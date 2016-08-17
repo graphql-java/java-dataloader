@@ -1,0 +1,95 @@
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
+
+publishing {
+    repositories {
+        maven {
+            url 'https://dl.bintray.com/engagingspaces/maven'
+        }
+    }
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId "$project.name"
+            from components.java
+
+            artifact sourcesJar {
+                classifier 'sources'
+            }
+            artifact javadocJar {
+                classifier 'javadoc'
+            }
+            pom.withXml {
+                asNode().children().last() + {
+                    def builder = delegate
+                    builder.name projectTitle
+                    builder.description projectDescription
+                    builder.url 'https://github.com/engagingspaces/vertx-dataloader'
+                    builder.licenses {
+                        builder.license {
+                            builder.name 'The Apache Software License, Version 2.0'
+                            builder.url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                            builder.distribution 'repo'
+                        }
+                    }
+                    builder.scm {
+                        builder.url 'scm:git@github.com/engagingspaces/vertx-dataloader.git'
+                        builder.connection 'git@github.com/engagingspaces/vertx-dataloader.git'
+                        builder.developerConnection 'git@github.com/engagingspaces/vertx-dataloader.git'
+                    }
+                    builder.developers {
+                        builder.developer {
+                            builder.id 'aschrijver'
+                            builder.name 'Arnold Schrijver'
+                            builder.url 'https://github.com/aschrijver/'
+                            builder.organization 'engagingspaces'
+                            builder.organizationUrl 'https://github.com/engagingspaces/'
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+bintray {
+    user = System.getenv('BINTRAY_USER')
+    key = System.getenv('BINTRAY_KEY')
+    publications = ['maven']
+    publish = true
+    pkg {
+        repo = 'maven'
+        name = "$project.name"
+        desc = projectDescription
+        userOrg = 'engagingspaces'
+        websiteUrl = 'https://github.com/engagingspaces/vertx-dataloader'
+        issueTrackerUrl = 'https://github.com/engagingspaces/vertx-dataloader/issues'
+        licenses = ['Apache-2.0']
+        vcsUrl = 'https://github.com/engagingspaces/vertx-dataloader.git'
+        labels = ['vertx', 'batch', 'batch-loading', 'completablefuture', 'future', 'asynchronous',
+                  'data-loader', 'facebook', 'graphql']
+        githubRepo = 'engagingspaces/vertx-dataloader'
+        githubReleaseNotesFile = 'README.md'
+        version {
+            released = new Date()
+            vcsTag = project.version
+        }
+    }
+}
