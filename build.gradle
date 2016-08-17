@@ -1,0 +1,52 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
+    }
+}
+
+apply plugin: 'maven-publish'
+
+publishing {
+    repositories {
+        maven {
+            url 'https://dl.bintray.com/engagingspaces/maven'
+        }
+    }
+}
+
+ext {
+    vertxVersion = '3.3.0'
+
+    junitVersion = '4.12'
+}
+
+apply plugin: 'java'
+apply from: "$projectDir/gradle/publishing.gradle"
+
+repositories {
+    mavenCentral()
+    jcenter()
+    maven {
+        url 'https://dl.bintray.com/engagingspaces/maven'
+    }
+}
+
+group = 'io.engagingspaces'
+version = '0.1.0'
+
+sourceCompatibility = 1.8
+
+dependencies {
+    compile "io.vertx:vertx-core:$vertxVersion"
+
+    testCompile "junit:junit:$junitVersion"
+    testCompile "io.vertx:vertx-unit:$vertxVersion"
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.14'
+    distributionUrl = "http://services.gradle.org/distributions/gradle-2.14-all.zip"
+}
