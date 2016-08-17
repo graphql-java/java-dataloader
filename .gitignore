@@ -1,0 +1,63 @@
+# Compiled source
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Packages
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Logs and databases
+*.log
+
+# OS generated files
+.DS_Store*
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# Editor Files
+*~
+*.swp
+
+# Gradle Files
+.gradle
+
+# Build output directies
+/target
+**/target
+/build/**
+**/build
+/node_modules
+**/node_modules
+
+# IntelliJ specific files/directories
+out
+.idea
+*.ipr
+*.iws
+*.iml
+
+# Eclipse specific files/directories
+.classpath
+.project
+.settings
+.metadata
+
+# NetBeans specific files/directories
+.nbattrs
+
+# Vagrant files
+.vagrant
+
+# Vert.x
+.vertx
