@@ -316,11 +316,110 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(Arrays.asList(Collections.singletonList(1), Collections.singletonList(2))));
     }
 
+    @Test
+    public void should_Represent_failures_and_successes_simultaneously() {
+        ArrayList<Collection> loadCalls = new ArrayList<>();
+        DataLoader<Integer, Integer> evenLoader = idLoaderWithErrors(new DataLoaderOptions(), loadCalls);
+
+        Future<Integer> future1 = evenLoader.load(1);
+        Future<Integer> future2 = evenLoader.load(2);
+        evenLoader.dispatch();
+
+        await().until(future1::isComplete);
+        assertThat(future1.failed(), is(true));
+        assertThat(future1.cause(), instanceOf(IllegalStateException.class));
+
+        await().until(future2::isComplete);
+        assertThat(future2.result(), equalTo(2));
+        assertThat(loadCalls, equalTo(Collections.singletonList(Arrays.asList(1, 2))));
+    }
+
+    @Test
+    public void should_Cache_failed_fetches() {
+        ArrayList<Collection> loadCalls = new ArrayList<>();
+        DataLoader<Integer, Integer> errorLoader = idLoaderAllErrors(new DataLoaderOptions(), loadCalls);
+
+        Future<Integer> future1 = errorLoader.load(1);
+        errorLoader.dispatch();
+
+        await().until(future1::isComplete);
+        assertThat(future1.failed(), is(true));
+        assertThat(future1.cause(), instanceOf(IllegalStateException.class));
+
+        Future<Integer> future2 = errorLoader.load(1);
+        errorLoader.dispatch();
+
+        await().until(future2::isComplete);
+        assertThat(future2.failed(), is(true));
+        assertThat(future2.cause(), instanceOf(IllegalStateException.class));
+        assertThat(loadCalls, equalTo(Collections.singletonList(Collections.singletonList(1))));
+    }
+
+    @Test
+    public void should_Handle_priming_the_cache_with_an_error() {
+        ArrayList<Collection> loadCalls = new ArrayList<>();
+        DataLoader<Integer, Integer> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+
+        identityLoader.prime(1, new IllegalStateException("Error"));
+
+        Future<Integer> future1 = identityLoader.load(1);
+        identityLoader.dispatch();
+
+        await().until(future1::isComplete);
+        assertThat(future1.failed(), is(true));
+        assertThat(future1.cause(), instanceOf(IllegalStateException.class));
+        assertThat(loadCalls, equalTo(Collections.emptyList()));
+    }
+
+    @Test
+    public void should_Clear_values_from_cache_after_errors() {
+        ArrayList<Collection> loadCalls = new ArrayList<>();
+        DataLoader<Integer, Integer> errorLoader = idLoaderAllErrors(new DataLoaderOptions(), loadCalls);
+
+        Future<Integer> future1 = errorLoader.load(1);
+        future1.setHandler(rh -> {
+            if (rh.failed()) {
+                // Presumably determine if this error is transient, and only clear the cache in that case.
+                errorLoader.clear(1);
+            }
+        });
+        errorLoader.dispatch();
+
+        await().until(future1::isComplete);
+        assertThat(future1.failed(), is(true));
+        assertThat(future1.cause(), instanceOf(IllegalStateException.class));
+
+        Future<Integer> future2 = errorLoader.load(1);
+        future2.setHandler(rh -> {
+            if (rh.failed()) {
+                // Again, only do this if you can determine the error is transient.
+                errorLoader.clear(1);
+            }
+        });
+        errorLoader.dispatch();
+
+        await().until(future2::isComplete);
+        assertThat(future2.failed(), is(true));
+        assertThat(future2.cause(), instanceOf(IllegalStateException.class));
+        assertThat(loadCalls, equalTo(Arrays.asList(Collections.singletonList(1), Collections.singletonList(1))));
+    }
+
     @SuppressWarnings("unchecked")
     private static <K, V> DataLoader<K, V> idLoader(DataLoaderOptions options, List<Collection> loadCalls) {
         return new DataLoader<>(keys -> {
             loadCalls.add(new ArrayList(keys));
             List<Future> futures = keys.stream().map(Future::succeededFuture).collect(Collectors.toList());
+            return CompositeFuture.all(futures);
+        }, options);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <K, V> DataLoader<K, V> idLoaderAllErrors(DataLoaderOptions options, List<Collection> loadCalls) {
+        return new DataLoader<>(keys -> {
+            loadCalls.add(new ArrayList(keys));
+            List<Future> futures = keys.stream()
+                    .map(key -> Future.failedFuture(new IllegalStateException("Error")))
+                    .collect(Collectors.toList());
             return CompositeFuture.all(futures);
         }, options);
     }
