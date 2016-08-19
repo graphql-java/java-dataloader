@@ -189,6 +189,21 @@ public class DataLoader<K, V> {
     }
 
     /**
+     * Primes the cache with the given key and error.
+     *
+     * @param key   the key
+     * @param error the exception to prime instead of a value
+     * @return the data loader for fluent coding
+     */
+    public DataLoader<K, V> prime(K key, Exception error) {
+        Object cacheKey = getCacheKey(key);
+        if (!futureCache.containsKey(cacheKey)) {
+            futureCache.set(cacheKey, Future.failedFuture(error));
+        }
+        return this;
+    }
+
+    /**
      * Gets the object that is used in the internal cache map as key, by applying the cache key function to
      * the provided key.
      * <p>
