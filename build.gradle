@@ -43,6 +43,7 @@ dependencies {
     compile "io.vertx:vertx-core:$vertxVersion"
 
     testCompile "junit:junit:$junitVersion"
+    testCompile 'org.awaitility:awaitility:2.0.0'
     testCompile "io.vertx:vertx-unit:$vertxVersion"
 }
 
