@@ -16,6 +16,7 @@
 
 package io.engagingspaces.vertx.dataloader;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 import java.util.Objects;
@@ -26,12 +27,12 @@ import java.util.Optional;
  *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  */
-public class DataLoaderOptions {
+public class DataLoaderOptions<K, V> {
 
     private boolean batchingEnabled;
     private boolean cachingEnabled;
     private CacheKey cacheKeyFunction;
-    private CacheMap cacheMap;
+    private CacheMap<K, Future<V>> cacheMap;
 
     /**
      * Creates a new data loader options with default settings.
@@ -41,12 +42,16 @@ public class DataLoaderOptions {
         cachingEnabled = true;
     }
 
+    public static <K, V> DataLoaderOptions<K, V> create() {
+        return new DataLoaderOptions<>();
+    }
+
     /**
      * Clones the provided data loader options.
      *
      * @param other the other options instance
      */
-    public DataLoaderOptions(DataLoaderOptions other) {
+    public DataLoaderOptions(DataLoaderOptions<K, V> other) {
         Objects.requireNonNull(other, "Other data loader options cannot be null");
         this.batchingEnabled = other.batchingEnabled;
         this.cachingEnabled = other.cachingEnabled;
@@ -139,7 +144,7 @@ public class DataLoaderOptions {
      *
      * @return an optional with the cache map instance, or empty
      */
-    public Optional<CacheMap> cacheMap() {
+    public Optional<CacheMap<K, Future<V>>> cacheMap() {
         return Optional.ofNullable(cacheMap);
     }
 
@@ -149,7 +154,7 @@ public class DataLoaderOptions {
      * @param cacheMap the cache map instance
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setCacheMap(CacheMap cacheMap) {
+    public DataLoaderOptions setCacheMap(CacheMap<K, Future<V>> cacheMap) {
         this.cacheMap = cacheMap;
         return this;
     }

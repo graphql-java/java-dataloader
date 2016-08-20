@@ -17,6 +17,7 @@
 package io.engagingspaces.vertx.dataloader;
 
 import io.engagingspaces.vertx.dataloader.impl.DefaultCacheMap;
+import io.vertx.core.Future;
 
 /**
  * Cache map interface for data loaders that use caching.
@@ -41,7 +42,7 @@ public interface CacheMap<U, V> {
      * @param <V> type parameter indicating the type of the data that is cached
      * @return the cache map
      */
-    static <U, V> CacheMap<U, V> simpleMap() {
+    static <U, V> CacheMap<U, Future<V>> simpleMap() {
         return new DefaultCacheMap<>();
     }
 
@@ -71,7 +72,7 @@ public interface CacheMap<U, V> {
      * @param value the value to cache
      * @return the cache map for fluent coding
      */
-    CacheMap set(U key, V value);
+    CacheMap<U, V> set(U key, V value);
 
     /**
      * Deletes the entry with the specified key from the cache map, if it exists.
@@ -79,12 +80,12 @@ public interface CacheMap<U, V> {
      * @param key the key to delete
      * @return the cache map for fluent coding
      */
-    CacheMap delete(U key);
+    CacheMap<U, V> delete(U key);
 
     /**
      * Clears all entries of the cache map
      *
      * @return the cache map for fluent coding
      */
-    CacheMap clear();
+    CacheMap<U, V> clear();
 }

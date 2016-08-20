@@ -22,15 +22,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * Default implementation of {@link CacheMap} that is based on a regular {@link java.util.LinkedHashMap}.
  *
- * @param <K>
- * @param <V>
+ * @param <U> type parameter indicating the type of the cache keys
+ * @param <V> type parameter indicating the type of the data that is cached
  *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  */
-public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
+public class DefaultCacheMap<U, V> implements CacheMap<U, V> {
 
-    private Map<K, V> cache;
+    private Map<U, V> cache;
 
     /**
      * Default constructor
@@ -43,7 +44,7 @@ public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
      * {@inheritDoc}
      */
     @Override
-    public boolean containsKey(K key) {
+    public boolean containsKey(U key) {
         return cache.containsKey(key);
     }
 
@@ -51,7 +52,7 @@ public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
      * {@inheritDoc}
      */
     @Override
-    public V get(K key) {
+    public V get(U key) {
         return cache.get(key);
     }
 
@@ -59,7 +60,7 @@ public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
      * {@inheritDoc}
      */
     @Override
-    public CacheMap set(K key, V value) {
+    public CacheMap<U, V> set(U key, V value) {
         cache.put(key, value);
         return this;
     }
@@ -68,7 +69,7 @@ public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
      * {@inheritDoc}
      */
     @Override
-    public CacheMap delete(K key) {
+    public CacheMap<U, V> delete(U key) {
         cache.remove(key);
         return this;
     }
@@ -77,7 +78,7 @@ public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
      * {@inheritDoc}
      */
     @Override
-    public CacheMap clear() {
+    public CacheMap<U, V> clear() {
         cache.clear();
         return this;
     }

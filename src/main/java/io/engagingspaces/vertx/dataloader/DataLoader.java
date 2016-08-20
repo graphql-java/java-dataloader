@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 public class DataLoader<K, V> {
 
     private final BatchLoader<K> batchLoadFunction;
-    private final DataLoaderOptions loaderOptions;
+    private final DataLoaderOptions<K, V> loaderOptions;
     private final CacheMap<Object, Future<V>> futureCache;
     private final LinkedHashMap<K, Future<V>> loaderQueue;
 
@@ -68,11 +68,12 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param options           the batch load options
      */
-    public DataLoader(BatchLoader<K> batchLoadFunction, DataLoaderOptions options) {
+    @SuppressWarnings("unchecked")
+    public DataLoader(BatchLoader<K> batchLoadFunction, DataLoaderOptions<K, V> options) {
         Objects.requireNonNull(batchLoadFunction, "Batch load function cannot be null");
         this.batchLoadFunction = batchLoadFunction;
-        this.loaderOptions = options == null ? new DataLoaderOptions() : options;
-        this.futureCache = loaderOptions.cacheMap().isPresent() ? loaderOptions.cacheMap().get() : CacheMap.simpleMap();
+        this.loaderOptions = options == null ? new DataLoaderOptions<>() : options;
+        this.futureCache = loaderOptions.cacheMap().isPresent() ? (CacheMap<Object, Future<V>>) loaderOptions.cacheMap().get() : CacheMap.simpleMap();
         this.loaderQueue = new LinkedHashMap<>();
     }
 

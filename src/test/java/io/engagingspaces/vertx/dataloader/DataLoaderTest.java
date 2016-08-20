@@ -54,7 +54,7 @@ public class DataLoaderTest {
 
     @Before
     public void setUp() {
-        identityLoader = idLoader(new DataLoaderOptions(), new ArrayList<>());
+        identityLoader = idLoader(new DataLoaderOptions<>(), new ArrayList<>());
     }
 
     @Test
@@ -108,7 +108,7 @@ public class DataLoaderTest {
     @Test
     public void should_Batch_multiple_requests() {
         ArrayList<Collection> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> identityLoader = idLoader(new DataLoaderOptions<>(), loadCalls);
 
         Future<Integer> future1 = identityLoader.load(1);
         Future<Integer> future2 = identityLoader.load(2);
@@ -123,7 +123,7 @@ public class DataLoaderTest {
     @Test
     public void should_Coalesce_identical_requests() {
         ArrayList<Collection> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> identityLoader = idLoader(new DataLoaderOptions<>(), loadCalls);
 
         Future<Integer> future1a = identityLoader.load(1);
         Future<Integer> future1b = identityLoader.load(1);
@@ -139,7 +139,7 @@ public class DataLoaderTest {
     @Test
     public void should_Cache_repeated_requests() {
         ArrayList<Collection> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions<>(), loadCalls);
 
         Future<String> future1 = identityLoader.load("A");
         Future<String> future2 = identityLoader.load("B");
@@ -174,7 +174,7 @@ public class DataLoaderTest {
     @Test
     public void should_Clear_single_value_in_loader() {
         ArrayList<Collection> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions<>(), loadCalls);
 
         Future<String> future1 = identityLoader.load("A");
         Future<String> future2 = identityLoader.load("B");
@@ -200,7 +200,7 @@ public class DataLoaderTest {
     @Test
     public void should_Clear_all_values_in_loader() {
         ArrayList<Collection> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions<>(), loadCalls);
 
         Future<String> future1 = identityLoader.load("A");
         Future<String> future2 = identityLoader.load("B");
@@ -226,7 +226,7 @@ public class DataLoaderTest {
     @Test
     public void should_Allow_priming_the_cache() {
         ArrayList<Collection> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions<>(), loadCalls);
 
         identityLoader.prime("A", "A");
 
@@ -243,7 +243,7 @@ public class DataLoaderTest {
     @Test
     public void should_Not_prime_keys_that_already_exist() {
         ArrayList<Collection> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions<>(), loadCalls);
 
         identityLoader.prime("A", "X");
 
@@ -271,7 +271,7 @@ public class DataLoaderTest {
     @Test
     public void should_Allow_to_forcefully_prime_the_cache() {
         ArrayList<Collection> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions<>(), loadCalls);
 
         identityLoader.prime("A", "X");
 
@@ -299,7 +299,7 @@ public class DataLoaderTest {
     @Test
     public void should_Resolve_to_error_to_indicate_failure() {
         ArrayList<Collection> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> evenLoader = idLoaderWithErrors(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> evenLoader = idLoaderWithErrors(new DataLoaderOptions<>(), loadCalls);
 
         Future<Integer> future1 = evenLoader.load(1);
         evenLoader.dispatch();
@@ -319,7 +319,7 @@ public class DataLoaderTest {
     @Test
     public void should_Represent_failures_and_successes_simultaneously() {
         ArrayList<Collection> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> evenLoader = idLoaderWithErrors(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> evenLoader = idLoaderWithErrors(new DataLoaderOptions<>(), loadCalls);
 
         Future<Integer> future1 = evenLoader.load(1);
         Future<Integer> future2 = evenLoader.load(2);
@@ -337,7 +337,7 @@ public class DataLoaderTest {
     @Test
     public void should_Cache_failed_fetches() {
         ArrayList<Collection> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> errorLoader = idLoaderAllErrors(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> errorLoader = idLoaderAllErrors(new DataLoaderOptions<>(), loadCalls);
 
         Future<Integer> future1 = errorLoader.load(1);
         errorLoader.dispatch();
@@ -358,7 +358,7 @@ public class DataLoaderTest {
     @Test
     public void should_Handle_priming_the_cache_with_an_error() {
         ArrayList<Collection> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> identityLoader = idLoader(new DataLoaderOptions<>(), loadCalls);
 
         identityLoader.prime(1, new IllegalStateException("Error"));
 
@@ -374,7 +374,7 @@ public class DataLoaderTest {
     @Test
     public void should_Clear_values_from_cache_after_errors() {
         ArrayList<Collection> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> errorLoader = idLoaderAllErrors(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> errorLoader = idLoaderAllErrors(new DataLoaderOptions<>(), loadCalls);
 
         Future<Integer> future1 = errorLoader.load(1);
         future1.setHandler(rh -> {
@@ -405,7 +405,7 @@ public class DataLoaderTest {
     }
 
     @SuppressWarnings("unchecked")
-    private static <K, V> DataLoader<K, V> idLoader(DataLoaderOptions options, List<Collection> loadCalls) {
+    private static <K, V> DataLoader<K, V> idLoader(DataLoaderOptions<K, V> options, List<Collection> loadCalls) {
         return new DataLoader<>(keys -> {
             loadCalls.add(new ArrayList(keys));
             List<Future> futures = keys.stream().map(Future::succeededFuture).collect(Collectors.toList());
@@ -414,7 +414,8 @@ public class DataLoaderTest {
     }
 
     @SuppressWarnings("unchecked")
-    private static <K, V> DataLoader<K, V> idLoaderAllErrors(DataLoaderOptions options, List<Collection> loadCalls) {
+    private static <K, V> DataLoader<K, V> idLoaderAllErrors(
+            DataLoaderOptions<K, V> options, List<Collection> loadCalls) {
         return new DataLoader<>(keys -> {
             loadCalls.add(new ArrayList(keys));
             List<Future> futures = keys.stream()
@@ -426,7 +427,7 @@ public class DataLoaderTest {
 
     @SuppressWarnings("unchecked")
     private static DataLoader<Integer, Integer> idLoaderWithErrors(
-            DataLoaderOptions options, List<Collection> loadCalls) {
+            DataLoaderOptions<Integer, Integer> options, List<Collection> loadCalls) {
         return new DataLoader<>(keys -> {
             loadCalls.add(new ArrayList(keys));
             List<Future> futures = keys.stream()
