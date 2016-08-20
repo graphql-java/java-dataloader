@@ -1,0 +1,15 @@
+language: java
+sudo: false
+
+jdk:
+  - oraclejdk8
+
+notifications:
+  email: false
+
+branches:
+  only:
+    - master
+
+script:
+- gradle clean test
