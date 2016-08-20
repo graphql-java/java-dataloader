@@ -39,7 +39,23 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 
 ## Features
 
-- Yes, they will be listed here :)
+- Simple, intuitive API, using generics and fluent coding
+- Define batch load function with lambda expression
+- Schedule a load request in queue for batching
+- Add load requests from anywhere in code
+- Request returns [`Future<V>`](http://vertx.io/docs/apidocs/io/vertx/core/Future.html) of requested value
+- Can create multiple requests at once, returns [`CompositeFuture`](http://vertx.io/docs/apidocs/io/vertx/core/CompositeFuture.html)
+- Caches load requests, so data is only fetched once
+- Can clear individual cache keys, so data is fetched on next load request dispatch
+- Can prime the cache with key/values, to avoid data being fetched needlessly
+- Can configure cache key function with lambda expression to extract cache key from complex data loader key types
+- Dispatch load request queue when batch is prepared, returns `CompositeFuture`
+- Individual batch futures complete as batch is processed
+- `CompositeFuture`s results are ordered according to insertion order of load requests
+- Deals with partial errors when a batch future fails
+- Can disable batching and/or caching in configuration
+- Can supply your own [`CacheMap<K, V>`](https://github.com/engagingspaces/vertx-dataloader/blob/master/src/main/java/io/engagingspaces/vertx/dataloader/CacheMap.java) implementations
+- Has very high test coverage (see [Acknowledgements](#acknowlegdements))
 
 ## Differences to reference implementation
 
