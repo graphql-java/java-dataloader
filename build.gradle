@@ -54,7 +54,7 @@ compileJava {
     targetCompatibility = 1.8
 
     dependsOn project.tasks.docProcessing
-    options.compilerArgs = [ "-Xlint:unchecked" ]
+    options.compilerArgs = [ "-Xlint:unchecked", "-Xdiags:verbose" ]
 }
 
 dependencies {
