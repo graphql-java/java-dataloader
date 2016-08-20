@@ -61,13 +61,48 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 
 ### Manual dispatching
 
+The original data loader was written in Javascript for NodeJS. NodeJS is single-threaded in nature, but simulates
+asynchronous logic by invoking functions on separate threads in an event loop, as explained
+[in this post](http://stackoverflow.com/a/19823583/3455094) on StackOverflow.
+
+[Vert.x](http://vertx.io) on the other hand also uses an event loop ([that you should not block!!](http://vertx.io/docs/vertx-core/java/#golden_rule)), but comes
+with actor-like [`Verticle`](http://vertx.io/docs/vertx-core/java/#_verticles)s and a
+distributed [`EventBus`](http://vertx.io/docs/vertx-core/java/#event_bus) that make it inherently asynchronous, and non-blocking.
+
+Now in NodeJS generates so-call 'ticks' in which queued functions are dispatched for execution, and Facebook `DataLoader` uses
+the `nextTick()` function in NodeJS to _automatically_ dequeue load requests and send them to the batch execution function for processing.
+
+And here there is an *IMPORTANT DIFFERENCE* compared to how _this_ data loader operates!!
+
+In NodeJS the batch preparation will not affect the asynchronous processing behaviour in any way. It will just prepare
+batches in 'spare time' as it were.
+
+This is different in Vert.x as you will actually _delay_ the execution of your load requests, until the moment where you make a call
+to `dataLoader.dispatch()` in comparison to when you would just handle futures directly.
+
+Does this make Java `DataLoader` any less useful than the reference implementation? I would argue this is not the case,
+and there are also gains to this different mode of operation:
+
+- In contrast to the NodeJS implementation _you_ as developer are in full control of when batches are dispatched
+- You can attach any logic that determines when a dispatch takes place
+- You still retain all other features, full caching support and batching (e.g. to optimize message bus traffic, GraphQL query execution time, etc.)
+
+However, with batch execution control comes responsibility! If you forget to make the call to `dispatch()` then the futures
+in the load request queue will never be batched, and thus _will never complete_! So be careful when crafting your loader designs.
+
+*Note*: In future releases the danger of not invoking dispatch will be greatly diminished. There will be an optional dispatch timeout,
+and some other optional features that ensure all load requests eventually complete. See [Project plans](#project-plans) for upcoming features and ideas.
+
 ### Additional features
 
-- None, so far :(
+- Initial release is a feature-complete port of the reference implementation (with the only change being [Manual dispatching](#manual-dispatching)).
+- See [Project plans](#project-plans) for upcoming features and ideas.
 
 ## Let's get started!
 
 ### Installing
+
+No more talking. Let's install the `vertx-dataloader` dependency and look at some actual code!
 
 ### Building
 
