@@ -1,5 +1,8 @@
 # Vert.x `DataLoader`
 
+[![Build Status](https://travis-ci.org/engagingspaces/vertx-dataloader.svg?branch=master)](https://travis-ci.org/engagingspaces/vertx-dataloader/)&nbsp;&nbsp;
+[![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/engagingspaces/vertx-dataloader/blob/master/LICENSE)&nbsp;&nbsp;
+
 **More documentation coming soon..**
 
 This small and simple utility library is a port of [Facebook DataLoader](https://github.com/facebook/dataloader)
@@ -72,7 +75,7 @@ distributed [`EventBus`](http://vertx.io/docs/vertx-core/java/#event_bus) that m
 Now in NodeJS generates so-call 'ticks' in which queued functions are dispatched for execution, and Facebook `DataLoader` uses
 the `nextTick()` function in NodeJS to _automatically_ dequeue load requests and send them to the batch execution function for processing.
 
-And here there is an *IMPORTANT DIFFERENCE* compared to how _this_ data loader operates!!
+And here there is an **IMPORTANT DIFFERENCE** compared to how _this_ data loader operates!!
 
 In NodeJS the batch preparation will not affect the asynchronous processing behaviour in any way. It will just prepare
 batches in 'spare time' as it were.
@@ -90,12 +93,12 @@ and there are also gains to this different mode of operation:
 However, with batch execution control comes responsibility! If you forget to make the call to `dispatch()` then the futures
 in the load request queue will never be batched, and thus _will never complete_! So be careful when crafting your loader designs.
 
-*Note*: In future releases the danger of not invoking dispatch will be greatly diminished. There will be an optional dispatch timeout,
+**Note**: In future releases the danger of not invoking dispatch will be greatly diminished. There will be an optional dispatch timeout,
 and some other optional features that ensure all load requests eventually complete. See [Project plans](#project-plans) for upcoming features and ideas.
 
 ### Additional features
 
-- Initial release is a feature-complete port of the reference implementation (with the only change being [Manual dispatching](#manual-dispatching)).
+- Initial release is a feature-complete port of the reference implementation (only change being [Manual dispatching](#manual-dispatching)).
 - See [Project plans](#project-plans) for upcoming features and ideas.
 
 ## Let's get started!
