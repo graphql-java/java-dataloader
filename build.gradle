@@ -37,10 +37,30 @@ repositories {
 group = 'io.engagingspaces'
 version = '0.1.0'
 
-sourceCompatibility = 1.8
+task docProcessing(type: JavaCompile, group: 'build') {
+    source = sourceSets.main.java
+    classpath = configurations.compile + configurations.compileOnly
+    destinationDir = project.file('src/main/asciidoc')
+    options.compilerArgs = [
+            "-proc:only",
+            "-processor", "io.vertx.docgen.JavaDocGenProcessor",
+            "-Adocgen.output=$buildDir/asciidoc",
+            "-Adocgen.source=$projectDir/src/main/asciidoc/index.adoc"
+    ]
+}
+
+compileJava {
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+
+    dependsOn project.tasks.docProcessing
+    options.compilerArgs = [ "-Xlint:unchecked" ]
+}
 
 dependencies {
     compile "io.vertx:vertx-core:$vertxVersion"
+
+    compileOnly "io.vertx:vertx-docgen:$vertxVersion"
 
     testCompile "junit:junit:$junitVersion"
     testCompile 'org.awaitility:awaitility:2.0.0'
