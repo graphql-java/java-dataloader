@@ -6,6 +6,8 @@
 
 **Work in progress. Stable version `1.0.0` soon to be released..**
 
+![vertx-dataloader-concepts](https://cloud.githubusercontent.com/assets/5111931/17837798/18e27032-67bd-11e6-9a9b-a9dc6a6a5ff4.png)
+
 This small and simple utility library is a port of [Facebook DataLoader](https://github.com/facebook/dataloader)
 to Java 8 for use with [Vert.x](http://vertx.io). It can serve as integral part of your application's data layer to provide a
 consistent API over various back-ends and reduce message communication overhead through batching and caching.
@@ -25,7 +27,7 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 - [Features](#features)
 - [Differences to reference implementation](#differences-to-reference-implementation)
   - [Manual dispatching](#manual-dispatching)
-  - [Additional features](#additional-features)
+  - [Additional features!](#additional-features)
 - [Let's get started!](#lets-get-started)
   - [Installing](#installing)
   - [Building](#building)
