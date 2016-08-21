@@ -123,6 +123,7 @@ No more talking. Let's install the `vertx-dataloader` dependency and look at som
 ### Known issues
 
 - ** Work in progress..**
+- There is a [weird issue](https://github.com/engagingspaces/vertx-dataloader/issues/2) where TravisCI is failing, but local builds are just fine.
 - Not yet production-ready as of yet, still porting tests that may uncover bugs.
 
 ### Upcoming features
