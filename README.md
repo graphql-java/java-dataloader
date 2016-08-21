@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/engagingspaces/vertx-dataloader.svg?branch=master)](https://travis-ci.org/engagingspaces/vertx-dataloader/)&nbsp;&nbsp;
 [![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/engagingspaces/vertx-dataloader/blob/master/LICENSE)&nbsp;&nbsp;
+[ ![Download](https://api.bintray.com/packages/engagingspaces/maven/vertx-dataloader/images/download.svg) ](https://bintray.com/engagingspaces/maven/vertx-dataloader/_latestVersion)
 
 **More documentation coming soon..**
 
