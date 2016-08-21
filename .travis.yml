@@ -17,4 +17,4 @@ branches:
     - master
 
 script:
-- gradle clean test --stacktrace
+- gradle clean test --debug
