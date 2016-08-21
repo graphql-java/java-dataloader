@@ -84,7 +84,7 @@ bintray {
         licenses = ['Apache-2.0']
         vcsUrl = 'https://github.com/engagingspaces/vertx-dataloader.git'
         labels = ['vertx', 'batch', 'batch-loading', 'completablefuture', 'future', 'asynchronous',
-                  'data-loader', 'facebook', 'graphql']
+                  'data-loader', 'dataloader', 'java', 'port', 'facebook', 'graphql']
         githubRepo = 'engagingspaces/vertx-dataloader'
         githubReleaseNotesFile = 'README.md'
         version {
