@@ -43,6 +43,8 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 
 ## Features
 
+Vert.x `DataLoader` is a feature-complete port of the Facebook reference implementation with [one major difference](#manual-dispatching). These features are:
+
 - Simple, intuitive API, using generics and fluent coding
 - Define batch load function with lambda expression
 - Schedule a load request in queue for batching
@@ -50,16 +52,18 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 - Request returns [`Future<V>`](http://vertx.io/docs/apidocs/io/vertx/core/Future.html) of requested value
 - Can create multiple requests at once, returns [`CompositeFuture`](http://vertx.io/docs/apidocs/io/vertx/core/CompositeFuture.html)
 - Caches load requests, so data is only fetched once
-- Can clear individual cache keys, so data is fetched on next load request dispatch
+- Can clear individual cache keys, so data is fetched on next batch queue dispatch
 - Can prime the cache with key/values, to avoid data being fetched needlessly
 - Can configure cache key function with lambda expression to extract cache key from complex data loader key types
-- Dispatch load request queue when batch is prepared, returns `CompositeFuture`
-- Individual batch futures complete as batch is processed
+- Dispatch load request queue after batch is prepared, also returns [`CompositeFuture`](http://vertx.io/docs/apidocs/io/vertx/core/CompositeFuture.html)
+- Individual batch futures complete / resolve as batch is processed
 - `CompositeFuture`s results are ordered according to insertion order of load requests
 - Deals with partial errors when a batch future fails
 - Can disable batching and/or caching in configuration
 - Can supply your own [`CacheMap<K, V>`](https://github.com/engagingspaces/vertx-dataloader/blob/master/src/main/java/io/engagingspaces/vertx/dataloader/CacheMap.java) implementations
 - Has very high test coverage (see [Acknowledgements](#acknowlegdements))
+
+Then Vert.x `DataLoader` has some very interesting [Additional features](#additional-features) that result from it being based on Vert.x
 
 ## Differences to reference implementation
 
@@ -100,7 +104,8 @@ and some other optional features that ensure all load requests eventually comple
 ### Additional features
 
 - Initial release is a feature-complete port of the reference implementation (only change being [Manual dispatching](#manual-dispatching)).
-- See [Project plans](#project-plans) for upcoming features and ideas.
+- Sorry, no additional features yet :flushed:, but this is where _you_ :hand: come into the picture: By giving your [feedback](https://github.com/vertx-dataloader/issues) and [contribute](#contributing)! You are most welcome.
+- See [Project plans](#project-plans) for [upcoming features](#upcoming-features) and [future ideas](#future-ideas).
 
 ## Let's get started!
 
