@@ -4,7 +4,7 @@
 [![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/engagingspaces/vertx-dataloader/blob/master/LICENSE)&nbsp;&nbsp;
 [ ![Download](https://api.bintray.com/packages/engagingspaces/maven/vertx-dataloader/images/download.svg) ](https://bintray.com/engagingspaces/maven/vertx-dataloader/_latestVersion)
 
-**More documentation coming soon..**
+**Work in progress. Stable version `1.0.0` soon to be released..**
 
 This small and simple utility library is a port of [Facebook DataLoader](https://github.com/facebook/dataloader)
 to Java 8 for use with [Vert.x](http://vertx.io). It can serve as integral part of your application's data layer to provide a
@@ -122,7 +122,7 @@ No more talking. Let's install the `vertx-dataloader` dependency and look at som
 
 ### Known issues
 
-- ** Work in progress..**
+- **Work in progress...**but a `1.0.0` release is imminent!
 - There is a [weird issue](https://github.com/engagingspaces/vertx-dataloader/issues/2) where TravisCI is failing, but local builds are just fine.
 - Not yet production-ready as of yet, still porting tests that may uncover bugs.
 
