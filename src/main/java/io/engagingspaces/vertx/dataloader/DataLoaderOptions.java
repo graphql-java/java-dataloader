@@ -90,7 +90,7 @@ public class DataLoaderOptions<K, V> {
      * @param batchingEnabled {@code true} to enable batch loading, {@code false} otherwise
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setBatchingEnabled(boolean batchingEnabled) {
+    public DataLoaderOptions<K, V> setBatchingEnabled(boolean batchingEnabled) {
         this.batchingEnabled = batchingEnabled;
         return this;
     }
@@ -110,7 +110,7 @@ public class DataLoaderOptions<K, V> {
      * @param cachingEnabled {@code true} to enable caching, {@code false} otherwise
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setCachingEnabled(boolean cachingEnabled) {
+    public DataLoaderOptions<K, V> setCachingEnabled(boolean cachingEnabled) {
         this.cachingEnabled = cachingEnabled;
         return this;
     }
@@ -132,7 +132,7 @@ public class DataLoaderOptions<K, V> {
      * @param cacheKeyFunction the cache key function to use
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setCacheKeyFunction(CacheKey cacheKeyFunction) {
+    public DataLoaderOptions<K, V> setCacheKeyFunction(CacheKey cacheKeyFunction) {
         this.cacheKeyFunction = cacheKeyFunction;
         return this;
     }
