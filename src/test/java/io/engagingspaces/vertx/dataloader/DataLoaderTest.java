@@ -404,6 +404,118 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(Arrays.asList(Collections.singletonList(1), Collections.singletonList(1))));
     }
 
+    @Test
+    public void should_Propagate_error_to_all_loads() {
+        ArrayList<Collection> loadCalls = new ArrayList<>();
+        DataLoader<Integer, Integer> errorLoader = idLoaderAllErrors(new DataLoaderOptions<>(), loadCalls);
+
+        Future<Integer> future1 = errorLoader.load(1);
+        Future<Integer> future2 = errorLoader.load(2);
+        errorLoader.dispatch();
+
+        await().until(future1::isComplete);
+        assertThat(future1.failed(), is(true));
+        Throwable cause = future1.cause();
+        assertThat(cause, instanceOf(IllegalStateException.class));
+        assertThat(cause.getMessage(), equalTo("Error"));
+
+        await().until(future2::isComplete);
+        cause = future2.cause();
+        assertThat(cause.getMessage(), equalTo(cause.getMessage()));
+        assertThat(loadCalls, equalTo(Collections.singletonList(Arrays.asList(1, 2))));
+    }
+
+    // Accept any kind of key.
+
+    @Test
+    public void should_Accept_objects_as_keys() {
+        ArrayList<Collection> loadCalls = new ArrayList<>();
+        DataLoader<Object, Object> identityLoader = idLoader(new DataLoaderOptions<>(), loadCalls);
+
+        Object keyA = new Object();
+        Object keyB = new Object();
+
+        // Fetches as expected
+
+        identityLoader.load(keyA);
+        identityLoader.load(keyB);
+
+        identityLoader.dispatch().setHandler(rh -> {
+            assertThat(rh.succeeded(), is(true));
+            assertThat(rh.result().result(0), equalTo(keyA));
+            assertThat(rh.result().result(1), equalTo(keyB));
+        });
+
+        assertThat(loadCalls.size(), equalTo(1));
+        assertThat(loadCalls.get(0).size(), equalTo(2));
+        assertThat(loadCalls.get(0).toArray()[0], equalTo(keyA));
+        assertThat(loadCalls.get(0).toArray()[1], equalTo(keyB));
+
+        // Caching
+        identityLoader.clear(keyA);
+        //noinspection SuspiciousMethodCalls
+        loadCalls.remove(keyA);
+
+        identityLoader.load(keyA);
+        identityLoader.load(keyB);
+
+        identityLoader.dispatch().setHandler(rh -> {
+            assertThat(rh.succeeded(), is(true));
+            assertThat(rh.result().result(0), equalTo(keyA));
+            assertThat(identityLoader.getCacheKey(keyB), equalTo(keyB));
+        });
+
+        assertThat(loadCalls.size(), equalTo(2));
+        assertThat(loadCalls.get(1).size(), equalTo(1));
+        assertThat(loadCalls.get(1).toArray()[0], equalTo(keyA));
+    }
+
+    // Accepts options
+
+    @Test
+    public void should_Disable_caching() {
+        ArrayList<Collection> loadCalls = new ArrayList<>();
+        DataLoaderOptions<String, String> options = new DataLoaderOptions<>();
+        DataLoader<String, String> identityLoader = idLoader(options.setCachingEnabled(false), loadCalls);
+
+        Future<String> future1 = identityLoader.load("A");
+        Future<String> future2 = identityLoader.load("B");
+        identityLoader.dispatch();
+
+        await().until(() -> future1.isComplete() && future2.isComplete());
+        assertThat(future1.result(), equalTo("A"));
+        assertThat(future2.result(), equalTo("B"));
+        assertThat(loadCalls, equalTo(Collections.singletonList(Arrays.asList("A", "B"))));
+
+        Future<String> future1a = identityLoader.load("A");
+        Future<String> future3 = identityLoader.load("C");
+        identityLoader.dispatch();
+
+        await().until(() -> future1a.isComplete() && future3.isComplete());
+        assertThat(future1a.result(), equalTo("A"));
+        assertThat(future3.result(), equalTo("C"));
+        assertThat(loadCalls, equalTo(Arrays.asList(Arrays.asList("A", "B"), Arrays.asList("A", "C"))));
+
+        Future<String> future1b = identityLoader.load("A");
+        Future<String> future2a = identityLoader.load("B");
+        Future<String> future3a = identityLoader.load("C");
+        identityLoader.dispatch();
+
+        await().until(() -> future1b.isComplete() && future2a.isComplete() && future3a.isComplete());
+        assertThat(future1b.result(), equalTo("A"));
+        assertThat(future2a.result(), equalTo("B"));
+        assertThat(future3a.result(), equalTo("C"));
+        assertThat(loadCalls, equalTo(Arrays.asList(Arrays.asList("A", "B"),
+                Arrays.asList("A", "C"), Arrays.asList("A", "B", "C"))));
+    }
+
+    // Accepts object key in custom cacheKey function
+
+    @Test
+    public void should_Accept_objects_with_a_complex_key() {
+
+    }
+
     @SuppressWarnings("unchecked")
     private static <K, V> DataLoader<K, V> idLoader(DataLoaderOptions<K, V> options, List<Collection> loadCalls) {
         return new DataLoader<>(keys -> {
