@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 public class DataLoader<K, V> {
 
     private final BatchLoader<K> batchLoadFunction;
-    private final DataLoaderOptions<K, V> loaderOptions;
+    private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, Future<V>> futureCache;
     private final LinkedHashMap<K, Future<V>> loaderQueue;
 
@@ -69,10 +69,10 @@ public class DataLoader<K, V> {
      * @param options           the batch load options
      */
     @SuppressWarnings("unchecked")
-    public DataLoader(BatchLoader<K> batchLoadFunction, DataLoaderOptions<K, V> options) {
+    public DataLoader(BatchLoader<K> batchLoadFunction, DataLoaderOptions options) {
         Objects.requireNonNull(batchLoadFunction, "Batch load function cannot be null");
         this.batchLoadFunction = batchLoadFunction;
-        this.loaderOptions = options == null ? new DataLoaderOptions<>() : options;
+        this.loaderOptions = options == null ? new DataLoaderOptions() : options;
         this.futureCache = loaderOptions.cacheMap().isPresent() ? (CacheMap<Object, Future<V>>) loaderOptions.cacheMap().get() : CacheMap.simpleMap();
         this.loaderQueue = new LinkedHashMap<>();
     }
@@ -91,7 +91,7 @@ public class DataLoader<K, V> {
         Objects.requireNonNull(key, "Key cannot be null");
         Object cacheKey = getCacheKey(key);
         if (loaderOptions.cachingEnabled() && futureCache.containsKey(cacheKey)) {
-            return futureCache.get(key);
+            return futureCache.get(cacheKey);
         }
 
         Future<V> future = Future.future();
@@ -106,7 +106,7 @@ public class DataLoader<K, V> {
             }
         }
         if (loaderOptions.cachingEnabled()) {
-            futureCache.set(key, future);
+            futureCache.set(cacheKey, future);
         }
         return future;
     }
@@ -213,6 +213,7 @@ public class DataLoader<K, V> {
      * @param key the input key
      * @return the cache key after the input is transformed with the cache key function
      */
+    @SuppressWarnings("unchecked")
     public Object getCacheKey(K key) {
         return loaderOptions.cacheKeyFunction().isPresent() ?
                 loaderOptions.cacheKeyFunction().get().getKey(key) : key;

@@ -20,18 +20,17 @@ package io.engagingspaces.vertx.dataloader;
  * Function that is invoked on input keys of type {@code K} to derive keys that are required by the {@link CacheMap}
  * implementation.
  *
+ * @param <K>   type parameter indicating the type of the input key
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  */
 @FunctionalInterface
-public interface CacheKey {
+public interface CacheKey<K> {
 
     /**
      * Returns the cache key that is created from the provided input key.
      *
      * @param input the input key
-     * @param <K>   type parameter indicating the type of the input key
-     * @param <U>   type parameter indicating the type of the cache key that is returned
      * @return the cache key
      */
-    <K, U> U getKey(K input);
+    Object getKey(K input);
 }

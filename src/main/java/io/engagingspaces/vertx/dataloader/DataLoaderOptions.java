@@ -27,12 +27,12 @@ import java.util.Optional;
  *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  */
-public class DataLoaderOptions<K, V> {
+public class DataLoaderOptions {
 
     private boolean batchingEnabled;
     private boolean cachingEnabled;
     private CacheKey cacheKeyFunction;
-    private CacheMap<K, Future<V>> cacheMap;
+    private CacheMap cacheMap;
 
     /**
      * Creates a new data loader options with default settings.
@@ -42,8 +42,8 @@ public class DataLoaderOptions<K, V> {
         cachingEnabled = true;
     }
 
-    public static <K, V> DataLoaderOptions<K, V> create() {
-        return new DataLoaderOptions<>();
+    public static DataLoaderOptions create() {
+        return new DataLoaderOptions();
     }
 
     /**
@@ -51,7 +51,7 @@ public class DataLoaderOptions<K, V> {
      *
      * @param other the other options instance
      */
-    public DataLoaderOptions(DataLoaderOptions<K, V> other) {
+    public DataLoaderOptions(DataLoaderOptions other) {
         Objects.requireNonNull(other, "Other data loader options cannot be null");
         this.batchingEnabled = other.batchingEnabled;
         this.cachingEnabled = other.cachingEnabled;
@@ -90,7 +90,7 @@ public class DataLoaderOptions<K, V> {
      * @param batchingEnabled {@code true} to enable batch loading, {@code false} otherwise
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions<K, V> setBatchingEnabled(boolean batchingEnabled) {
+    public DataLoaderOptions setBatchingEnabled(boolean batchingEnabled) {
         this.batchingEnabled = batchingEnabled;
         return this;
     }
@@ -110,7 +110,7 @@ public class DataLoaderOptions<K, V> {
      * @param cachingEnabled {@code true} to enable caching, {@code false} otherwise
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions<K, V> setCachingEnabled(boolean cachingEnabled) {
+    public DataLoaderOptions setCachingEnabled(boolean cachingEnabled) {
         this.cachingEnabled = cachingEnabled;
         return this;
     }
@@ -132,7 +132,7 @@ public class DataLoaderOptions<K, V> {
      * @param cacheKeyFunction the cache key function to use
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions<K, V> setCacheKeyFunction(CacheKey cacheKeyFunction) {
+    public DataLoaderOptions setCacheKeyFunction(CacheKey cacheKeyFunction) {
         this.cacheKeyFunction = cacheKeyFunction;
         return this;
     }
@@ -144,7 +144,7 @@ public class DataLoaderOptions<K, V> {
      *
      * @return an optional with the cache map instance, or empty
      */
-    public Optional<CacheMap<K, Future<V>>> cacheMap() {
+    public Optional<CacheMap> cacheMap() {
         return Optional.ofNullable(cacheMap);
     }
 
@@ -154,7 +154,7 @@ public class DataLoaderOptions<K, V> {
      * @param cacheMap the cache map instance
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setCacheMap(CacheMap<K, Future<V>> cacheMap) {
+    public <K, V> DataLoaderOptions setCacheMap(CacheMap<K, Future<V>> cacheMap) {
         this.cacheMap = cacheMap;
         return this;
     }
