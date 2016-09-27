@@ -18,8 +18,7 @@ publishing {
 }
 
 ext {
-    vertxVersion = '3.3.0'
-
+    vertxVersion = '3.3.3'
     junitVersion = '4.12'
 }
 
@@ -35,7 +34,7 @@ repositories {
 }
 
 group = 'io.engagingspaces'
-version = '0.9.0'
+version = '1.0.0'
 
 task docProcessing(type: JavaCompile, group: 'build') {
     source = sourceSets.main.java
@@ -59,7 +58,6 @@ compileJava {
 
 dependencies {
     compile "io.vertx:vertx-core:$vertxVersion"
-
     compileOnly "io.vertx:vertx-docgen:$vertxVersion"
 
     testCompile "junit:junit:$junitVersion"
