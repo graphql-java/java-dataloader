@@ -129,9 +129,9 @@ No more talking. Let's install the `vertx-dataloader` dependency and look at som
 
 ### Known issues
 
-- **Work in progress...**but a `1.0.0` release is imminent!
-- There is a [weird issue](https://github.com/engagingspaces/vertx-dataloader/issues/2) where TravisCI is failing, but local builds are just fine.
+- **Work in progress...**but a `1.0.0` release is on its way!
 - Not yet production-ready as of yet, still porting tests that may uncover bugs.
+- Tests on job queue ordering need refactoring to Futures, one test currently omitted
 
 ### Upcoming features
 
