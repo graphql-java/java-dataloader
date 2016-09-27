@@ -22,6 +22,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.junit.RunTestOnContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertThat;
 
 /**
@@ -531,11 +533,199 @@ public class DataLoaderTest {
         assertThat(future2.result(), equalTo(key1));
     }
 
+    @Test
+    public void should_Clear_objects_with_complex_key() {
+        ArrayList<Collection> loadCalls = new ArrayList<>();
+        DataLoaderOptions options = DataLoaderOptions.create().setCacheKeyFunction(getJsonObjectCacheMapFn());
+        DataLoader<JsonObject, Integer> identityLoader = idLoader(options, loadCalls);
+
+        JsonObject key1 = new JsonObject().put("id", 123);
+        JsonObject key2 = new JsonObject().put("id", 123);
+
+        Future<Integer> future1 = identityLoader.load(key1);
+        identityLoader.dispatch();
+
+        await().until(future1::isComplete);
+        identityLoader.clear(key2); // clear equivalent object key
+
+        Future<Integer> future2 = identityLoader.load(key1);
+        identityLoader.dispatch();
+
+        await().until(future2::isComplete);
+        assertThat(loadCalls, equalTo(Arrays.asList(Collections.singletonList(key1), Collections.singletonList(key1))));
+        assertThat(future1.result(), equalTo(key1));
+        assertThat(future2.result(), equalTo(key1));
+    }
+
+    @Test
+    public void should_Accept_objects_with_different_order_of_keys() {
+        ArrayList<Collection> loadCalls = new ArrayList<>();
+        DataLoaderOptions options = DataLoaderOptions.create().setCacheKeyFunction(getJsonObjectCacheMapFn());
+        DataLoader<JsonObject, Integer> identityLoader = idLoader(options, loadCalls);
+
+        JsonObject key1 = new JsonObject().put("a", 123).put("b", 321);
+        JsonObject key2 = new JsonObject().put("b", 321).put("a", 123);
+
+        // Fetches as expected
+
+        Future<Integer> future1 = identityLoader.load(key1);
+        Future<Integer> future2 = identityLoader.load(key2);
+        identityLoader.dispatch();
+
+        await().until(() -> future1.isComplete() && future2.isComplete());
+        assertThat(loadCalls, equalTo(Collections.singletonList(Collections.singletonList(key1))));
+        assertThat(loadCalls.size(), equalTo(1));
+        assertThat(future1.result(), equalTo(key1));
+        assertThat(future2.result(), equalTo(key1));
+    }
+
+    @Test
+    public void should_Allow_priming_the_cache_with_an_object_key() {
+        ArrayList<Collection> loadCalls = new ArrayList<>();
+        DataLoaderOptions options = DataLoaderOptions.create().setCacheKeyFunction(getJsonObjectCacheMapFn());
+        DataLoader<JsonObject, JsonObject> identityLoader = idLoader(options, loadCalls);
+
+        JsonObject key1 = new JsonObject().put("id", 123);
+        JsonObject key2 = new JsonObject().put("id", 123);
+
+        identityLoader.prime(key1, key1);
+
+        Future<JsonObject> future1 = identityLoader.load(key1);
+        Future<JsonObject> future2 = identityLoader.load(key2);
+        identityLoader.dispatch();
+
+        await().until(() -> future1.isComplete() && future2.isComplete());
+        assertThat(loadCalls, equalTo(Collections.emptyList()));
+        assertThat(future1.result(), equalTo(key1));
+        assertThat(future2.result(), equalTo(key1));
+    }
+
+    @Test
+    public void should_Accept_a_custom_cache_map_implementation() {
+        CustomCacheMap customMap = new CustomCacheMap();
+        ArrayList<Collection> loadCalls = new ArrayList<>();
+        DataLoaderOptions options = DataLoaderOptions.create().setCacheMap(customMap);
+        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+
+        // Fetches as expected
+
+        Future future1 = identityLoader.load("a");
+        Future future2 = identityLoader.load("b");
+        CompositeFuture composite = identityLoader.dispatch();
+
+        await().until((Callable<Boolean>) composite::isComplete);
+        assertThat(future1.result(), equalTo("a"));
+        assertThat(future2.result(), equalTo("b"));
+
+        assertThat(loadCalls, equalTo(Collections.singletonList(Arrays.asList("a", "b"))));
+        assertArrayEquals(customMap.stash.keySet().toArray(), Arrays.asList("a", "b").toArray());
+
+        Future future3 = identityLoader.load("c");
+        Future future2a = identityLoader.load("b");
+        composite = identityLoader.dispatch();
+
+        await().until((Callable<Boolean>) composite::isComplete);
+        assertThat(future3.result(), equalTo("c"));
+        assertThat(future2a.result(), equalTo("b"));
+
+        assertThat(loadCalls, equalTo(Arrays.asList(Arrays.asList("a", "b"), Collections.singletonList("c"))));
+        assertArrayEquals(customMap.stash.keySet().toArray(), Arrays.asList("a", "b", "c").toArray());
+
+        // Supports clear
+
+        identityLoader.clear("b");
+        assertArrayEquals(customMap.stash.keySet().toArray(), Arrays.asList("a", "c").toArray());
+
+        Future future2b = identityLoader.load("b");
+        composite = identityLoader.dispatch();
+
+        await().until((Callable<Boolean>) composite::isComplete);
+        assertThat(future2b.result(), equalTo("b"));
+        assertThat(loadCalls, equalTo(Arrays.asList(Arrays.asList("a", "b"),
+                Collections.singletonList("c"), Collections.singletonList("b"))));
+        assertArrayEquals(customMap.stash.keySet().toArray(), Arrays.asList("a", "c", "b").toArray());
+
+        // Supports clear all
+
+        identityLoader.clearAll();
+        assertArrayEquals(customMap.stash.keySet().toArray(), Collections.emptyList().toArray());
+    }
+
+    // It is resilient to job queue ordering
+
+    @Test
+    public void should_Batch_loads_occurring_within_futures() {
+        ArrayList<Collection> loadCalls = new ArrayList<>();
+        DataLoader<String, String> identityLoader = idLoader(DataLoaderOptions.create(), loadCalls);
+
+        Future.<String>future().setHandler(rh -> {
+            identityLoader.load("a");
+            Future.future().setHandler(rh2 -> {
+                identityLoader.load("b");
+                Future.future().setHandler(rh3 -> {
+                    identityLoader.load("c");
+                    Future.future().setHandler(rh4 ->
+                            identityLoader.load("d")).complete();
+                }).complete();
+            }).complete();
+        }).complete();
+        CompositeFuture composite = identityLoader.dispatch();
+
+        await().until((Callable<Boolean>) composite::isComplete);
+        assertThat(loadCalls, equalTo(
+                Collections.singletonList(Arrays.asList("a", "b", "c", "d"))));
+    }
+
+    @Test
+    @Ignore
+    public void should_Call_a_loader_from_a_loader() {
+        // TODO Provide implementation with Futures
+    }
+
+    // Helper methods
+
     private static CacheKey<JsonObject> getJsonObjectCacheMapFn() {
         return key -> key.stream()
-                .sorted()
                 .map(entry -> entry.getKey() + ":" + entry.getValue())
+                .sorted()
                 .collect(Collectors.joining());
+    }
+
+    public class CustomCacheMap implements CacheMap<String, Object> {
+
+        public Map<String, Object> stash;
+
+        public CustomCacheMap() {
+            stash = new LinkedHashMap<>();
+        }
+
+        @Override
+        public boolean containsKey(String key) {
+            return stash.containsKey(key);
+        }
+
+        @Override
+        public Object get(String key) {
+            return stash.get(key);
+        }
+
+        @Override
+        public CacheMap<String, Object> set(String key, Object value) {
+            stash.put(key, value);
+            return this;
+        }
+
+        @Override
+        public CacheMap<String, Object> delete(String key) {
+            stash.remove(key);
+            return this;
+        }
+
+        @Override
+        public CacheMap<String, Object> clear() {
+            stash.clear();
+            return this;
+        }
     }
 
     @SuppressWarnings("unchecked")
