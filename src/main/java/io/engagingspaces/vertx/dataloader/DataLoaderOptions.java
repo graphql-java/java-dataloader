@@ -16,7 +16,6 @@
 
 package io.engagingspaces.vertx.dataloader;
 
-import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 import java.util.Objects;
@@ -154,7 +153,7 @@ public class DataLoaderOptions {
      * @param cacheMap the cache map instance
      * @return the data loader options for fluent coding
      */
-    public <K, V> DataLoaderOptions setCacheMap(CacheMap<K, Future<V>> cacheMap) {
+    public DataLoaderOptions setCacheMap(CacheMap cacheMap) {
         this.cacheMap = cacheMap;
         return this;
     }
