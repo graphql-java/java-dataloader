@@ -113,11 +113,59 @@ and some other optional features that ensure all load requests eventually comple
 
 ### Installing
 
-No more talking. Let's install the `vertx-dataloader` dependency and look at some actual code!
+Gradle users configure the `vertx-dataloader` dependency in `build.gradle`:
+
+```
+repositories {
+    maven {
+        jcenter()
+    }
+}
+
+dependencies {
+    compile 'io.engagingspaces:vertx-dataloader:0.9.0'
+}
+```
 
 ### Building
 
+To build from source use the Gradle wrapper:
+
+```
+./gradlew clean build
+```
+
+Or when using Maven add the following repository to your `pom.xml`:
+
+```
+<repositories>
+    <repository>
+        <snapshots>
+            <enabled>false</enabled>
+        </snapshots>
+        <id>central</id>
+        <name>bintray</name>
+        <url>http://jcenter.bintray.com</url>
+    </repository>
+</repositories>
+```
+
+And add the dependency to `vertx-dataloader`:
+
+```
+<dependency>
+    <groupId>io.engagingspaces</groupId>
+    <artifactId>vertx-dataloader</artifactId>
+    <version>0.9.0</version>
+    <type>pom</type>
+</dependency>
+```
+
 ### Using
+
+```java
+
+```
 
 ### JavaDoc
 
@@ -125,20 +173,24 @@ No more talking. Let's install the `vertx-dataloader` dependency and look at som
 
 ### Current releases
 
-- Not yet released
+- `1.0.0` Initial release
 
 ### Known issues
 
-- **Work in progress...**but a `1.0.0` release is on its way!
-- Not yet production-ready as of yet, still porting tests that may uncover bugs.
 - Tests on job queue ordering need refactoring to Futures, one test currently omitted
 
 ### Upcoming features
 
+- Distributed cache
+
 ### Future ideas
+
+- `CompletableFuture` implementation
 
 ## Other information sources
 
+- [Facebook DataLoader Github repo](https://github.com/facebook/dataloader)
+- [Facebook DataLoader code walkthrough on YouTube](https://youtu.be/OQTnXNCDywA)
 - [Using DataLoader and GraphQL to batch requests](http://gajus.com/blog/9/using-dataloader-to-batch-requests)
 
 ## Contributing
