@@ -23,6 +23,7 @@ ext {
 }
 
 apply plugin: 'java'
+apply from: "$projectDir/gradle/coverage.gradle"
 apply from: "$projectDir/gradle/publishing.gradle"
 
 repositories {
@@ -34,7 +35,7 @@ repositories {
 }
 
 group = 'io.engagingspaces'
-version = '1.0.0'
+version = '0.9.1'
 
 task docProcessing(type: JavaCompile, group: 'build') {
     source = sourceSets.main.java
