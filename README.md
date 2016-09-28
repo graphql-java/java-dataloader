@@ -1,6 +1,7 @@
 # Vert.x `DataLoader`
 
 [![Build Status](https://travis-ci.org/engagingspaces/vertx-dataloader.svg?branch=master)](https://travis-ci.org/engagingspaces/vertx-dataloader/)&nbsp;&nbsp;
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/ec906aa3a12147e28b69b93e3a9d9bf7)](https://www.codacy.com/app/engagingspaces/vertx-dataloader?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=engagingspaces/vertx-dataloader&amp;utm_campaign=Badge_Grade)&nbsp;&nbsp;
 [![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/engagingspaces/vertx-dataloader/blob/master/LICENSE)&nbsp;&nbsp;
 [ ![Download](https://api.bintray.com/packages/engagingspaces/maven/vertx-dataloader/images/download.svg) ](https://bintray.com/engagingspaces/maven/vertx-dataloader/_latestVersion)
 
