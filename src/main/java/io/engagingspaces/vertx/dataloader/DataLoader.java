@@ -100,7 +100,7 @@ public class DataLoader<K, V> {
         } else {
             CompositeFuture compositeFuture = batchLoadFunction.load(Collections.singleton(key));
             if (compositeFuture.succeeded()) {
-                future.complete(compositeFuture.result().result(0));
+                future.complete(compositeFuture.result().resultAt(0));
             } else {
                 future.fail(compositeFuture.cause());
             }
@@ -141,7 +141,7 @@ public class DataLoader<K, V> {
         AtomicInteger index = new AtomicInteger(0);
         loaderQueue.forEach((key, future) -> {
             if (batch.succeeded(index.get())) {
-                future.complete(batch.result(index.get()));
+                future.complete(batch.resultAt(index.get()));
             } else {
                 future.fail(batch.cause(index.get()));
             }

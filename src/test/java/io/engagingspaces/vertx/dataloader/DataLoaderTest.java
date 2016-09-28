@@ -445,8 +445,8 @@ public class DataLoaderTest {
 
         identityLoader.dispatch().setHandler(rh -> {
             assertThat(rh.succeeded(), is(true));
-            assertThat(rh.result().result(0), equalTo(keyA));
-            assertThat(rh.result().result(1), equalTo(keyB));
+            assertThat(rh.result().resultAt(0), equalTo(keyA));
+            assertThat(rh.result().resultAt(1), equalTo(keyB));
         });
 
         assertThat(loadCalls.size(), equalTo(1));
@@ -464,7 +464,7 @@ public class DataLoaderTest {
 
         identityLoader.dispatch().setHandler(rh -> {
             assertThat(rh.succeeded(), is(true));
-            assertThat(rh.result().result(0), equalTo(keyA));
+            assertThat(rh.result().resultAt(0), equalTo(keyA));
             assertThat(identityLoader.getCacheKey(keyB), equalTo(keyB));
         });
 
