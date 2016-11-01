@@ -5,8 +5,6 @@
 [![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/engagingspaces/vertx-dataloader/blob/master/LICENSE)&nbsp;&nbsp;
 [ ![Download](https://api.bintray.com/packages/engagingspaces/maven/vertx-dataloader/images/download.svg) ](https://bintray.com/engagingspaces/maven/vertx-dataloader/_latestVersion)
 
-**Work in progress. Stable version `1.0.0` soon to be released..**
-
 ![vertx-dataloader-concepts](https://cloud.githubusercontent.com/assets/5111931/17837825/f5748bfc-67bd-11e6-9c7a-d407bb92c3d9.png)
 
 This small and simple utility library is a port of [Facebook DataLoader](https://github.com/facebook/dataloader)
@@ -32,8 +30,6 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 - [Let's get started!](#lets-get-started)
   - [Installing](#installing)
   - [Building](#building)
-  - [Using](#using)
-  - [JavaDoc](#javadoc)
 - [Project plans](#project-plans)
   - [Current releases](#current-releases)
   - [Known issues](#known-issues)
@@ -161,14 +157,6 @@ And add the dependency to `vertx-dataloader`:
     <type>pom</type>
 </dependency>
 ```
-
-### Using
-
-```java
-
-```
-
-### JavaDoc
 
 ## Project plans
 
