@@ -138,16 +138,18 @@ public class DataLoader<K, V> {
             return CompositeFuture.all(Collections.emptyList());
         }
         CompositeFuture batch = batchLoadFunction.load(loaderQueue.keySet());
-        AtomicInteger index = new AtomicInteger(0);
-        loaderQueue.forEach((key, future) -> {
-            if (batch.succeeded(index.get())) {
-                future.complete(batch.resultAt(index.get()));
-            } else {
-                future.fail(batch.cause(index.get()));
-            }
-            index.incrementAndGet();
+        batch.setHandler(rh -> {
+            AtomicInteger index = new AtomicInteger(0);
+            loaderQueue.forEach((key, future) -> {
+                if (batch.succeeded(index.get())) {
+                    future.complete(batch.resultAt(index.get()));
+                } else {
+                    future.fail(batch.cause(index.get()));
+                }
+                index.incrementAndGet();
+            });
+            loaderQueue.clear();
         });
-        loaderQueue.clear();
         return batch;
     }
 
