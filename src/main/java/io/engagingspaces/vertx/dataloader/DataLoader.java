@@ -123,7 +123,7 @@ public class DataLoader<K, V> {
      * @return the composite future of the list of values
      */
     public CompositeFuture loadMany(List<K> keys) {
-        return CompositeFuture.all(keys.stream().map(this::load).collect(Collectors.toList()));
+        return CompositeFuture.join(keys.stream().map(this::load).collect(Collectors.toList()));
     }
 
     /**
@@ -135,7 +135,7 @@ public class DataLoader<K, V> {
      */
     public CompositeFuture dispatch() {
         if (!loaderOptions.batchingEnabled() || loaderQueue.size() == 0) {
-            return CompositeFuture.all(Collections.emptyList());
+            return CompositeFuture.join(Collections.emptyList());
         }
         CompositeFuture batch = batchLoadFunction.load(loaderQueue.keySet());
         batch.setHandler(rh -> {
