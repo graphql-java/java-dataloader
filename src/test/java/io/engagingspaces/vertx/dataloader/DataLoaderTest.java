@@ -32,6 +32,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import static java.util.Arrays.asList;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertArrayEquals;
@@ -85,14 +86,14 @@ public class DataLoaderTest {
                         .map(Future::succeededFuture)
                         .collect(Collectors.toCollection(ArrayList::new))));
 
-        CompositeFuture futureAll = identityLoader.loadMany(Arrays.asList(1, 2));
+        CompositeFuture futureAll = identityLoader.loadMany(asList(1, 2));
         futureAll.setHandler(rh -> {
             assertThat(rh.result().size(), is(2));
             success.set(rh.succeeded());
         });
         identityLoader.dispatch();
         await().untilAtomic(success, is(true));
-        assertThat(futureAll.list(), equalTo(Arrays.asList(1, 2)));
+        assertThat(futureAll.list(), equalTo(asList(1, 2)));
     }
 
     @Test
@@ -120,7 +121,7 @@ public class DataLoaderTest {
         await().until(() -> future1.isComplete() && future2.isComplete());
         assertThat(future1.result(), equalTo(1));
         assertThat(future2.result(), equalTo(2));
-        assertThat(loadCalls, equalTo(Collections.singletonList(Arrays.asList(1, 2))));
+        assertThat(loadCalls, equalTo(Collections.singletonList(asList(1, 2))));
     }
 
     @Test
@@ -151,7 +152,7 @@ public class DataLoaderTest {
         await().until(() -> future1.isComplete() && future2.isComplete());
         assertThat(future1.result(), equalTo("A"));
         assertThat(future2.result(), equalTo("B"));
-        assertThat(loadCalls, equalTo(Collections.singletonList(Arrays.asList("A", "B"))));
+        assertThat(loadCalls, equalTo(Collections.singletonList(asList("A", "B"))));
 
         Future<String> future1a = identityLoader.load("A");
         Future<String> future3 = identityLoader.load("C");
@@ -160,7 +161,7 @@ public class DataLoaderTest {
         await().until(() -> future1a.isComplete() && future3.isComplete());
         assertThat(future1a.result(), equalTo("A"));
         assertThat(future3.result(), equalTo("C"));
-        assertThat(loadCalls, equalTo(Arrays.asList(Arrays.asList("A", "B"), Collections.singletonList("C"))));
+        assertThat(loadCalls, equalTo(asList(asList("A", "B"), Collections.singletonList("C"))));
 
         Future<String> future1b = identityLoader.load("A");
         Future<String> future2a = identityLoader.load("B");
@@ -171,7 +172,41 @@ public class DataLoaderTest {
         assertThat(future1b.result(), equalTo("A"));
         assertThat(future2a.result(), equalTo("B"));
         assertThat(future3a.result(), equalTo("C"));
-        assertThat(loadCalls, equalTo(Arrays.asList(Arrays.asList("A", "B"), Collections.singletonList("C"))));
+        assertThat(loadCalls, equalTo(asList(asList("A", "B"), Collections.singletonList("C"))));
+    }
+
+    @Test
+    public void should_Not_redispatch_previous_load() {
+      ArrayList<Collection> loadCalls = new ArrayList<>();
+      DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+
+      Future<String> future1 = identityLoader.load("A");
+      identityLoader.dispatch();
+
+      Future<String> future2 = identityLoader.load("B");
+      identityLoader.dispatch();
+
+      await().until(() -> future1.isComplete() && future2.isComplete());
+      assertThat(future1.result(), equalTo("A"));
+      assertThat(future2.result(), equalTo("B"));
+      assertThat(loadCalls, equalTo(asList(asList("A"), asList("B"))));
+    }
+
+    @Test
+    public void should_Cache_on_redispatch() {
+      ArrayList<Collection> loadCalls = new ArrayList<>();
+      DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+
+      Future<String> future1 = identityLoader.load("A");
+      identityLoader.dispatch();
+
+      CompositeFuture future2 = identityLoader.loadMany(asList("A", "B"));
+      identityLoader.dispatch();
+
+      await().until(() -> future1.isComplete() && future2.isComplete());
+      assertThat(future1.result(), equalTo("A"));
+      assertThat(future2.list(), equalTo(asList("A", "B")));
+      assertThat(loadCalls, equalTo(asList(asList("A"), asList("B"))));
     }
 
     @Test
@@ -186,7 +221,7 @@ public class DataLoaderTest {
         await().until(() -> future1.isComplete() && future2.isComplete());
         assertThat(future1.result(), equalTo("A"));
         assertThat(future2.result(), equalTo("B"));
-        assertThat(loadCalls, equalTo(Collections.singletonList(Arrays.asList("A", "B"))));
+        assertThat(loadCalls, equalTo(Collections.singletonList(asList("A", "B"))));
 
         identityLoader.clear("A");
 
@@ -197,7 +232,7 @@ public class DataLoaderTest {
         await().until(() -> future1a.isComplete() && future2a.isComplete());
         assertThat(future1a.result(), equalTo("A"));
         assertThat(future2a.result(), equalTo("B"));
-        assertThat(loadCalls, equalTo(Arrays.asList(Arrays.asList("A", "B"), Collections.singletonList("A"))));
+        assertThat(loadCalls, equalTo(asList(asList("A", "B"), Collections.singletonList("A"))));
     }
 
     @Test
@@ -212,7 +247,7 @@ public class DataLoaderTest {
         await().until(() -> future1.isComplete() && future2.isComplete());
         assertThat(future1.result(), equalTo("A"));
         assertThat(future2.result(), equalTo("B"));
-        assertThat(loadCalls, equalTo(Collections.singletonList(Arrays.asList("A", "B"))));
+        assertThat(loadCalls, equalTo(Collections.singletonList(asList("A", "B"))));
 
         identityLoader.clearAll();
 
@@ -223,7 +258,7 @@ public class DataLoaderTest {
         await().until(() -> future1a.isComplete() && future2a.isComplete());
         assertThat(future1a.result(), equalTo("A"));
         assertThat(future2a.result(), equalTo("B"));
-        assertThat(loadCalls, equalTo(Arrays.asList(Arrays.asList("A", "B"), Arrays.asList("A", "B"))));
+        assertThat(loadCalls, equalTo(asList(asList("A", "B"), asList("A", "B"))));
     }
 
     @Test
@@ -316,7 +351,7 @@ public class DataLoaderTest {
 
         await().until(future2::isComplete);
         assertThat(future2.result(), equalTo(2));
-        assertThat(loadCalls, equalTo(Arrays.asList(Collections.singletonList(1), Collections.singletonList(2))));
+        assertThat(loadCalls, equalTo(asList(Collections.singletonList(1), Collections.singletonList(2))));
     }
 
     @Test
@@ -339,7 +374,7 @@ public class DataLoaderTest {
         assertThat(future3.failed(), is(true));
         assertThat(future4.result(), equalTo(4));
 
-        assertThat(loadCalls, equalTo(Collections.singletonList(Arrays.asList(1, 2, 3, 4))));
+        assertThat(loadCalls, equalTo(Collections.singletonList(asList(1, 2, 3, 4))));
     }
 
     @Test
@@ -409,7 +444,7 @@ public class DataLoaderTest {
         await().until(future2::isComplete);
         assertThat(future2.failed(), is(true));
         assertThat(future2.cause(), instanceOf(IllegalStateException.class));
-        assertThat(loadCalls, equalTo(Arrays.asList(Collections.singletonList(1), Collections.singletonList(1))));
+        assertThat(loadCalls, equalTo(asList(Collections.singletonList(1), Collections.singletonList(1))));
     }
 
     @Test
@@ -430,7 +465,7 @@ public class DataLoaderTest {
         await().until(future2::isComplete);
         cause = future2.cause();
         assertThat(cause.getMessage(), equalTo(cause.getMessage()));
-        assertThat(loadCalls, equalTo(Collections.singletonList(Arrays.asList(1, 2))));
+        assertThat(loadCalls, equalTo(Collections.singletonList(asList(1, 2))));
     }
 
     // Accept any kind of key.
@@ -493,7 +528,7 @@ public class DataLoaderTest {
         await().until(() -> future1.isComplete() && future2.isComplete());
         assertThat(future1.result(), equalTo("A"));
         assertThat(future2.result(), equalTo("B"));
-        assertThat(loadCalls, equalTo(Collections.singletonList(Arrays.asList("A", "B"))));
+        assertThat(loadCalls, equalTo(Collections.singletonList(asList("A", "B"))));
 
         Future<String> future1a = identityLoader.load("A");
         Future<String> future3 = identityLoader.load("C");
@@ -502,7 +537,7 @@ public class DataLoaderTest {
         await().until(() -> future1a.isComplete() && future3.isComplete());
         assertThat(future1a.result(), equalTo("A"));
         assertThat(future3.result(), equalTo("C"));
-        assertThat(loadCalls, equalTo(Arrays.asList(Arrays.asList("A", "B"), Arrays.asList("A", "C"))));
+        assertThat(loadCalls, equalTo(asList(asList("A", "B"), asList("A", "C"))));
 
         Future<String> future1b = identityLoader.load("A");
         Future<String> future2a = identityLoader.load("B");
@@ -513,8 +548,8 @@ public class DataLoaderTest {
         assertThat(future1b.result(), equalTo("A"));
         assertThat(future2a.result(), equalTo("B"));
         assertThat(future3a.result(), equalTo("C"));
-        assertThat(loadCalls, equalTo(Arrays.asList(Arrays.asList("A", "B"),
-                Arrays.asList("A", "C"), Arrays.asList("A", "B", "C"))));
+        assertThat(loadCalls, equalTo(asList(asList("A", "B"),
+                asList("A", "C"), asList("A", "B", "C"))));
     }
 
     // Accepts object key in custom cacheKey function
@@ -557,7 +592,7 @@ public class DataLoaderTest {
         identityLoader.dispatch();
 
         await().until(future2::isComplete);
-        assertThat(loadCalls, equalTo(Arrays.asList(Collections.singletonList(key1), Collections.singletonList(key1))));
+        assertThat(loadCalls, equalTo(asList(Collections.singletonList(key1), Collections.singletonList(key1))));
         assertThat(future1.result(), equalTo(key1));
         assertThat(future2.result(), equalTo(key1));
     }
@@ -622,8 +657,8 @@ public class DataLoaderTest {
         assertThat(future1.result(), equalTo("a"));
         assertThat(future2.result(), equalTo("b"));
 
-        assertThat(loadCalls, equalTo(Collections.singletonList(Arrays.asList("a", "b"))));
-        assertArrayEquals(customMap.stash.keySet().toArray(), Arrays.asList("a", "b").toArray());
+        assertThat(loadCalls, equalTo(Collections.singletonList(asList("a", "b"))));
+        assertArrayEquals(customMap.stash.keySet().toArray(), asList("a", "b").toArray());
 
         Future future3 = identityLoader.load("c");
         Future future2a = identityLoader.load("b");
@@ -633,22 +668,22 @@ public class DataLoaderTest {
         assertThat(future3.result(), equalTo("c"));
         assertThat(future2a.result(), equalTo("b"));
 
-        assertThat(loadCalls, equalTo(Arrays.asList(Arrays.asList("a", "b"), Collections.singletonList("c"))));
-        assertArrayEquals(customMap.stash.keySet().toArray(), Arrays.asList("a", "b", "c").toArray());
+        assertThat(loadCalls, equalTo(asList(asList("a", "b"), Collections.singletonList("c"))));
+        assertArrayEquals(customMap.stash.keySet().toArray(), asList("a", "b", "c").toArray());
 
         // Supports clear
 
         identityLoader.clear("b");
-        assertArrayEquals(customMap.stash.keySet().toArray(), Arrays.asList("a", "c").toArray());
+        assertArrayEquals(customMap.stash.keySet().toArray(), asList("a", "c").toArray());
 
         Future future2b = identityLoader.load("b");
         composite = identityLoader.dispatch();
 
         await().until((Callable<Boolean>) composite::isComplete);
         assertThat(future2b.result(), equalTo("b"));
-        assertThat(loadCalls, equalTo(Arrays.asList(Arrays.asList("a", "b"),
+        assertThat(loadCalls, equalTo(asList(asList("a", "b"),
                 Collections.singletonList("c"), Collections.singletonList("b"))));
-        assertArrayEquals(customMap.stash.keySet().toArray(), Arrays.asList("a", "c", "b").toArray());
+        assertArrayEquals(customMap.stash.keySet().toArray(), asList("a", "c", "b").toArray());
 
         // Supports clear all
 
@@ -678,7 +713,7 @@ public class DataLoaderTest {
 
         await().until((Callable<Boolean>) composite::isComplete);
         assertThat(loadCalls, equalTo(
-                Collections.singletonList(Arrays.asList("a", "b", "c", "d"))));
+                Collections.singletonList(asList("a", "b", "c", "d"))));
     }
 
     @Test
