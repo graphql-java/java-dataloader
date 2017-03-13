@@ -27,6 +27,7 @@ apply from: "$projectDir/gradle/coverage.gradle"
 apply from: "$projectDir/gradle/publishing.gradle"
 
 repositories {
+    mavenLocal()
     mavenCentral()
     jcenter()
     maven {
@@ -35,7 +36,7 @@ repositories {
 }
 
 group = 'io.engagingspaces'
-version = '0.9.3'
+version = '0.9.4'
 
 task docProcessing(type: JavaCompile, group: 'build') {
     source = sourceSets.main.java
