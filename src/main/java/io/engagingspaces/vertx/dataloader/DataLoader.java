@@ -52,6 +52,7 @@ public class DataLoader<K, V> {
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, Future<V>> futureCache;
     private final LinkedHashMap<K, Future<V>> loaderQueue;
+    private final LinkedHashMap<CompositeFuture, LinkedHashMap<K, Future<V>>> dispatchedQueues;
 
     /**
      * Creates a new data loader with the provided batch load function, and default options.
@@ -75,6 +76,7 @@ public class DataLoader<K, V> {
         this.loaderOptions = options == null ? new DataLoaderOptions() : options;
         this.futureCache = loaderOptions.cacheMap().isPresent() ? (CacheMap<Object, Future<V>>) loaderOptions.cacheMap().get() : CacheMap.simpleMap();
         this.loaderQueue = new LinkedHashMap<>();
+        this.dispatchedQueues = new LinkedHashMap<>();
     }
 
     /**
@@ -138,9 +140,10 @@ public class DataLoader<K, V> {
             return CompositeFuture.join(Collections.emptyList());
         }
         CompositeFuture batch = batchLoadFunction.load(loaderQueue.keySet());
+        dispatchedQueues.put(batch, new LinkedHashMap<>(loaderQueue));
         batch.setHandler(rh -> {
             AtomicInteger index = new AtomicInteger(0);
-            loaderQueue.forEach((key, future) -> {
+            dispatchedQueues.get(batch).forEach((key, future) -> {
                 if (batch.succeeded(index.get())) {
                     future.complete(batch.resultAt(index.get()));
                 } else {
@@ -148,8 +151,9 @@ public class DataLoader<K, V> {
                 }
                 index.incrementAndGet();
             });
-            loaderQueue.clear();
+            dispatchedQueues.remove(batch);
         });
+        loaderQueue.clear();
         return batch;
     }
 
