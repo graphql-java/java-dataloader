@@ -36,7 +36,7 @@ repositories {
 }
 
 group = 'io.engagingspaces'
-version = '0.9.4'
+version = '1.0.0'
 
 task docProcessing(type: JavaCompile, group: 'build') {
     source = sourceSets.main.java
