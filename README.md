@@ -15,7 +15,7 @@ An important use case for `DataLoader` is improving the efficiency of GraphQL qu
 many other use cases where you can benefit from using this utility.
 
 Most of the code is ported directly from Facebook's reference implementation, with one IMPORTANT adaptation to make
-it work for Java 8 and Vert.x. ([Find more on this in the paragraphs below]).
+it work for Java 8 and Vert.x. ([more on this below](manual-dispatching)).
 
 But before reading on, be sure to take a short dive into the
 [original documentation](https://github.com/facebook/dataloader/blob/master/README.md) provided by Lee Byron (@leebyron)
@@ -26,14 +26,12 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 - [Features](#features)
 - [Differences to reference implementation](#differences-to-reference-implementation)
   - [Manual dispatching](#manual-dispatching)
-  - [Additional features!](#additional-features)
 - [Let's get started!](#lets-get-started)
   - [Installing](#installing)
   - [Building](#building)
 - [Project plans](#project-plans)
   - [Current releases](#current-releases)
   - [Known issues](#known-issues)
-  - [Upcoming features](#upcoming-features)
   - [Future ideas](#future-ideas)
 - [Other information sources](#other-information-sources)
 - [Contributing](#contributing)
@@ -61,8 +59,6 @@ Vert.x `DataLoader` is a feature-complete port of the Facebook reference impleme
 - Can disable batching and/or caching in configuration
 - Can supply your own [`CacheMap<K, V>`](https://github.com/engagingspaces/vertx-dataloader/blob/master/src/main/java/io/engagingspaces/vertx/dataloader/CacheMap.java) implementations
 - Has very high test coverage (see [Acknowledgements](#acknowlegdements))
-
-Then Vert.x `DataLoader` has some very interesting [Additional features](#additional-features) that result from it being based on Vert.x
 
 ## Differences to reference implementation
 
@@ -97,15 +93,6 @@ and there are also gains to this different mode of operation:
 However, with batch execution control comes responsibility! If you forget to make the call to `dispatch()` then the futures
 in the load request queue will never be batched, and thus _will never complete_! So be careful when crafting your loader designs.
 
-**Note**: In future releases the danger of not invoking dispatch will be greatly diminished. There will be an optional dispatch timeout,
-and some other optional features that ensure all load requests eventually complete. See [Project plans](#project-plans) for upcoming features and ideas.
-
-### Additional features
-
-- Initial release is a feature-complete port of the reference implementation (only change being [Manual dispatching](#manual-dispatching)).
-- Sorry, no additional features yet :flushed:, but this is where _you_ :hand: come into the picture: By giving your [feedback](https://github.com/vertx-dataloader/issues) and [contribute](#contributing)! You are most welcome.
-- See [Project plans](#project-plans) for [upcoming features](#upcoming-features) and [future ideas](#future-ideas).
-
 ## Let's get started!
 
 ### Installing
@@ -120,7 +107,7 @@ repositories {
 }
 
 dependencies {
-    compile 'io.engagingspaces:vertx-dataloader:0.9.0'
+    compile 'io.engagingspaces:vertx-dataloader:1.0.0'
 }
 ```
 
@@ -153,10 +140,15 @@ And add the dependency to `vertx-dataloader`:
 <dependency>
     <groupId>io.engagingspaces</groupId>
     <artifactId>vertx-dataloader</artifactId>
-    <version>0.9.0</version>
+    <version>1.0.0</version>
     <type>pom</type>
 </dependency>
 ```
+
+### Using
+
+Please take a look at the example project [vertx-graphql-example](https://github.com/bmsantos/vertx-graphql-example)
+created by [Bruno Santos](https://github.com/bmsantos).
 
 ## Project plans
 
@@ -167,10 +159,6 @@ And add the dependency to `vertx-dataloader`:
 ### Known issues
 
 - Tests on job queue ordering need refactoring to Futures, one test currently omitted
-
-### Upcoming features
-
-- Distributed cache
 
 ### Future ideas
 
