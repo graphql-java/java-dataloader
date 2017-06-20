@@ -16,7 +16,6 @@
 
 package io.engagingspaces.vertx.dataloader;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 
 import java.util.Collections;
