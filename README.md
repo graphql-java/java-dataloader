@@ -1,11 +1,12 @@
-# Vert.x `DataLoader`
+# Java `DataLoader`
 
 [![Build Status](https://travis-ci.org/bbakerman/java-dataloader.svg?branch=master)](https://travis-ci.org/bbakerman/java-dataloader/)&nbsp;&nbsp;
 [![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/bbakerman/java-dataloader/blob/master/LICENSE)&nbsp;&nbsp;
-[ ![Download](https://api.bintray.com/packages/bbakerman/maven/kava-dataloader/images/download.svg) ](https://bintray.com/bbakerman/maven/java-dataloader/_latestVersion)
+[ ![Download](https://api.bintray.com/packages/bbakerman/maven/java-dataloader/images/download.svg) ](https://bintray.com/bbakerman/maven/java-dataloader/_latestVersion)
 
 
 This small and simple utility library is a Pure Java 8 port of [Facebook DataLoader](https://github.com/facebook/dataloader). 
+
 It can serve as integral part of your application's data layer to provide a
 consistent API over various back-ends and reduce message communication overhead through batching and caching.
 
