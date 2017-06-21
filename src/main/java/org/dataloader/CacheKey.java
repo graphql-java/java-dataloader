@@ -14,27 +14,25 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.engagingspaces.vertx.dataloader;
-
-import java.util.Collection;
+package org.dataloader;
 
 /**
- * Function that is invoked for batch loading the list of data values indicated by the provided list of keys. The
- * function returns a {@link CompositeFuture} to aggregate results of individual load requests.
+ * Function that is invoked on input keys of type {@code K} to derive keys that are required by the {@link CacheMap}
+ * implementation.
  *
- * @param <K> type parameter indicating the type of keys to use for data load requests.
+ * @param <K> type parameter indicating the type of the input key
  *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  */
 @FunctionalInterface
-public interface BatchLoader<K> {
+public interface CacheKey<K> {
 
     /**
-     * Batch load the provided keys and return a composite future of the result.
+     * Returns the cache key that is created from the provided input key.
      *
-     * @param keys the list of keys to load
+     * @param input the input key
      *
-     * @return the composite future
+     * @return the cache key
      */
-    CompositeFuture load(Collection<K> keys);
+    Object getKey(K input);
 }

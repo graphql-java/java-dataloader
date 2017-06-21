@@ -14,10 +14,11 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.engagingspaces.vertx.dataloader;
+package org.dataloader;
 
-import io.engagingspaces.vertx.dataloader.impl.DefaultCacheMap;
-import io.vertx.core.Future;
+import org.dataloader.impl.DefaultCacheMap;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Cache map interface for data loaders that use caching.
@@ -42,7 +43,7 @@ public interface CacheMap<U, V> {
      * @param <V> type parameter indicating the type of the data that is cached
      * @return the cache map
      */
-    static <U, V> CacheMap<U, Future<V>> simpleMap() {
+    static <U, V> CacheMap<U, CompletableFuture<V>> simpleMap() {
         return new DefaultCacheMap<>();
     }
 

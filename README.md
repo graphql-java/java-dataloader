@@ -1,21 +1,19 @@
 # Vert.x `DataLoader`
 
-[![Build Status](https://travis-ci.org/engagingspaces/vertx-dataloader.svg?branch=master)](https://travis-ci.org/engagingspaces/vertx-dataloader/)&nbsp;&nbsp;
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/ec906aa3a12147e28b69b93e3a9d9bf7)](https://www.codacy.com/app/engagingspaces/vertx-dataloader?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=engagingspaces/vertx-dataloader&amp;utm_campaign=Badge_Grade)&nbsp;&nbsp;
-[![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/engagingspaces/vertx-dataloader/blob/master/LICENSE)&nbsp;&nbsp;
-[ ![Download](https://api.bintray.com/packages/engagingspaces/maven/vertx-dataloader/images/download.svg) ](https://bintray.com/engagingspaces/maven/vertx-dataloader/_latestVersion)
+[![Build Status](https://travis-ci.org/bbakerman/java-dataloader.svg?branch=master)](https://travis-ci.org/bbakerman/java-dataloader/)&nbsp;&nbsp;
+[![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/bbakerman/java-dataloader/blob/master/LICENSE)&nbsp;&nbsp;
+[ ![Download](https://api.bintray.com/packages/bbakerman/maven/kava-dataloader/images/download.svg) ](https://bintray.com/bbakerman/maven/java-dataloader/_latestVersion)
 
-![vertx-dataloader-concepts](https://cloud.githubusercontent.com/assets/5111931/17837825/f5748bfc-67bd-11e6-9c7a-d407bb92c3d9.png)
 
-This small and simple utility library is a port of [Facebook DataLoader](https://github.com/facebook/dataloader)
-to Java 8 for use with [Vert.x](http://vertx.io). It can serve as integral part of your application's data layer to provide a
+This small and simple utility library is a Pure Java 8 port of [Facebook DataLoader](https://github.com/facebook/dataloader). 
+It can serve as integral part of your application's data layer to provide a
 consistent API over various back-ends and reduce message communication overhead through batching and caching.
 
-An important use case for `DataLoader` is improving the efficiency of GraphQL query execution, but there are
+An important use case for `java-dataloader` is improving the efficiency of GraphQL query execution, but there are
 many other use cases where you can benefit from using this utility.
 
 Most of the code is ported directly from Facebook's reference implementation, with one IMPORTANT adaptation to make
-it work for Java 8 and Vert.x. ([more on this below](manual-dispatching)).
+it work for Java 8. ([more on this below](manual-dispatching)).
 
 But before reading on, be sure to take a short dive into the
 [original documentation](https://github.com/facebook/dataloader/blob/master/README.md) provided by Lee Byron (@leebyron)
@@ -40,24 +38,24 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 
 ## Features
 
-Vert.x `DataLoader` is a feature-complete port of the Facebook reference implementation with [one major difference](#manual-dispatching). These features are:
+`java-dataloader` is a feature-complete port of the Facebook reference implementation with [one major difference](#manual-dispatching). These features are:
 
 - Simple, intuitive API, using generics and fluent coding
 - Define batch load function with lambda expression
 - Schedule a load request in queue for batching
 - Add load requests from anywhere in code
-- Request returns [`Future<V>`](http://vertx.io/docs/apidocs/io/vertx/core/Future.html) of requested value
-- Can create multiple requests at once, returns [`CompositeFuture`](http://vertx.io/docs/apidocs/io/vertx/core/CompositeFuture.html)
+- Request returns a [`CompleteableFuture<V>`](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html) of the requested value
+- Can create multiple requests at once, returns a `CombinedFutures` object
 - Caches load requests, so data is only fetched once
 - Can clear individual cache keys, so data is fetched on next batch queue dispatch
 - Can prime the cache with key/values, to avoid data being fetched needlessly
 - Can configure cache key function with lambda expression to extract cache key from complex data loader key types
-- Dispatch load request queue after batch is prepared, also returns [`CompositeFuture`](http://vertx.io/docs/apidocs/io/vertx/core/CompositeFuture.html)
+- Dispatch load request queue after batch is prepared, also returns `CombinedFutures`
 - Individual batch futures complete / resolve as batch is processed
-- `CompositeFuture`s results are ordered according to insertion order of load requests
+- `CombinedFutures` results are ordered according to insertion order of load requests
 - Deals with partial errors when a batch future fails
 - Can disable batching and/or caching in configuration
-- Can supply your own [`CacheMap<K, V>`](https://github.com/engagingspaces/vertx-dataloader/blob/master/src/main/java/io/engagingspaces/vertx/dataloader/CacheMap.java) implementations
+- Can supply your own [`CacheMap<K, V>`](https://github.com/bbakerman/java-dataloader/blob/master/src/main/java/io/engagingspaces/vertx/dataloader/CacheMap.java) implementations
 - Has very high test coverage (see [Acknowledgements](#acknowlegdements))
 
 ## Differences to reference implementation
@@ -68,10 +66,6 @@ The original data loader was written in Javascript for NodeJS. NodeJS is single-
 asynchronous logic by invoking functions on separate threads in an event loop, as explained
 [in this post](http://stackoverflow.com/a/19823583/3455094) on StackOverflow.
 
-[Vert.x](http://vertx.io) on the other hand also uses an event loop ([that you should not block!!](http://vertx.io/docs/vertx-core/java/#golden_rule)), but comes
-with actor-like [`Verticle`](http://vertx.io/docs/vertx-core/java/#_verticles)s and a
-distributed [`EventBus`](http://vertx.io/docs/vertx-core/java/#event_bus) that make it inherently asynchronous, and non-blocking.
-
 Now in NodeJS generates so-call 'ticks' in which queued functions are dispatched for execution, and Facebook `DataLoader` uses
 the `nextTick()` function in NodeJS to _automatically_ dequeue load requests and send them to the batch execution function for processing.
 
@@ -80,10 +74,10 @@ And here there is an **IMPORTANT DIFFERENCE** compared to how _this_ data loader
 In NodeJS the batch preparation will not affect the asynchronous processing behaviour in any way. It will just prepare
 batches in 'spare time' as it were.
 
-This is different in Vert.x as you will actually _delay_ the execution of your load requests, until the moment where you make a call
+This is different in Java as you will actually _delay_ the execution of your load requests, until the moment where you make a call
 to `dataLoader.dispatch()` in comparison to when you would just handle futures directly.
 
-Does this make Java `DataLoader` any less useful than the reference implementation? I would argue this is not the case,
+Does this make Java `DataLoader` any less useful than the reference implementation? We would argue this is not the case,
 and there are also gains to this different mode of operation:
 
 - In contrast to the NodeJS implementation _you_ as developer are in full control of when batches are dispatched
@@ -97,7 +91,7 @@ in the load request queue will never be batched, and thus _will never complete_!
 
 ### Installing
 
-Gradle users configure the `vertx-dataloader` dependency in `build.gradle`:
+Gradle users configure the `java-dataloader` dependency in `build.gradle`:
 
 ```
 repositories {
@@ -107,7 +101,7 @@ repositories {
 }
 
 dependencies {
-    compile 'io.engagingspaces:vertx-dataloader:1.0.0'
+    compile 'org.dataloader:java-dataloader:1.0.0'
 }
 ```
 
@@ -119,36 +113,8 @@ To build from source use the Gradle wrapper:
 ./gradlew clean build
 ```
 
-Or when using Maven add the following repository to your `pom.xml`:
-
-```
-<repositories>
-    <repository>
-        <snapshots>
-            <enabled>false</enabled>
-        </snapshots>
-        <id>central</id>
-        <name>bintray</name>
-        <url>http://jcenter.bintray.com</url>
-    </repository>
-</repositories>
-```
-
-And add the dependency to `vertx-dataloader`:
-
-```
-<dependency>
-    <groupId>io.engagingspaces</groupId>
-    <artifactId>vertx-dataloader</artifactId>
-    <version>1.0.0</version>
-    <type>pom</type>
-</dependency>
-```
-
 ### Using
 
-Please take a look at the example project [vertx-graphql-example](https://github.com/bmsantos/vertx-graphql-example)
-created by [Bruno Santos](https://github.com/bmsantos).
 
 ## Project plans
 
@@ -160,9 +126,6 @@ created by [Bruno Santos](https://github.com/bmsantos).
 
 - Tests on job queue ordering need refactoring to Futures, one test currently omitted
 
-### Future ideas
-
-- `CompletableFuture` implementation
 
 ## Other information sources
 
@@ -178,21 +141,31 @@ enhancement requests, or better yet, contribute directly by creating a PR.
 When reporting an issue, please add a detailed instruction, and if possible a code snippet or test that can be used
 as a reproducer of your problem.
 
-When creating a pull request, please adhere to the Vert.x coding style where possible, and create tests with your
+When creating a pull request, please adhere to the current coding style where possible, and create tests with your
 code so it keeps providing an excellent test coverage level. PR's without tests may not be accepted unless they only
 deal with minor changes.
 
 ## Acknowledgements
 
+This library was originally written for use within a [VertX world](http://vertx.io/) and it used the vertx-core `Future` classes to implement
+itself.  All the heavy lifting has been done by this project : [vertx-dataloader](https://github.com/engagingspaces/vertx-dataloader)
+including the extensive testing.
+
+
 This library is entirely inspired by the great works of [Lee Byron](https://github.com/leebyron) and
-[Nicholas Schrock](https://github.com/schrockn) from [Facebook](https://www.facebook.com/) whom I like to thank, and
+[Nicholas Schrock](https://github.com/schrockn) from [Facebook](https://www.facebook.com/) whom we would like to thank, and
 especially @leebyron for taking the time and effort to provide 100% coverage on the codebase. A set of tests which
-I also ported.
+were also ported.
+
+This particular port was done to reduce the dependency on Vertx and to write a pure Java 8 implementation with no dependencies and also
+to use the more normative Java CompletableFuture.  [vertx-core](http://vertx.io/docs/vertx-core/java/) is not a lightweight library by any means
+so having a pure Java 8 implementation is very desirable.
+
 
 ## Licensing
 
-This project [vertx-dataloader](https://github.com/engagingspaces/vertx-dataloader) is licensed under the
-[Apache Commons v2.0](https://github.com/engagingspaces/vertx-dataloader/LICENSE) license.
+This project is licensed under the
+[Apache Commons v2.0](https://www.apache.org/licenses/LICENSE-2.0) license.
 
-Copyright &copy; 2016 Arnold Schrijver and other
-[contributors](https://github.com/engagingspaces/vertx-dataloader/graphs/contributors)
+Copyright &copy; 2016 Arnold Schrijver and others
+[contributors](https://github.com/bbakerman/java-dataloader/graphs/contributors)

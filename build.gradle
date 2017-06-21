@@ -18,12 +18,10 @@ publishing {
 }
 
 ext {
-    vertxVersion = '3.4.0'
     junitVersion = '4.12'
 }
 
 apply plugin: 'java'
-apply from: "$projectDir/gradle/coverage.gradle"
 apply from: "$projectDir/gradle/publishing.gradle"
 
 repositories {
@@ -35,39 +33,22 @@ repositories {
     }
 }
 
-group = 'io.engagingspaces'
+group = 'org.dataloader'
 version = '1.0.0'
-
-task docProcessing(type: JavaCompile, group: 'build') {
-    source = sourceSets.main.java
-    classpath = configurations.compile + configurations.compileOnly
-    destinationDir = project.file('src/main/asciidoc')
-    options.compilerArgs = [
-            "-proc:only",
-            "-processor", "io.vertx.docgen.JavaDocGenProcessor",
-            "-Adocgen.output=$buildDir/asciidoc",
-            "-Adocgen.source=$projectDir/src/main/asciidoc/index.adoc"
-    ]
-}
 
 compileJava {
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 
-    dependsOn project.tasks.docProcessing
-    options.compilerArgs = [ "-Xlint:unchecked", "-Xdiags:verbose" ]
+    options.compilerArgs = ["-Xlint:unchecked", "-Xdiags:verbose"]
 }
 
 dependencies {
-    compile "io.vertx:vertx-core:$vertxVersion"
-    compileOnly "io.vertx:vertx-docgen:$vertxVersion"
-
     testCompile "junit:junit:$junitVersion"
     testCompile 'org.awaitility:awaitility:2.0.0'
-    testCompile "io.vertx:vertx-unit:$vertxVersion"
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '2.14'
-    distributionUrl = "http://services.gradle.org/distributions/gradle-2.14-all.zip"
+    gradleVersion = '4.0'
+    distributionUrl = "http://services.gradle.org/distributions/gradle-4.0-all.zip"
 }

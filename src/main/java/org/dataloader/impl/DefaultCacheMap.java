@@ -14,9 +14,9 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.engagingspaces.vertx.dataloader.impl;
+package org.dataloader.impl;
 
-import io.engagingspaces.vertx.dataloader.CacheMap;
+import org.dataloader.CacheMap;
 
 import java.util.HashMap;
 import java.util.Map;

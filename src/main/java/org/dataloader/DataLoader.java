@@ -14,24 +14,26 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.engagingspaces.vertx.dataloader;
+package org.dataloader;
 
-import io.vertx.core.Future;
+import org.dataloader.impl.CombinedFuturesImpl;
+import org.dataloader.impl.FutureKit;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
  * Data loader is a utility class that allows batch loading of data that is identified by a set of unique keys. For
- * each key that is loaded a separate {@link Future} is returned, that completes as the batch function completes.
- * Besides individual futures a {@link CompositeFuture} of the batch is available as well.
+ * each key that is loaded a separate {@link CompletableFuture} is returned, that completes as the batch function completes.
+ * Besides individual futures a {@link CombinedFuturesImpl} of the batch is available as well.
  * <p>
  * With batching enabled the execution will start after calling {@link DataLoader#dispatch()}, causing the queue of
- * loaded keys to be sent to the batch function, clears the queue, and returns the {@link CompositeFuture}.
+ * loaded keys to be sent to the batch function, clears the queue, and returns the {@link CombinedFuturesImpl}.
  * <p>
  * As batch functions are executed the resulting futures are cached using a cache implementation of choice, so they
  * will only execute once. Individual cache keys can be cleared, so they will be re-fetched when referred to again.
@@ -49,9 +51,9 @@ public class DataLoader<K, V> {
 
     private final BatchLoader<K> batchLoadFunction;
     private final DataLoaderOptions loaderOptions;
-    private final CacheMap<Object, Future<V>> futureCache;
-    private final LinkedHashMap<K, Future<V>> loaderQueue;
-    private final LinkedHashMap<CompositeFuture, LinkedHashMap<K, Future<V>>> dispatchedQueues;
+    private final CacheMap<Object, CompletableFuture<V>> futureCache;
+    private final LinkedHashMap<K, CompletableFuture<V>> loaderQueue;
+    private final LinkedHashMap<CombinedFutures, LinkedHashMap<K, CompletableFuture<V>>> dispatchedQueues;
 
     /**
      * Creates a new data loader with the provided batch load function, and default options.
@@ -73,7 +75,7 @@ public class DataLoader<K, V> {
         Objects.requireNonNull(batchLoadFunction, "Batch load function cannot be null");
         this.batchLoadFunction = batchLoadFunction;
         this.loaderOptions = options == null ? new DataLoaderOptions() : options;
-        this.futureCache = loaderOptions.cacheMap().isPresent() ? (CacheMap<Object, Future<V>>) loaderOptions.cacheMap().get() : CacheMap.simpleMap();
+        this.futureCache = loaderOptions.cacheMap().isPresent() ? (CacheMap<Object, CompletableFuture<V>>) loaderOptions.cacheMap().get() : CacheMap.simpleMap();
         this.loaderQueue = new LinkedHashMap<>();
         this.dispatchedQueues = new LinkedHashMap<>();
     }
@@ -86,24 +88,25 @@ public class DataLoader<K, V> {
      * and returned from cache).
      *
      * @param key the key to load
+     *
      * @return the future of the value
      */
-    public Future<V> load(K key) {
+    public CompletableFuture<V> load(K key) {
         Objects.requireNonNull(key, "Key cannot be null");
         Object cacheKey = getCacheKey(key);
         if (loaderOptions.cachingEnabled() && futureCache.containsKey(cacheKey)) {
             return futureCache.get(cacheKey);
         }
 
-        Future<V> future = Future.future();
+        CompletableFuture<V> future = FutureKit.future();
         if (loaderOptions.batchingEnabled()) {
             loaderQueue.put(key, future);
         } else {
-            CompositeFuture compositeFuture = batchLoadFunction.load(Collections.singleton(key));
-            if (compositeFuture.succeeded()) {
-                future.complete(compositeFuture.result().resultAt(0));
+            CombinedFutures combinedFutures = batchLoadFunction.load(Collections.singleton(key));
+            if (combinedFutures.succeeded()) {
+                future.complete(combinedFutures.resultAt(0));
             } else {
-                future.fail(compositeFuture.cause());
+                future.completeExceptionally(combinedFutures.cause());
             }
         }
         if (loaderOptions.cachingEnabled()) {
@@ -121,10 +124,11 @@ public class DataLoader<K, V> {
      * and returned from cache).
      *
      * @param keys the list of keys to load
+     *
      * @return the composite future of the list of values
      */
-    public CompositeFuture loadMany(List<K> keys) {
-        return CompositeFuture.join(keys.stream().map(this::load).collect(Collectors.toList()));
+    public CombinedFutures loadMany(List<K> keys) {
+        return CombinedFutures.allOf(keys.stream().map(this::load).collect(Collectors.toList()));
     }
 
     /**
@@ -134,19 +138,19 @@ public class DataLoader<K, V> {
      *
      * @return the composite future of the queued load requests
      */
-    public CompositeFuture dispatch() {
+    public CombinedFutures dispatch() {
         if (!loaderOptions.batchingEnabled() || loaderQueue.size() == 0) {
-            return CompositeFuture.join(Collections.emptyList());
+            return CombinedFutures.allOf(Collections.emptyList());
         }
-        CompositeFuture batch = batchLoadFunction.load(loaderQueue.keySet());
+        CombinedFutures batch = batchLoadFunction.load(loaderQueue.keySet());
         dispatchedQueues.put(batch, new LinkedHashMap<>(loaderQueue));
-        batch.setHandler(rh -> {
+        batch.thenAccept(rh -> {
             AtomicInteger index = new AtomicInteger(0);
             dispatchedQueues.get(batch).forEach((key, future) -> {
                 if (batch.succeeded(index.get())) {
                     future.complete(batch.resultAt(index.get()));
                 } else {
-                    future.fail(batch.cause(index.get()));
+                    future.completeExceptionally(batch.cause(index.get()));
                 }
                 index.incrementAndGet();
             });
@@ -161,6 +165,7 @@ public class DataLoader<K, V> {
      * on the next load request.
      *
      * @param key the key to remove
+     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clear(K key) {
@@ -184,12 +189,13 @@ public class DataLoader<K, V> {
      *
      * @param key   the key
      * @param value the value
+     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, V value) {
         Object cacheKey = getCacheKey(key);
         if (!futureCache.containsKey(cacheKey)) {
-            futureCache.set(cacheKey, Future.succeededFuture(value));
+            futureCache.set(cacheKey, CompletableFuture.completedFuture(value));
         }
         return this;
     }
@@ -199,12 +205,13 @@ public class DataLoader<K, V> {
      *
      * @param key   the key
      * @param error the exception to prime instead of a value
+     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, Exception error) {
         Object cacheKey = getCacheKey(key);
         if (!futureCache.containsKey(cacheKey)) {
-            futureCache.set(cacheKey, Future.failedFuture(error));
+            futureCache.set(cacheKey, FutureKit.failedFuture(error));
         }
         return this;
     }
@@ -216,6 +223,7 @@ public class DataLoader<K, V> {
      * If no cache key function is present in {@link DataLoaderOptions}, then the returned value equals the input key.
      *
      * @param key the input key
+     *
      * @return the cache key after the input is transformed with the cache key function
      */
     @SuppressWarnings("unchecked")

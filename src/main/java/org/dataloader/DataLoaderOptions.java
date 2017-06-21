@@ -14,9 +14,7 @@
  * You may elect to redistribute this code under either of these licenses.
  */
 
-package io.engagingspaces.vertx.dataloader;
-
-import io.vertx.core.json.JsonObject;
+package org.dataloader;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -59,22 +57,6 @@ public class DataLoaderOptions {
     }
 
     /**
-     * Creates a new data loader options with values provided as JSON.
-     * <p>
-     * Note that only json-serializable options can be set with this constructor. Others,
-     * like {@link DataLoaderOptions#cacheKeyFunction} must be set manually after creation.
-     * <p>
-     * Note also that this makes it incompatible with true Vert.x data objects, so beware if you use it that way.
-     *
-     * @param json the serialized data loader options to set
-     */
-    public DataLoaderOptions(JsonObject json) {
-        Objects.requireNonNull(json, "Json cannot be null");
-        this.batchingEnabled = json.getBoolean("batchingEnabled");
-        this.batchingEnabled = json.getBoolean("cachingEnabled");
-    }
-
-    /**
      * Option that determines whether to use batching (the default), or not.
      *
      * @return {@code true} when batching is enabled, {@code false} otherwise
@@ -87,6 +69,7 @@ public class DataLoaderOptions {
      * Sets the option that determines whether batch loading is enabled.
      *
      * @param batchingEnabled {@code true} to enable batch loading, {@code false} otherwise
+     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setBatchingEnabled(boolean batchingEnabled) {
@@ -107,6 +90,7 @@ public class DataLoaderOptions {
      * Sets the option that determines whether caching is enabled.
      *
      * @param cachingEnabled {@code true} to enable caching, {@code false} otherwise
+     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setCachingEnabled(boolean cachingEnabled) {
@@ -129,6 +113,7 @@ public class DataLoaderOptions {
      * Sets the function to use for creating the cache key, if caching is enabled.
      *
      * @param cacheKeyFunction the cache key function to use
+     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setCacheKeyFunction(CacheKey cacheKeyFunction) {
@@ -151,6 +136,7 @@ public class DataLoaderOptions {
      * Sets the cache map implementation to use for caching, if caching is enabled.
      *
      * @param cacheMap the cache map instance
+     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setCacheMap(CacheMap cacheMap) {
