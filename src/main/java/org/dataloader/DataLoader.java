@@ -76,7 +76,7 @@ public class DataLoader<K, V> {
         this.loaderOptions = options == null ? new DataLoaderOptions() : options;
         this.futureCache = determineCacheMap(loaderOptions);
         // order of keys matter in data loader
-        this.loaderQueue = Collections.synchronizedMap(new LinkedHashMap<>());
+        this.loaderQueue = new LinkedHashMap<>();
     }
 
     @SuppressWarnings("unchecked")
@@ -103,7 +103,9 @@ public class DataLoader<K, V> {
 
         CompletableFuture<V> future = new CompletableFuture<>();
         if (loaderOptions.batchingEnabled()) {
-            loaderQueue.put(key, future);
+            synchronized (loaderQueue) {
+                loaderQueue.put(key, future);
+            }
         } else {
             PromisedValues<V> combinedFutures = batchLoadFunction.load(Collections.singletonList(key));
             if (combinedFutures.succeeded()) {
@@ -131,9 +133,11 @@ public class DataLoader<K, V> {
      * @return the composite future of the list of values
      */
     public PromisedValues<V> loadMany(List<K> keys) {
-        return PromisedValues.allOf(keys.stream()
-                .map(this::load)
-                .collect(Collectors.toList()));
+        synchronized (loaderQueue) {
+            return PromisedValues.allOf(keys.stream()
+                    .map(this::load)
+                    .collect(Collectors.toList()));
+        }
     }
 
     /**
@@ -144,45 +148,48 @@ public class DataLoader<K, V> {
      * @return the composite future of the queued load requests
      */
     public PromisedValues<V> dispatch() {
+        //
+        // we copy the pre-loaded set of futures ready for dispatch
+        final List<K> keys = new ArrayList<>();
+        final List<CompletableFuture<V>> futureValues = new ArrayList<>();
         synchronized (loaderQueue) {
-            if (!loaderOptions.batchingEnabled() || loaderQueue.size() == 0) {
-                return PromisedValues.allOf(Collections.emptyList());
-            }
-            //
-            // order of keys -> values matter in data loader hence the use of linked hash map
-            //
-            // See https://github.com/facebook/dataloader/blob/master/README.md for more details
-            //
-            List<K> keys = new ArrayList<>(loaderQueue.keySet());
-            List<CompletableFuture<V>> futureList = keys.stream()
-                    .map(loaderQueue::get)
-                    .collect(Collectors.toList());
-
-            PromisedValues<V> batchOfPromisedValues = batchLoadFunction.load(keys);
-
-            assertState(keys.size() == batchOfPromisedValues.size(), "The size of the promised values MUST be the same size as the key list");
-
-            //
-            // when the promised list of values completes, we transfer the values into
-            // the previously cached future objects that client already has been given
-            // via calls to load("foo") and loadMany("foo")
-            //
-            batchOfPromisedValues.thenAccept(promisedValues -> {
-                for (int idx = 0; idx < futureList.size(); idx++) {
-                    CompletableFuture<V> future = futureList.get(idx);
-                    if (promisedValues.succeeded(idx)) {
-                        V value = promisedValues.get(idx);
-                        future.complete(value);
-                    } else {
-                        Throwable cause = promisedValues.cause(idx);
-                        future.completeExceptionally(cause);
-                    }
-                }
+            loaderQueue.forEach((key, future) -> {
+                keys.add(key);
+                futureValues.add(future);
             });
-
             loaderQueue.clear();
-            return batchOfPromisedValues;
         }
+        if (!loaderOptions.batchingEnabled() || keys.size() == 0) {
+            return PromisedValues.allOf(Collections.emptyList());
+        }
+        //
+        // order of keys -> values matter in data loader hence the use of linked hash map
+        //
+        // See https://github.com/facebook/dataloader/blob/master/README.md for more details
+        //
+
+        PromisedValues<V> batchOfPromisedValues = batchLoadFunction.load(keys);
+
+        assertState(keys.size() == batchOfPromisedValues.size(), "The size of the promised values MUST be the same size as the key list");
+
+        //
+        // when the promised list of values completes, we transfer the values into
+        // the previously cached future objects that the client already has been given
+        // via calls to load("foo") and loadMany("foo")
+        //
+        batchOfPromisedValues.thenAccept(promisedValues -> {
+            for (int idx = 0; idx < futureValues.size(); idx++) {
+                CompletableFuture<V> future = futureValues.get(idx);
+                if (promisedValues.succeeded(idx)) {
+                    V value = promisedValues.get(idx);
+                    future.complete(value);
+                } else {
+                    Throwable cause = promisedValues.cause(idx);
+                    future.completeExceptionally(cause);
+                }
+            }
+        });
+        return batchOfPromisedValues;
     }
 
     /**

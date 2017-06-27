@@ -16,7 +16,6 @@
 
 package org.dataloader;
 
-import org.dataloader.impl.CompletableFutureKit;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -38,7 +37,8 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
-import static org.dataloader.impl.CompletableFutureKit.*;
+import static org.dataloader.impl.CompletableFutureKit.cause;
+import static org.dataloader.impl.CompletableFutureKit.failedFuture;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
