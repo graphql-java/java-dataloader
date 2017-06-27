@@ -53,12 +53,12 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
     @Override
     public boolean succeeded() {
-        return FutureKit.succeeded(controller);
+        return CompletableFutureKit.succeeded(controller);
     }
 
     @Override
     public boolean failed() {
-        return FutureKit.failed(controller);
+        return CompletableFutureKit.failed(controller);
     }
 
     @Override
@@ -73,18 +73,18 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
     @Override
     public boolean succeeded(int index) {
-        return FutureKit.succeeded(futures.get(index));
+        return CompletableFutureKit.succeeded(futures.get(index));
     }
 
     @Override
     public Throwable cause(int index) {
-        return FutureKit.cause(futures.get(index));
+        return CompletableFutureKit.cause(futures.get(index));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public T get(int index) {
-        assertState(isDone(),"The PromisedValues MUST be complete before calling the get() method");
+        assertState(isDone(), "The PromisedValues MUST be complete before calling the get() method");
         try {
             CompletableFuture<T> future = futures.get(index);
             return future.get();
@@ -95,7 +95,7 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
     @Override
     public List<T> toList() {
-        assertState(isDone(),"The PromisedValues MUST be complete before calling the toList() method");
+        assertState(isDone(), "The PromisedValues MUST be complete before calling the toList() method");
         int size = size();
         List<T> list = new ArrayList<>(size);
         for (int index = 0; index < size; index++) {

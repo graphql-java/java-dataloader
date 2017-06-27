@@ -16,7 +16,8 @@
 
 package org.dataloader;
 
-import java.util.Objects;
+import org.dataloader.impl.Assertions;
+
 import java.util.Optional;
 
 /**
@@ -39,21 +40,21 @@ public class DataLoaderOptions {
         cachingEnabled = true;
     }
 
-    public static DataLoaderOptions create() {
-        return new DataLoaderOptions();
-    }
-
     /**
      * Clones the provided data loader options.
      *
      * @param other the other options instance
      */
     public DataLoaderOptions(DataLoaderOptions other) {
-        Objects.requireNonNull(other, "Other data loader options cannot be null");
+        Assertions.nonNull(other);
         this.batchingEnabled = other.batchingEnabled;
         this.cachingEnabled = other.cachingEnabled;
         this.cacheKeyFunction = other.cacheKeyFunction;
         this.cacheMap = other.cacheMap;
+    }
+
+    public static DataLoaderOptions create() {
+        return new DataLoaderOptions();
     }
 
     /**

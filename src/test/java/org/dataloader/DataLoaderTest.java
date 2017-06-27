@@ -16,7 +16,7 @@
 
 package org.dataloader;
 
-import org.dataloader.impl.FutureKit;
+import org.dataloader.impl.CompletableFutureKit;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -38,6 +38,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
+import static org.dataloader.impl.CompletableFutureKit.*;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
@@ -117,7 +118,7 @@ public class DataLoaderTest {
     }
 
     private static <V> CompletableFuture<V> futureError() {
-        return FutureKit.failedFuture(new IllegalStateException("Error"));
+        return failedFuture(new IllegalStateException("Error"));
     }
 
     @Before
@@ -137,8 +138,8 @@ public class DataLoaderTest {
 
         CompletableFuture<Integer> future1 = identityLoader.load(1);
 
-        future1.thenAccept(rh -> {
-            assertThat(rh, equalTo(1));
+        future1.thenAccept(value -> {
+            assertThat(value, equalTo(1));
             success.set(true);
         });
         identityLoader.dispatch();
@@ -154,9 +155,9 @@ public class DataLoaderTest {
                         .collect(Collectors.toCollection(ArrayList::new))));
 
         PromisedValues<Integer> futureAll = identityLoader.loadMany(asList(1, 2));
-        futureAll.thenAccept(rh -> {
-            assertThat(rh.size(), is(2));
-            success.set(rh.succeeded());
+        futureAll.thenAccept(promisedValues -> {
+            assertThat(promisedValues.size(), is(2));
+            success.set(promisedValues.succeeded());
         });
         identityLoader.dispatch();
         await().untilAtomic(success, is(true));
@@ -167,9 +168,9 @@ public class DataLoaderTest {
     public void should_Resolve_to_empty_list_when_no_keys_supplied() {
         AtomicBoolean success = new AtomicBoolean();
         PromisedValues<Integer> futureEmpty = identityLoader.loadMany(emptyList());
-        futureEmpty.thenAccept(rh -> {
-            assertThat(rh.size(), is(0));
-            success.set(rh.succeeded());
+        futureEmpty.thenAccept(promisedValues -> {
+            assertThat(promisedValues.size(), is(0));
+            success.set(promisedValues.succeeded());
         });
         identityLoader.dispatch();
         await().untilAtomic(success, is(true));
@@ -411,7 +412,7 @@ public class DataLoaderTest {
 
         await().until(future1::isDone);
         assertThat(future1.isCompletedExceptionally(), is(true));
-        assertThat(FutureKit.cause(future1), instanceOf(IllegalStateException.class));
+        assertThat(cause(future1), instanceOf(IllegalStateException.class));
 
         CompletableFuture<Integer> future2 = evenLoader.load(2);
         evenLoader.dispatch();
@@ -434,11 +435,11 @@ public class DataLoaderTest {
         CompletableFuture<Integer> future3 = evenLoader.load(3);
         CompletableFuture<Integer> future4 = evenLoader.load(4);
         PromisedValues<Integer> result = evenLoader.dispatch();
-        result.thenAccept(rh -> success.set(true));
+        result.thenAccept(promisedValues -> success.set(true));
 
         await().untilAtomic(success, is(true));
         assertThat(future1.isCompletedExceptionally(), is(true));
-        assertThat(FutureKit.cause(future1), instanceOf(IllegalStateException.class));
+        assertThat(cause(future1), instanceOf(IllegalStateException.class));
         assertThat(future2.get(), equalTo(2));
         assertThat(future3.isCompletedExceptionally(), is(true));
         assertThat(future4.get(), equalTo(4));
@@ -458,14 +459,14 @@ public class DataLoaderTest {
 
         await().until(future1::isDone);
         assertThat(future1.isCompletedExceptionally(), is(true));
-        assertThat(FutureKit.cause(future1), instanceOf(IllegalStateException.class));
+        assertThat(cause(future1), instanceOf(IllegalStateException.class));
 
         CompletableFuture<Integer> future2 = errorLoader.load(1);
         errorLoader.dispatch();
 
         await().until(future2::isDone);
         assertThat(future2.isCompletedExceptionally(), is(true));
-        assertThat(FutureKit.cause(future2), instanceOf(IllegalStateException.class));
+        assertThat(cause(future2), instanceOf(IllegalStateException.class));
         assertThat(loadCalls, equalTo(singletonList(singletonList(1))));
     }
 
@@ -483,7 +484,7 @@ public class DataLoaderTest {
 
         await().until(future1::isDone);
         assertThat(future1.isCompletedExceptionally(), is(true));
-        assertThat(FutureKit.cause(future1), instanceOf(IllegalStateException.class));
+        assertThat(cause(future1), instanceOf(IllegalStateException.class));
         assertThat(loadCalls, equalTo(emptyList()));
     }
 
@@ -493,7 +494,7 @@ public class DataLoaderTest {
         DataLoader<Integer, Integer> errorLoader = idLoaderAllErrors(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<Integer> future1 = errorLoader.load(1);
-        future1.handle((rh, t) -> {
+        future1.handle((value, t) -> {
             if (t != null) {
                 // Presumably determine if this error is transient, and only clear the cache in that case.
                 errorLoader.clear(1);
@@ -504,10 +505,10 @@ public class DataLoaderTest {
 
         await().until(future1::isDone);
         assertThat(future1.isCompletedExceptionally(), is(true));
-        assertThat(FutureKit.cause(future1), instanceOf(IllegalStateException.class));
+        assertThat(cause(future1), instanceOf(IllegalStateException.class));
 
         CompletableFuture<Integer> future2 = errorLoader.load(1);
-        future2.handle((rh, t) -> {
+        future2.handle((value, t) -> {
             if (t != null) {
                 // Again, only do this if you can determine the error is transient.
                 errorLoader.clear(1);
@@ -518,7 +519,7 @@ public class DataLoaderTest {
 
         await().until(future2::isDone);
         assertThat(future2.isCompletedExceptionally(), is(true));
-        assertThat(FutureKit.cause(future2), instanceOf(IllegalStateException.class));
+        assertThat(cause(future2), instanceOf(IllegalStateException.class));
         assertThat(loadCalls, equalTo(asList(Collections.singletonList(1), Collections.singletonList(1))));
     }
 
@@ -533,13 +534,13 @@ public class DataLoaderTest {
 
         await().until(future1::isDone);
         assertThat(future1.isCompletedExceptionally(), is(true));
-        Throwable cause = FutureKit.cause(future1);
+        Throwable cause = cause(future1);
         assert cause != null;
         assertThat(cause, instanceOf(IllegalStateException.class));
         assertThat(cause.getMessage(), equalTo("Error"));
 
         await().until(future2::isDone);
-        cause = FutureKit.cause(future2);
+        cause = cause(future2);
         assert cause != null;
         assertThat(cause.getMessage(), equalTo(cause.getMessage()));
         assertThat(loadCalls, equalTo(singletonList(asList(1, 2))));
@@ -558,10 +559,10 @@ public class DataLoaderTest {
         identityLoader.load(keyA);
         identityLoader.load(keyB);
 
-        identityLoader.dispatch().thenAccept(rh -> {
-            assertThat(rh.succeeded(), is(true));
-            assertThat(rh.get(0), equalTo(keyA));
-            assertThat(rh.get(1), equalTo(keyB));
+        identityLoader.dispatch().thenAccept(promisedValues -> {
+            assertThat(promisedValues.succeeded(), is(true));
+            assertThat(promisedValues.get(0), equalTo(keyA));
+            assertThat(promisedValues.get(1), equalTo(keyB));
         });
 
         assertThat(loadCalls.size(), equalTo(1));
@@ -577,9 +578,9 @@ public class DataLoaderTest {
         identityLoader.load(keyA);
         identityLoader.load(keyB);
 
-        identityLoader.dispatch().thenAccept(rh -> {
-            assertThat(rh.succeeded(), is(true));
-            assertThat(rh.get(0), equalTo(keyA));
+        identityLoader.dispatch().thenAccept(promisedValues -> {
+            assertThat(promisedValues.succeeded(), is(true));
+            assertThat(promisedValues.get(0), equalTo(keyA));
             assertThat(identityLoader.getCacheKey(keyB), equalTo(keyB));
         });
 
@@ -773,14 +774,14 @@ public class DataLoaderTest {
 
         Supplier<Object> nullValue = () -> null;
 
-        CompletableFuture.supplyAsync(nullValue).thenAccept(rh -> {
+        CompletableFuture.supplyAsync(nullValue).thenAccept(v1 -> {
             identityLoader.load("a");
-            CompletableFuture.supplyAsync(nullValue).thenAccept(rh2 -> {
+            CompletableFuture.supplyAsync(nullValue).thenAccept(v2 -> {
                 identityLoader.load("b");
-                CompletableFuture.supplyAsync(nullValue).thenAccept(rh3 -> {
+                CompletableFuture.supplyAsync(nullValue).thenAccept(v3 -> {
                     identityLoader.load("c");
                     CompletableFuture.supplyAsync(nullValue).thenAccept(
-                            rh4 ->
+                            v4 ->
                                     identityLoader.load("d"));
                 });
             });

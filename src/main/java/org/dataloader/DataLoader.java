@@ -16,18 +16,18 @@
 
 package org.dataloader;
 
-import org.dataloader.impl.FutureKit;
+import org.dataloader.impl.CompletableFutureKit;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static org.dataloader.impl.Assertions.assertState;
+import static org.dataloader.impl.Assertions.nonNull;
 
 /**
  * Data loader is a utility class that allows batch loading of data that is identified by a set of unique keys. For
@@ -54,8 +54,7 @@ public class DataLoader<K, V> {
     private final BatchLoader<K, V> batchLoadFunction;
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
-    private final LinkedHashMap<K, CompletableFuture<V>> loaderQueue;
-    private final LinkedHashMap<PromisedValues, LinkedHashMap<K, CompletableFuture<V>>> dispatchedQueues;
+    private final Map<K, CompletableFuture<V>> loaderQueue;
 
     /**
      * Creates a new data loader with the provided batch load function, and default options.
@@ -72,14 +71,17 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param options           the batch load options
      */
-    @SuppressWarnings("unchecked")
     public DataLoader(BatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
-        Objects.requireNonNull(batchLoadFunction, "Batch load function cannot be null");
-        this.batchLoadFunction = batchLoadFunction;
+        this.batchLoadFunction = nonNull(batchLoadFunction);
         this.loaderOptions = options == null ? new DataLoaderOptions() : options;
-        this.futureCache = loaderOptions.cacheMap().isPresent() ? (CacheMap<Object, CompletableFuture<V>>) loaderOptions.cacheMap().get() : CacheMap.simpleMap();
-        this.loaderQueue = new LinkedHashMap<>();
-        this.dispatchedQueues = new LinkedHashMap<>();
+        this.futureCache = determineCacheMap(loaderOptions);
+        // order of keys matter in data loader
+        this.loaderQueue = Collections.synchronizedMap(new LinkedHashMap<>());
+    }
+
+    @SuppressWarnings("unchecked")
+    private CacheMap<Object, CompletableFuture<V>> determineCacheMap(DataLoaderOptions loaderOptions) {
+        return loaderOptions.cacheMap().isPresent() ? (CacheMap<Object, CompletableFuture<V>>) loaderOptions.cacheMap().get() : CacheMap.simpleMap();
     }
 
     /**
@@ -94,13 +96,12 @@ public class DataLoader<K, V> {
      * @return the future of the value
      */
     public CompletableFuture<V> load(K key) {
-        Objects.requireNonNull(key, "Key cannot be null");
-        Object cacheKey = getCacheKey(key);
+        Object cacheKey = getCacheKey(nonNull(key));
         if (loaderOptions.cachingEnabled() && futureCache.containsKey(cacheKey)) {
             return futureCache.get(cacheKey);
         }
 
-        CompletableFuture<V> future = FutureKit.future();
+        CompletableFuture<V> future = new CompletableFuture<>();
         if (loaderOptions.batchingEnabled()) {
             loaderQueue.put(key, future);
         } else {
@@ -130,7 +131,9 @@ public class DataLoader<K, V> {
      * @return the composite future of the list of values
      */
     public PromisedValues<V> loadMany(List<K> keys) {
-        return PromisedValues.allOf(keys.stream().map(this::load).collect(Collectors.toList()));
+        return PromisedValues.allOf(keys.stream()
+                .map(this::load)
+                .collect(Collectors.toList()));
     }
 
     /**
@@ -141,30 +144,45 @@ public class DataLoader<K, V> {
      * @return the composite future of the queued load requests
      */
     public PromisedValues<V> dispatch() {
-        if (!loaderOptions.batchingEnabled() || loaderQueue.size() == 0) {
-            return PromisedValues.allOf(Collections.emptyList());
-        }
-        List<K> keys = new ArrayList<>(loaderQueue.keySet());
-        PromisedValues<V> batch = batchLoadFunction.load(keys);
+        synchronized (loaderQueue) {
+            if (!loaderOptions.batchingEnabled() || loaderQueue.size() == 0) {
+                return PromisedValues.allOf(Collections.emptyList());
+            }
+            //
+            // order of keys -> values matter in data loader hence the use of linked hash map
+            //
+            // See https://github.com/facebook/dataloader/blob/master/README.md for more details
+            //
+            List<K> keys = new ArrayList<>(loaderQueue.keySet());
+            List<CompletableFuture<V>> futureList = keys.stream()
+                    .map(loaderQueue::get)
+                    .collect(Collectors.toList());
 
-        assertState(keys.size() == batch.size(), "The size of the promised values MUST be the same size as the key list");
+            PromisedValues<V> batchOfPromisedValues = batchLoadFunction.load(keys);
 
-        dispatchedQueues.put(batch, new LinkedHashMap<>(loaderQueue));
-        batch.thenAccept(rh -> {
-            AtomicInteger index = new AtomicInteger(0);
-            dispatchedQueues.get(batch).forEach((key, future) -> {
-                int idx = index.get();
-                if (batch.succeeded(idx)) {
-                    future.complete(batch.get(idx));
-                } else {
-                    future.completeExceptionally(batch.cause(idx));
+            assertState(keys.size() == batchOfPromisedValues.size(), "The size of the promised values MUST be the same size as the key list");
+
+            //
+            // when the promised list of values completes, we transfer the values into
+            // the previously cached future objects that client already has been given
+            // via calls to load("foo") and loadMany("foo")
+            //
+            batchOfPromisedValues.thenAccept(promisedValues -> {
+                for (int idx = 0; idx < futureList.size(); idx++) {
+                    CompletableFuture<V> future = futureList.get(idx);
+                    if (promisedValues.succeeded(idx)) {
+                        V value = promisedValues.get(idx);
+                        future.complete(value);
+                    } else {
+                        Throwable cause = promisedValues.cause(idx);
+                        future.completeExceptionally(cause);
+                    }
                 }
-                index.incrementAndGet();
             });
-            dispatchedQueues.remove(batch);
-        });
-        loaderQueue.clear();
-        return batch;
+
+            loaderQueue.clear();
+            return batchOfPromisedValues;
+        }
     }
 
     /**
@@ -218,7 +236,7 @@ public class DataLoader<K, V> {
     public DataLoader<K, V> prime(K key, Exception error) {
         Object cacheKey = getCacheKey(key);
         if (!futureCache.containsKey(cacheKey)) {
-            futureCache.set(cacheKey, FutureKit.failedFuture(error));
+            futureCache.set(cacheKey, CompletableFutureKit.failedFuture(error));
         }
         return this;
     }

@@ -3,17 +3,16 @@ package org.dataloader.impl;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-public class FutureKit {
-    public static <V> CompletableFuture<V> future() {
-        return new CompletableFuture<>();
-    }
+/**
+ * Some really basic helpers when working with CompletableFutures
+ */
+public class CompletableFutureKit {
 
     public static <V> CompletableFuture<V> failedFuture(Exception e) {
-        CompletableFuture<V> future = future();
+        CompletableFuture<V> future = new CompletableFuture<>();
         future.completeExceptionally(e);
         return future;
     }
-
 
     public static Throwable cause(CompletableFuture completableFuture) {
         if (!completableFuture.isCompletedExceptionally()) {
