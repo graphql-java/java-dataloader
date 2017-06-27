@@ -49,18 +49,84 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 - Schedule a load request in queue for batching
 - Add load requests from anywhere in code
 - Request returns a [`CompleteableFuture<V>`](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html) of the requested value
-- Can create multiple requests at once, returns a `CombinedFutures` object
+- Can create multiple requests at once
 - Caches load requests, so data is only fetched once
-- Can clear individual cache keys, so data is fetched on next batch queue dispatch
+- Can clear individual cache keys, so data is re-fetched on next batch queue dispatch
 - Can prime the cache with key/values, to avoid data being fetched needlessly
 - Can configure cache key function with lambda expression to extract cache key from complex data loader key types
-- Dispatch load request queue after batch is prepared, also returns `CombinedFutures`
 - Individual batch futures complete / resolve as batch is processed
-- `CombinedFutures` results are ordered according to insertion order of load requests
+- Results are ordered according to insertion order of load requests
 - Deals with partial errors when a batch future fails
 - Can disable batching and/or caching in configuration
 - Can supply your own [`CacheMap<K, V>`](https://github.com/bbakerman/java-dataloader/blob/master/src/main/java/io/engagingspaces/vertx/dataloader/CacheMap.java) implementations
 - Has very high test coverage (see [Acknowledgements](#acknowlegdements))
+
+## Examples
+
+A `DataLoader` object requires a `BatchLoader` function that is responsible for loading a promise of values given
+a list of keys
+
+```java
+
+        BatchLoader<Long, User> userBatchLoader = new BatchLoader<Long, User>() {
+            @Override
+            public PromisedValues<User> load(List<Long> userIds) {
+                List<CompletableFuture<User>> futures = userIds.stream()
+                        .map(userId ->
+                                CompletableFuture.supplyAsync(() ->
+                                        userManager.loadUsersById(userId)))
+                        .collect(Collectors.toList());
+                return PromisedValues.allOf(futures);
+            }
+        };
+        DataLoader<Long, User> userLoader = new DataLoader<>(userBatchLoader);
+
+```
+
+You can then use it to load values which will be `CompleteableFuture` promises to values
+ 
+```java
+        CompletableFuture<User> load1 = userLoader.load(1L);
+```
+ 
+or you can use it to compose future computations as follows.  The key requirement is that you call
+`dataloader.dispatch()` at some point in order to make the underlying calls happen to the batch loader.
+In this version of data loader, this does not happen automatically.  More on this later.
+
+```java
+        userLoader.load(1L)
+                .thenAccept(user -> {
+                    System.out.println("user = " + user);
+                    userLoader.load(user.getInvitedByID())
+                            .thenAccept(invitedBy -> {
+                                System.out.println("invitedBy = " + invitedBy);
+                            });
+                });
+
+        userLoader.load(2L)
+                .thenAccept(user -> {
+                    System.out.println("user = " + user);
+                    userLoader.load(user.getInvitedByID())
+                            .thenAccept(invitedBy -> {
+                                System.out.println("invitedBy = " + invitedBy);
+                            });
+                });
+
+        userLoader.dispatch().join();
+
+```
+
+As stated on the original Facebook project :
+
+>A naive application may have issued four round-trips to a backend for the required information, 
+but with DataLoader this application will make at most two.
+ 
+> DataLoader allows you to decouple unrelated parts of your application without sacrificing the 
+performance of batch data-loading. While the loader presents an API that loads individual values, all 
+concurrent requests will be coalesced and presented to your batch loading function. This allows your 
+application to safely distribute data fetching requirements throughout your application and 
+maintain minimal outgoing data requests.
+
 
 ## Differences to reference implementation
 
@@ -117,9 +183,6 @@ To build from source use the Gradle wrapper:
 ```
 ./gradlew clean build
 ```
-
-### Using
-
 
 ## Project plans
 

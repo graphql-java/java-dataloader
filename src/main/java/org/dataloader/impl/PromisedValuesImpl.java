@@ -110,6 +110,11 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
     }
 
     @Override
+    public void join() {
+        controller.join();
+    }
+
+    @Override
     public CompletableFuture<List<T>> toCompletableFuture() {
         return controller.thenApply(v -> toList());
     }

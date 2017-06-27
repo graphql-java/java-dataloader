@@ -3,6 +3,7 @@ package org.dataloader;
 import org.dataloader.impl.PromisedValuesImpl;
 
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
@@ -159,6 +160,20 @@ public interface PromisedValues<T> {
      * @return the number of {@link CompletableFuture}s under the covers
      */
     int size();
+
+    /**
+     * Waits for the underlying futures to complete.  To better
+     * conform with the use of common functional forms, if a
+     * computation involved in the completion of this
+     * CompletableFuture threw an exception, this method throws an
+     * (unchecked) {@link CompletionException} with the underlying
+     * exception as its cause.
+     *
+     * @throws CancellationException if the computation was cancelled
+     * @throws CompletionException   if this future completed
+     *                               exceptionally or a completion computation threw an exception
+     */
+    void join();
 
     /**
      * @return this as a {@link CompletableFuture} that returns the list of underlying values
