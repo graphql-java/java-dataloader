@@ -1,3 +1,5 @@
+import java.text.SimpleDateFormat
+
 buildscript {
     repositories {
         jcenter()
@@ -12,7 +14,7 @@ apply plugin: 'maven-publish'
 publishing {
     repositories {
         maven {
-            url 'https://dl.bintray.com/engagingspaces/maven'
+            url 'https://dl.bintray.com/bbakerman/maven'
         }
     }
 }
@@ -33,8 +35,9 @@ repositories {
     }
 }
 
+def releaseVersion = System.properties.RELEASE_VERSION
+version = releaseVersion ? releaseVersion : new SimpleDateFormat('yyyy-MM-dd\'T\'HH-mm-ss').format(new Date())
 group = 'org.dataloader'
-version = '1.0.0'
 
 compileJava {
     sourceCompatibility = 1.8

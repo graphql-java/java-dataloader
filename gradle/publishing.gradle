@@ -67,7 +67,7 @@ bintray {
     publish = true
     pkg {
         repo = 'maven'
-        name = "$project.name"
+        name = "java-dataloader"
         desc = projectDescription
         userOrg = 'bbakerman'
         websiteUrl = 'https://github.com/bbakerman/java-dataloader'

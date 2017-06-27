@@ -1,4 +1,4 @@
-# Java `DataLoader`
+# `java-dataloader`
 
 [![Build Status](https://travis-ci.org/bbakerman/java-dataloader.svg?branch=master)](https://travis-ci.org/bbakerman/java-dataloader/)&nbsp;&nbsp;
 [![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/bbakerman/java-dataloader/blob/master/LICENSE)&nbsp;&nbsp;
@@ -10,8 +10,11 @@ This small and simple utility library is a Pure Java 8 port of [Facebook DataLoa
 It can serve as integral part of your application's data layer to provide a
 consistent API over various back-ends and reduce message communication overhead through batching and caching.
 
-An important use case for `java-dataloader` is improving the efficiency of GraphQL query execution, but there are
-many other use cases where you can benefit from using this utility.
+An important use case for `java-dataloader` is improving the efficiency of GraphQL query execution.  Graphql fields
+are resolved in a independent manner and with a true graph of objects, you may be fetching the same object many times.  
+Also a naive implementation of graphql data fetchers can easily lead to the dreaded  "n+1" fetch problem. 
+
+There are many other use cases where you can also benefit from using this utility.
 
 Most of the code is ported directly from Facebook's reference implementation, with one IMPORTANT adaptation to make
 it work for Java 8. ([more on this below](manual-dispatching)).
@@ -67,16 +70,17 @@ The original data loader was written in Javascript for NodeJS. NodeJS is single-
 asynchronous logic by invoking functions on separate threads in an event loop, as explained
 [in this post](http://stackoverflow.com/a/19823583/3455094) on StackOverflow.
 
-Now in NodeJS generates so-call 'ticks' in which queued functions are dispatched for execution, and Facebook `DataLoader` uses
-the `nextTick()` function in NodeJS to _automatically_ dequeue load requests and send them to the batch execution function for processing.
+NodeJS generates so-call 'ticks' in which queued functions are dispatched for execution, and Facebook `DataLoader` uses
+the `nextTick()` function in NodeJS to _automatically_ dequeue load requests and send them to the batch execution function 
+for processing.
 
-And here there is an **IMPORTANT DIFFERENCE** compared to how _this_ data loader operates!!
+And here there is an **IMPORTANT DIFFERENCE** compared to how `java-dataloader` operates!!
 
 In NodeJS the batch preparation will not affect the asynchronous processing behaviour in any way. It will just prepare
 batches in 'spare time' as it were.
 
-This is different in Java as you will actually _delay_ the execution of your load requests, until the moment where you make a call
-to `dataLoader.dispatch()` in comparison to when you would just handle futures directly.
+This is different in Java as you will actually _delay_ the execution of your load requests, until the moment where you make a 
+call to `dataLoader.dispatch()`.
 
 Does this make Java `DataLoader` any less useful than the reference implementation? We would argue this is not the case,
 and there are also gains to this different mode of operation:

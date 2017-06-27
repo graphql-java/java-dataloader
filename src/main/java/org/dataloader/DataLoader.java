@@ -16,9 +16,9 @@
 
 package org.dataloader;
 
-import org.dataloader.impl.CombinedFuturesImpl;
 import org.dataloader.impl.FutureKit;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,13 +27,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static org.dataloader.impl.Assertions.assertState;
+
 /**
  * Data loader is a utility class that allows batch loading of data that is identified by a set of unique keys. For
  * each key that is loaded a separate {@link CompletableFuture} is returned, that completes as the batch function completes.
- * Besides individual futures a {@link CombinedFuturesImpl} of the batch is available as well.
+ * Besides individual futures a {@link PromisedValues} of the batch is available as well.
  * <p>
  * With batching enabled the execution will start after calling {@link DataLoader#dispatch()}, causing the queue of
- * loaded keys to be sent to the batch function, clears the queue, and returns the {@link CombinedFuturesImpl}.
+ * loaded keys to be sent to the batch function, clears the queue, and returns the {@link PromisedValues}.
  * <p>
  * As batch functions are executed the resulting futures are cached using a cache implementation of choice, so they
  * will only execute once. Individual cache keys can be cleared, so they will be re-fetched when referred to again.
@@ -49,18 +51,18 @@ import java.util.stream.Collectors;
  */
 public class DataLoader<K, V> {
 
-    private final BatchLoader<K> batchLoadFunction;
+    private final BatchLoader<K, V> batchLoadFunction;
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
     private final LinkedHashMap<K, CompletableFuture<V>> loaderQueue;
-    private final LinkedHashMap<CombinedFutures, LinkedHashMap<K, CompletableFuture<V>>> dispatchedQueues;
+    private final LinkedHashMap<PromisedValues, LinkedHashMap<K, CompletableFuture<V>>> dispatchedQueues;
 
     /**
      * Creates a new data loader with the provided batch load function, and default options.
      *
      * @param batchLoadFunction the batch load function to use
      */
-    public DataLoader(BatchLoader<K> batchLoadFunction) {
+    public DataLoader(BatchLoader<K, V> batchLoadFunction) {
         this(batchLoadFunction, null);
     }
 
@@ -71,7 +73,7 @@ public class DataLoader<K, V> {
      * @param options           the batch load options
      */
     @SuppressWarnings("unchecked")
-    public DataLoader(BatchLoader<K> batchLoadFunction, DataLoaderOptions options) {
+    public DataLoader(BatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
         Objects.requireNonNull(batchLoadFunction, "Batch load function cannot be null");
         this.batchLoadFunction = batchLoadFunction;
         this.loaderOptions = options == null ? new DataLoaderOptions() : options;
@@ -102,9 +104,9 @@ public class DataLoader<K, V> {
         if (loaderOptions.batchingEnabled()) {
             loaderQueue.put(key, future);
         } else {
-            CombinedFutures combinedFutures = batchLoadFunction.load(Collections.singleton(key));
+            PromisedValues<V> combinedFutures = batchLoadFunction.load(Collections.singletonList(key));
             if (combinedFutures.succeeded()) {
-                future.complete(combinedFutures.resultAt(0));
+                future.complete(combinedFutures.get(0));
             } else {
                 future.completeExceptionally(combinedFutures.cause());
             }
@@ -127,8 +129,8 @@ public class DataLoader<K, V> {
      *
      * @return the composite future of the list of values
      */
-    public CombinedFutures loadMany(List<K> keys) {
-        return CombinedFutures.allOf(keys.stream().map(this::load).collect(Collectors.toList()));
+    public PromisedValues<V> loadMany(List<K> keys) {
+        return PromisedValues.allOf(keys.stream().map(this::load).collect(Collectors.toList()));
     }
 
     /**
@@ -138,19 +140,24 @@ public class DataLoader<K, V> {
      *
      * @return the composite future of the queued load requests
      */
-    public CombinedFutures dispatch() {
+    public PromisedValues<V> dispatch() {
         if (!loaderOptions.batchingEnabled() || loaderQueue.size() == 0) {
-            return CombinedFutures.allOf(Collections.emptyList());
+            return PromisedValues.allOf(Collections.emptyList());
         }
-        CombinedFutures batch = batchLoadFunction.load(loaderQueue.keySet());
+        List<K> keys = new ArrayList<>(loaderQueue.keySet());
+        PromisedValues<V> batch = batchLoadFunction.load(keys);
+
+        assertState(keys.size() == batch.size(), "The size of the promised values MUST be the same size as the key list");
+
         dispatchedQueues.put(batch, new LinkedHashMap<>(loaderQueue));
         batch.thenAccept(rh -> {
             AtomicInteger index = new AtomicInteger(0);
             dispatchedQueues.get(batch).forEach((key, future) -> {
-                if (batch.succeeded(index.get())) {
-                    future.complete(batch.resultAt(index.get()));
+                int idx = index.get();
+                if (batch.succeeded(idx)) {
+                    future.complete(batch.get(idx));
                 } else {
-                    future.completeExceptionally(batch.cause(index.get()));
+                    future.completeExceptionally(batch.cause(idx));
                 }
                 index.incrementAndGet();
             });
