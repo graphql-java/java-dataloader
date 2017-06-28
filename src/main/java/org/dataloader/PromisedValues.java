@@ -22,6 +22,7 @@ import static java.util.Arrays.asList;
  * also compose a {@link CompletableFuture} of that list of values via {@link #toCompletableFuture()}
  */
 public interface PromisedValues<T> {
+
     /**
      * Returns a new {@link PromisedValues} that is completed when all of
      * the given {@link CompletableFuture}s complete.  If any of the given
@@ -31,7 +32,7 @@ public interface PromisedValues<T> {
      * @param cfs the {@link CompletableFuture}s to combine
      * @param <T> the type of values
      *
-     * @return a new CombinedFutures
+     * @return a new PromisedValues
      */
     static <T> PromisedValues<T> allOf(List<CompletableFuture<T>> cfs) {
         return PromisedValuesImpl.combineAllOf(cfs);
@@ -47,7 +48,7 @@ public interface PromisedValues<T> {
      * @param f2  the 2nd completable future
      * @param <T> the type of values
      *
-     * @return a new CombinedFutures
+     * @return a new PromisedValues
      */
     static <T> PromisedValues<T> allOf(CompletableFuture<T> f1, CompletableFuture<T> f2) {
         return PromisedValuesImpl.combineAllOf(asList(f1, f2));
@@ -64,11 +65,12 @@ public interface PromisedValues<T> {
      * @param f3  the 3rd completable future
      * @param <T> the type of values
      *
-     * @return a new CombinedFutures
+     * @return a new PromisedValues
      */
     static <T> PromisedValues allOf(CompletableFuture<T> f1, CompletableFuture<T> f2, CompletableFuture<T> f3) {
         return PromisedValuesImpl.combineAllOf(asList(f1, f2, f3));
     }
+
 
     /**
      * Returns a new {@link PromisedValues} that is completed when all of
@@ -82,11 +84,79 @@ public interface PromisedValues<T> {
      * @param f4  the 4th completable future
      * @param <T> the type of values
      *
-     * @return a new CombinedFutures
+     * @return a new PromisedValues
      */
     static <T> PromisedValues allOf(CompletableFuture<T> f1, CompletableFuture<T> f2, CompletableFuture<T> f3, CompletableFuture<T> f4) {
         return PromisedValuesImpl.combineAllOf(asList(f1, f2, f3, f4));
     }
+
+
+    /**
+     * Returns a new {@link PromisedValues} that is completed when all of
+     * the given {@link PromisedValues}s complete.  If any of the given
+     * {@link PromisedValues}s complete exceptionally, then the returned
+     * {@link PromisedValues} also does so.
+     *
+     * @param cfs the list to combine
+     * @param <T> the type of values
+     *
+     * @return a new PromisedValues
+     */
+    static <T> PromisedValues<T> allPromisedValues(List<PromisedValues<T>> cfs) {
+        return PromisedValuesImpl.combinePromisedValues(cfs);
+    }
+
+    /**
+     * Returns a new {@link PromisedValues} that is completed when all of
+     * the given {@link PromisedValues}s complete.  If any of the given
+     * {@link PromisedValues}s complete exceptionally, then the returned
+     * {@link PromisedValues} also does so.
+     *
+     * @param pv1 the 1st promised value
+     * @param pv2 the 2nd promised value
+     * @param <T> the type of values
+     *
+     * @return a new PromisedValues
+     */
+    static <T> PromisedValues<T> allPromisedValues(PromisedValues<T> pv1, PromisedValues<T> pv2) {
+        return PromisedValuesImpl.combinePromisedValues(asList(pv1, pv2));
+    }
+
+    /**
+     * Returns a new {@link PromisedValues} that is completed when all of
+     * the given {@link PromisedValues}s complete.  If any of the given
+     * {@link PromisedValues}s complete exceptionally, then the returned
+     * {@link PromisedValues} also does so.
+     *
+     * @param pv1 the 1st promised value
+     * @param pv2 the 2nd promised value
+     * @param pv3 the 3rd promised value
+     * @param <T> the type of values
+     *
+     * @return a new PromisedValues
+     */
+    static <T> PromisedValues<T> allPromisedValues(PromisedValues<T> pv1, PromisedValues<T> pv2, PromisedValues<T> pv3) {
+        return PromisedValuesImpl.combinePromisedValues(asList(pv1, pv2, pv3));
+    }
+
+    /**
+     * Returns a new {@link PromisedValues} that is completed when all of
+     * the given {@link PromisedValues}s complete.  If any of the given
+     * {@link PromisedValues}s complete exceptionally, then the returned
+     * {@link PromisedValues} also does so.
+     *
+     * @param pv1 the 1st promised value
+     * @param pv2 the 2nd promised value
+     * @param pv3 the 3rd promised value
+     * @param pv4 the 4th promised value
+     * @param <T> the type of values
+     *
+     * @return a new PromisedValues
+     */
+    static <T> PromisedValues<T> allPromisedValues(PromisedValues<T> pv1, PromisedValues<T> pv2, PromisedValues<T> pv3, PromisedValues<T> pv4) {
+        return PromisedValuesImpl.combinePromisedValues(asList(pv1, pv2, pv3, pv4));
+    }
+
 
     /**
      * When the all the futures complete, this call back will be invoked with this {@link PromisedValues} as a parameter
@@ -169,11 +239,14 @@ public interface PromisedValues<T> {
      * (unchecked) {@link CompletionException} with the underlying
      * exception as its cause.
      *
+     * @return the list of completed values similar to {@link #toList()}
+     *
      * @throws CancellationException if the computation was cancelled
      * @throws CompletionException   if this future completed
      *                               exceptionally or a completion computation threw an exception
+     *
      */
-    void join();
+    List<T> join();
 
     /**
      * @return this as a {@link CompletableFuture} that returns the list of underlying values

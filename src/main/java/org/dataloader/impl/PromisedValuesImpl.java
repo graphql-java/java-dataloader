@@ -5,9 +5,11 @@ import org.dataloader.PromisedValues;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static org.dataloader.impl.Assertions.assertState;
 import static org.dataloader.impl.Assertions.nonNull;
@@ -22,7 +24,10 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
         this.futures = nonNull(cfs);
         this.cause = new AtomicReference<>();
         CompletableFuture[] futuresArray = cfs.toArray(new CompletableFuture[cfs.size()]);
-        this.controller = CompletableFuture.allOf(futuresArray);
+        this.controller = CompletableFuture.allOf(futuresArray).handle((result, throwable) -> {
+            setCause(throwable);
+            return null;
+        });
     }
 
     private PromisedValuesImpl(PromisedValuesImpl<T> other, CompletableFuture<Void> controller) {
@@ -35,17 +40,31 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
         return new PromisedValuesImpl<>(nonNull(cfs));
     }
 
+    public static <T> PromisedValues<T> combinePromisedValues(List<PromisedValues<T>> promisedValues) {
+        List<CompletableFuture<T>> cfs = promisedValues.stream()
+                .map(pv -> (PromisedValuesImpl<T>) pv)
+                .flatMap(pv -> pv.futures.stream())
+                .collect(Collectors.toList());
+        return new PromisedValuesImpl<>(cfs);
+    }
+
+    private void setCause(Throwable throwable) {
+        if (throwable != null) {
+            if (throwable instanceof CompletionException && throwable.getCause() != null) {
+                cause.set(throwable.getCause());
+            } else {
+                cause.set(throwable);
+            }
+        }
+    }
 
     @Override
     public PromisedValues<T> thenAccept(Consumer<PromisedValues<T>> handler) {
+        nonNull(handler);
         CompletableFuture<Void> newController = controller.handle((result, throwable) -> {
-            if (throwable != null) {
-                cause.set(throwable);
-            }
-            if (handler != null) {
-                handler.accept(this);
-            }
-            return null;
+            setCause(throwable);
+            handler.accept(this);
+            return result;
         });
         return new PromisedValuesImpl<>(this, newController);
     }
@@ -53,12 +72,12 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
     @Override
     public boolean succeeded() {
-        return CompletableFutureKit.succeeded(controller);
+        return isDone() && cause.get() == null;
     }
 
     @Override
     public boolean failed() {
-        return CompletableFutureKit.failed(controller);
+        return isDone() && cause.get() != null;
     }
 
     @Override
@@ -110,12 +129,14 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
     }
 
     @Override
-    public void join() {
+    public List<T> join() {
         controller.join();
+        return toList();
     }
 
     @Override
     public CompletableFuture<List<T>> toCompletableFuture() {
         return controller.thenApply(v -> toList());
     }
+
 }

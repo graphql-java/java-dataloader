@@ -26,15 +26,12 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 ## Table of contents
 
 - [Features](#features)
+- [Examples](#examples)
 - [Differences to reference implementation](#differences-to-reference-implementation)
   - [Manual dispatching](#manual-dispatching)
 - [Let's get started!](#lets-get-started)
   - [Installing](#installing)
   - [Building](#building)
-- [Project plans](#project-plans)
-  - [Current releases](#current-releases)
-  - [Known issues](#known-issues)
-  - [Future ideas](#future-ideas)
 - [Other information sources](#other-information-sources)
 - [Contributing](#contributing)
 - [Acknowledgements](#acknowledgements)
@@ -184,16 +181,6 @@ To build from source use the Gradle wrapper:
 ./gradlew clean build
 ```
 
-## Project plans
-
-### Current releases
-
-- `1.0.0` Initial release
-
-### Known issues
-
-- Tests on job queue ordering need refactoring to Futures, one test currently omitted
-
 
 ## Other information sources
 
@@ -219,15 +206,16 @@ This library was originally written for use within a [VertX world](http://vertx.
 itself.  All the heavy lifting has been done by this project : [vertx-dataloader](https://github.com/engagingspaces/vertx-dataloader)
 including the extensive testing.
 
+This particular port was done to reduce the dependency on Vertx and to write a pure Java 8 implementation with no dependencies and also
+to use the more normative Java CompletableFuture.  [vertx-core](http://vertx.io/docs/vertx-core/java/) is not a lightweight library by any means
+so having a pure Java 8 implementation is very desirable.
+
 
 This library is entirely inspired by the great works of [Lee Byron](https://github.com/leebyron) and
 [Nicholas Schrock](https://github.com/schrockn) from [Facebook](https://www.facebook.com/) whom we would like to thank, and
 especially @leebyron for taking the time and effort to provide 100% coverage on the codebase. A set of tests which
 were also ported.
 
-This particular port was done to reduce the dependency on Vertx and to write a pure Java 8 implementation with no dependencies and also
-to use the more normative Java CompletableFuture.  [vertx-core](http://vertx.io/docs/vertx-core/java/) is not a lightweight library by any means
-so having a pure Java 8 implementation is very desirable.
 
 
 ## Licensing
@@ -235,5 +223,5 @@ so having a pure Java 8 implementation is very desirable.
 This project is licensed under the
 [Apache Commons v2.0](https://www.apache.org/licenses/LICENSE-2.0) license.
 
-Copyright &copy; 2016 Arnold Schrijver and others
+Copyright &copy; 2016 Arnold Schrijver, 2017 Brad Baker and others
 [contributors](https://github.com/bbakerman/java-dataloader/graphs/contributors)

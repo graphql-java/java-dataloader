@@ -193,6 +193,37 @@ public class DataLoader<K, V> {
     }
 
     /**
+     * Normally {@link #dispatch()} is an asynchronous operation but this version will 'join' on the
+     * results if dispatch and wait for them to complete.  If the {@link CompletableFuture} callbacks make more
+     * calls to this data loader then the {@link #dispatchDepth()} will be &gt; 0 and this method will loop
+     * around and wait for any other extra batch loads to occur.
+     *
+     * @return the list of all results when the {@link #dispatchDepth()} reached 0
+     */
+    public List<V> dispatchAndJoin() {
+        List<V> results = new ArrayList<>();
+
+        List<V> joinedResults = dispatch().toCompletableFuture().join();
+        results.addAll(joinedResults);
+        while (this.dispatchDepth() > 0) {
+            joinedResults = dispatch().toCompletableFuture().join();
+            results.addAll(joinedResults);
+        }
+        return results;
+    }
+
+
+    /**
+     * @return the depth of the batched key loads that need to be dispatched
+     */
+    public int dispatchDepth() {
+        synchronized (loaderQueue) {
+            return loaderQueue.size();
+        }
+    }
+
+
+    /**
      * Clears the future with the specified key from the cache, if caching is enabled, so it will be re-fetched
      * on the next load request.
      *
