@@ -87,29 +87,29 @@ You can then use it to load values which will be `CompleteableFuture` promises t
 ```
  
 or you can use it to compose future computations as follows.  The key requirement is that you call
-`dataloader.dispatch()` at some point in order to make the underlying calls happen to the batch loader.
-In this version of data loader, this does not happen automatically.  More on this later.
+`dataloader.dispatch()` or its variant `dataloader.dispatchAndJoin()` at some point in order to make the underlying calls happen to the batch loader.
+In this version of data loader, this does not happen automatically.  More on this in [Manual dispatching](#manual-dispatching) .
 
 ```java
-        userLoader.load(1L)
-                .thenAccept(user -> {
-                    System.out.println("user = " + user);
-                    userLoader.load(user.getInvitedByID())
-                            .thenAccept(invitedBy -> {
-                                System.out.println("invitedBy = " + invitedBy);
-                            });
-                });
-
-        userLoader.load(2L)
-                .thenAccept(user -> {
-                    System.out.println("user = " + user);
-                    userLoader.load(user.getInvitedByID())
-                            .thenAccept(invitedBy -> {
-                                System.out.println("invitedBy = " + invitedBy);
-                            });
-                });
-
-        userLoader.dispatch().join();
+           userLoader.load(1L)
+                    .thenAccept(user -> {
+                        System.out.println("user = " + user);
+                        userLoader.load(user.getInvitedByID())
+                                .thenAccept(invitedBy -> {
+                                    System.out.println("invitedBy = " + invitedBy);
+                                });
+                    });
+    
+            userLoader.load(2L)
+                    .thenAccept(user -> {
+                        System.out.println("user = " + user);
+                        userLoader.load(user.getInvitedByID())
+                                .thenAccept(invitedBy -> {
+                                    System.out.println("invitedBy = " + invitedBy);
+                                });
+                    });
+    
+            userLoader.dispatchAndJoin();
 
 ```
 
@@ -124,6 +124,13 @@ concurrent requests will be coalesced and presented to your batch loading functi
 application to safely distribute data fetching requirements throughout your application and 
 maintain minimal outgoing data requests.
 
+In the example above, the first call to dispatch will cause the batched user keys (1 and 2) to be fired at the BatchLoader function to load 2 users.
+  
+Since each `thenAccept` callback made more calls to `userLoader` to get the "user they they invited", another 2 user keys are fired at the BatchLoader function for them.    
+
+In this case the `userLoader.dispatchAndJoin()` is used to fire a dispatch call, wait for it (aka join it), see if the data loader has more batched entries, (which is does)
+and then it repeats this until the data loader internal queue of keys is empty.  At this point we have made 2 batched calls instead of the niave 4 calls we might have made if
+we did not "batch" the calls to load data.
 
 ## Differences to reference implementation
 

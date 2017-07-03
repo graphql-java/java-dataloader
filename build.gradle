@@ -24,6 +24,7 @@ ext {
 }
 
 apply plugin: 'java'
+apply plugin: 'maven'
 apply from: "$projectDir/gradle/publishing.gradle"
 
 repositories {
