@@ -12,9 +12,8 @@ consistent API over various back-ends and reduce message communication overhead 
 
 An important use case for `java-dataloader` is improving the efficiency of GraphQL query execution.  Graphql fields
 are resolved in a independent manner and with a true graph of objects, you may be fetching the same object many times.  
-A naive implementation of graphql data fetchers can easily lead to the dreaded  "n+1" fetch problem. 
 
-There are many other use cases where you can also benefit from using this utility.
+A naive implementation of graphql data fetchers can easily lead to the dreaded  "n+1" fetch problem. 
 
 Most of the code is ported directly from Facebook's reference implementation, with one IMPORTANT adaptation to make
 it work for Java 8. ([more on this below](manual-dispatching)).
@@ -132,9 +131,10 @@ In this case the `userLoader.dispatchAndJoin()` is used to make a dispatch call,
 and then it repeats this until the data loader internal queue of keys is empty.  At this point we have made 2 batched calls instead of the naive 4 calls we might have made if
 we did not "batch" the calls to load data.
 
-## Batching requires batch backing APIs
+## Batching requires batched backing APIs
 
-You will notice in our BatchLoader example that the backing service had the ability to get a list of users give a list of user ids in one call.
+You will notice in our BatchLoader example that the backing service had the ability to get a list of users given
+a list of user ids in one call.
  
 ```java
             public CompletionStage<List<User>> load(List<Long> userIds) {
@@ -144,8 +144,10 @@ You will notice in our BatchLoader example that the backing service had the abil
             }
 ```
  
- This is important consideration.  By using `dataloader` you have batched up the request for N keys in a list of keys that can be retrieved at one time.
- If you don't have batch backing services, then you cant be as efficient as possible if you then have to make N calls for each key.
+ This is important consideration.  By using `dataloader` you have batched up the requests for N keys in a list of keys that can be 
+ retrieved at one time.
+ 
+ If you don't have batched backing services, then you cant be as efficient as possible as you will have to make N calls for each key.
  
  ```java
         BatchLoader<Long, User> lessEfficientUserBatchLoader = new BatchLoader<Long, User>() {
@@ -164,7 +166,7 @@ You will notice in our BatchLoader example that the backing service had the abil
 
 ```
  
-That said, with key caching turn on (the default), it may still be more efficient using `dataloader` than without it
+That said, with key caching turn on (the default), it may still be more efficient using `dataloader` than without it.
 
 ## Differences to reference implementation
 
