@@ -1,11 +1,10 @@
 package org.dataloader.impl;
 
-import org.dataloader.PromisedValues;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -16,13 +15,14 @@ import static org.dataloader.impl.Assertions.nonNull;
 
 public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
-    private final List<CompletableFuture<T>> futures;
-    private final CompletableFuture<Void> controller;
+    private final List<CompletionStage<T>> futures;
+    private final CompletionStage<Void> controller;
     private AtomicReference<Throwable> cause;
 
-    private PromisedValuesImpl(List<CompletableFuture<T>> cfs) {
-        this.futures = nonNull(cfs);
+    private PromisedValuesImpl(List<CompletionStage<T>> cs) {
+        this.futures = nonNull(cs);
         this.cause = new AtomicReference<>();
+        List<CompletableFuture> cfs = cs.stream().map(CompletionStage::toCompletableFuture).collect(Collectors.toList());
         CompletableFuture[] futuresArray = cfs.toArray(new CompletableFuture[cfs.size()]);
         this.controller = CompletableFuture.allOf(futuresArray).handle((result, throwable) -> {
             setCause(throwable);
@@ -30,18 +30,18 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
         });
     }
 
-    private PromisedValuesImpl(PromisedValuesImpl<T> other, CompletableFuture<Void> controller) {
+    private PromisedValuesImpl(PromisedValuesImpl<T> other, CompletionStage<Void> controller) {
         this.futures = other.futures;
         this.cause = other.cause;
         this.controller = controller;
     }
 
-    public static <T> PromisedValues<T> combineAllOf(List<CompletableFuture<T>> cfs) {
+    public static <T> PromisedValues<T> combineAllOf(List<CompletionStage<T>> cfs) {
         return new PromisedValuesImpl<>(nonNull(cfs));
     }
 
     public static <T> PromisedValues<T> combinePromisedValues(List<PromisedValues<T>> promisedValues) {
-        List<CompletableFuture<T>> cfs = promisedValues.stream()
+        List<CompletionStage<T>> cfs = promisedValues.stream()
                 .map(pv -> (PromisedValuesImpl<T>) pv)
                 .flatMap(pv -> pv.futures.stream())
                 .collect(Collectors.toList());
@@ -61,7 +61,7 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
     @Override
     public PromisedValues<T> thenAccept(Consumer<PromisedValues<T>> handler) {
         nonNull(handler);
-        CompletableFuture<Void> newController = controller.handle((result, throwable) -> {
+        CompletionStage<Void> newController = controller.handle((result, throwable) -> {
             setCause(throwable);
             handler.accept(this);
             return result;
@@ -82,7 +82,7 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
     @Override
     public boolean isDone() {
-        return controller.isDone();
+        return controller.toCompletableFuture().isDone();
     }
 
     @Override
@@ -92,12 +92,12 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
     @Override
     public boolean succeeded(int index) {
-        return CompletableFutureKit.succeeded(futures.get(index));
+        return CompletableFutureKit.succeeded(futures.get(index).toCompletableFuture());
     }
 
     @Override
     public Throwable cause(int index) {
-        return CompletableFutureKit.cause(futures.get(index));
+        return CompletableFutureKit.cause(futures.get(index).toCompletableFuture());
     }
 
     @Override
@@ -105,8 +105,8 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
     public T get(int index) {
         assertState(isDone(), "The PromisedValues MUST be complete before calling the get() method");
         try {
-            CompletableFuture<T> future = futures.get(index);
-            return future.get();
+            CompletionStage<T> future = futures.get(index);
+            return future.toCompletableFuture().get();
         } catch (InterruptedException | ExecutionException e) {
             return null;
         }
@@ -130,13 +130,13 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
     @Override
     public List<T> join() {
-        controller.join();
+        controller.toCompletableFuture().join();
         return toList();
     }
 
     @Override
     public CompletableFuture<List<T>> toCompletableFuture() {
-        return controller.thenApply(v -> toList());
+        return controller.thenApply(v -> toList()).toCompletableFuture();
     }
 
 }

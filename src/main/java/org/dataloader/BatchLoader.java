@@ -17,10 +17,11 @@
 package org.dataloader;
 
 import java.util.List;
+import java.util.concurrent.CompletionStage;
 
 /**
  * A function that is invoked for batch loading a list of data values indicated by the provided list of keys. The
- * function returns a {@link PromisedValues} to aggregate results of individual load requests.
+ * function returns a promise of a list of results of individual load requests.
  *
  * There are a few constraints that must be upheld:
  * <ul>
@@ -28,7 +29,15 @@ import java.util.List;
  * <li>Each index in the list of values must correspond to the same index in the list of keys.</li>
  * </ul>
  *
- * For example, if your batch function was provided the list of keys: [ 2, 9, 6, 1 ], and loading from a back-end service returned the values:
+ * For example, if your batch function was provided the list of keys:
+ *
+ * <pre>
+ *  [
+ *      2, 9, 6, 1
+ *  ]
+ * </pre>
+ *
+ * and loading from a back-end service returned this list of  values:
  *
  * <pre>
  *  [
@@ -38,10 +47,13 @@ import java.util.List;
  *  ]
  * </pre>
  *
- * The back-end service returned results in a different order than we requested, likely because it was more efficient for it to do so. Also, it omitted a result for key 6, which we can interpret as no value
- * existing for that key.
+ * then the batch loader function contract has been broken.
  *
- * To uphold the constraints of the batch function, it must return an List of values the same length as the List of keys, and re-order them to ensure each index aligns with the original keys [ 2, 9, 6, 1 ]:
+ * The back-end service returned results in a different order than we requested, likely because it was more efficient for it to
+ * do so. Also, it omitted a result for key 6, which we may interpret as no value existing for that key.
+ *
+ * To uphold the constraints of the batch function, it must return an List of values the same length as
+ * the List of keys, and re-order them to ensure each index aligns with the original keys [ 2, 9, 6, 1 ]:
  *
  * <pre>
  *  [
@@ -56,16 +68,17 @@ import java.util.List;
  * @param <V> type parameter indicating the type of values returned
  *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
+ * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
 @FunctionalInterface
 public interface BatchLoader<K, V> {
 
     /**
-     * Called to batch load the provided keys and return a {@link PromisedValues} which is a promise to a list of values
+     * Called to batch load the provided keys and return a promise to a list of values
      *
      * @param keys the collection of keys to load
      *
      * @return a promise of the values for those keys
      */
-    PromisedValues<V> load(List<K> keys);
+    CompletionStage<List<V>> load(List<K> keys);
 }

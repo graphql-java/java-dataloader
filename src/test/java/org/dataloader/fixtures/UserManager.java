@@ -1,7 +1,9 @@
 package org.dataloader.fixtures;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class UserManager {
 
@@ -39,7 +41,11 @@ public class UserManager {
         users.put(user.getId(), user);
     }
 
-    public User loadUsersById(Long userId) {
+    public User loadUserById(Long userId) {
         return users.get(userId);
+    }
+
+    public List<User> loadUsersById(List<Long> userIds) {
+        return userIds.stream().map(this::loadUserById).collect(Collectors.toList());
     }
 }

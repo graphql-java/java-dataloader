@@ -33,6 +33,7 @@ import java.util.concurrent.CompletableFuture;
  * @param <V> type parameter indicating the type of the data that is cached
  *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
+ * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
 public interface CacheMap<U, V> {
 
@@ -41,6 +42,7 @@ public interface CacheMap<U, V> {
      *
      * @param <U> type parameter indicating the type of the cache keys
      * @param <V> type parameter indicating the type of the data that is cached
+     *
      * @return the cache map
      */
     static <U, V> CacheMap<U, CompletableFuture<V>> simpleMap() {
@@ -51,6 +53,7 @@ public interface CacheMap<U, V> {
      * Checks whether the specified key is contained in the cach map.
      *
      * @param key the key to check
+     *
      * @return {@code true} if the cache contains the key, {@code false} otherwise
      */
     boolean containsKey(U key);
@@ -62,6 +65,7 @@ public interface CacheMap<U, V> {
      * so be sure to check {@link CacheMap#containsKey(Object)} first.
      *
      * @param key the key to retrieve
+     *
      * @return the cached value, or {@code null} if not found (depends on cache implementation)
      */
     V get(U key);
@@ -71,6 +75,7 @@ public interface CacheMap<U, V> {
      *
      * @param key   the key to cache
      * @param value the value to cache
+     *
      * @return the cache map for fluent coding
      */
     CacheMap<U, V> set(U key, V value);
@@ -79,6 +84,7 @@ public interface CacheMap<U, V> {
      * Deletes the entry with the specified key from the cache map, if it exists.
      *
      * @param key the key to delete
+     *
      * @return the cache map for fluent coding
      */
     CacheMap<U, V> delete(U key);
