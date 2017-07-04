@@ -1,6 +1,6 @@
 # java-dataloader
 
-[![Build Status](https://travis-ci.org/bbakerman/java-dataloader.svg?branch=master)](https://travis-ci.org/bbakerman/java-dataloader/)&nbsp;&nbsp;
+[![Build Status](https://travis-ci.org/bbakerman/java-dataloader.svg?branch=master)](https://travis-ci.org/bbakerman/java-dataloader.svg?branch=master)&nbsp;&nbsp;
 [![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/bbakerman/java-dataloader/blob/master/LICENSE)&nbsp;&nbsp;
 [![Download](https://api.bintray.com/packages/bbakerman/java-dataloader/java-dataloader/images/download.svg) ](https://bintray.com/bbakerman/java-dataloader/java-dataloader/_latestVersion)
 
