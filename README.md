@@ -196,22 +196,21 @@ and there are also gains to this different mode of operation:
 However, with batch execution control comes responsibility! If you forget to make the call to `dispatch()` then the futures
 in the load request queue will never be batched, and thus _will never complete_! So be careful when crafting your loader designs.
 
-### Error object is not a thing in Java
+### Error object is not a thing in a type safe Java world
 
 In the reference JS implementation if the batch loader returns an `Error` object back then the `loadKey()` promise is rejected
-with that error.  This allows fine grain (per object in the list)  sets of error.  If I ask for keys A,B,C and B errors out the promise
-for B can contain a specific eror. 
+with that error.  This allows fine grain (per object in the list) sets of error.  If I ask for keys A,B,C and B errors out the promise
+for B can contain a specific error. 
 
-This is not (easily) possible in a Java implementation
+This is not quite as neat in a Java implementation
 
-A batch loader function is defined as `BatchLoader<K, V>` meaning for a key of type `K` it returns a value of type `V`.  It can just return
-some `Exception` as an object of type `V` since Java is type safe.
-  
-We could have made it return an `List<Either<V,Exception>>` but this greatly complicates the method signatures and so this aspect was not ported.
-   
-Instead when the batch loader function is called, it returns a promise of `List<V>` and if that promise fails in aggregate then that is what
-is reported back.   
+A batch loader function is defined as `BatchLoader<K, V>` meaning for a key of type `K` it returns a value of type `V`.  
 
+It cant just return some `Exception` as an object of type `V` since Java is type safe.
+
+You in order for a batch loader function to return an `Exception` it must be declared as `BatchLoader<K, Object>` which
+allows both values and exceptions to be returned .  Some type safety is lost in this case if you want
+to use the mix of exceptions and values pattern.
 
 ## Let's get started!
 
