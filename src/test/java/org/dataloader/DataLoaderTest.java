@@ -844,9 +844,8 @@ public class DataLoaderTest {
             });
         });
 
-        CompletableFuture<List<String>> composite = identityLoader.dispatch();
+        identityLoader.dispatchAndJoin();
 
-        await().until(composite::isDone);
         assertThat(loadCalls, equalTo(
                 singletonList(asList("a", "b", "c", "d"))));
     }
