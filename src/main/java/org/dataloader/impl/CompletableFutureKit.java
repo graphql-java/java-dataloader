@@ -1,7 +1,10 @@
 package org.dataloader.impl;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Some really basic helpers when working with CompletableFutures
@@ -38,5 +41,13 @@ public class CompletableFutureKit {
 
     public static boolean failed(CompletableFuture future) {
         return future.isDone() && future.isCompletedExceptionally();
+    }
+
+    public static <T> CompletableFuture<List<T>> allOf(List<CompletableFuture<T>> cfs) {
+        return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()]))
+                .thenApply(v -> cfs.stream()
+                        .map(CompletableFuture::join)
+                        .collect(toList())
+                );
     }
 }

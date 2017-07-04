@@ -19,23 +19,24 @@ package org.dataloader;
 import org.dataloader.impl.CompletableFutureKit;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static org.dataloader.impl.Assertions.assertState;
 import static org.dataloader.impl.Assertions.nonNull;
 
 /**
  * Data loader is a utility class that allows batch loading of data that is identified by a set of unique keys. For
  * each key that is loaded a separate {@link CompletableFuture} is returned, that completes as the batch function completes.
- * Besides individual futures a {@link PromisedValues} of the batch is available as well.
  * <p>
  * With batching enabled the execution will start after calling {@link DataLoader#dispatch()}, causing the queue of
- * loaded keys to be sent to the batch function, clears the queue, and returns the {@link PromisedValues}.
+ * loaded keys to be sent to the batch function, clears the queue, and returns a promise to the values.
  * <p>
  * As batch functions are executed the resulting futures are cached using a cache implementation of choice, so they
  * will only execute once. Individual cache keys can be cleared, so they will be re-fetched when referred to again.
@@ -48,6 +49,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  * @param <V> type parameter indicating the type of the data that is returned
  *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
+ * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
 public class DataLoader<K, V> {
 
@@ -97,8 +99,10 @@ public class DataLoader<K, V> {
      */
     public CompletableFuture<V> load(K key) {
         Object cacheKey = getCacheKey(nonNull(key));
-        if (loaderOptions.cachingEnabled() && futureCache.containsKey(cacheKey)) {
-            return futureCache.get(cacheKey);
+        synchronized (futureCache) {
+            if (loaderOptions.cachingEnabled() && futureCache.containsKey(cacheKey)) {
+                return futureCache.get(cacheKey);
+            }
         }
 
         CompletableFuture<V> future = new CompletableFuture<>();
@@ -107,15 +111,17 @@ public class DataLoader<K, V> {
                 loaderQueue.put(key, future);
             }
         } else {
-            PromisedValues<V> combinedFutures = batchLoadFunction.load(Collections.singletonList(key));
-            if (combinedFutures.succeeded()) {
-                future.complete(combinedFutures.get(0));
-            } else {
-                future.completeExceptionally(combinedFutures.cause());
-            }
+            // immediate execution of batch function
+            CompletableFuture<List<V>> batchedLoad = batchLoadFunction
+                    .load(singletonList(key))
+                    .toCompletableFuture();
+            future = batchedLoad
+                    .thenApply(list -> list.get(0));
         }
         if (loaderOptions.cachingEnabled()) {
-            futureCache.set(cacheKey, future);
+            synchronized (futureCache) {
+                futureCache.set(cacheKey, future);
+            }
         }
         return future;
     }
@@ -132,35 +138,38 @@ public class DataLoader<K, V> {
      *
      * @return the composite future of the list of values
      */
-    public PromisedValues<V> loadMany(List<K> keys) {
+    public CompletableFuture<List<V>> loadMany(List<K> keys) {
         synchronized (loaderQueue) {
-            return PromisedValues.allOf(keys.stream()
+
+            List<CompletableFuture<V>> collect = keys.stream()
                     .map(this::load)
-                    .collect(Collectors.toList()));
+                    .collect(Collectors.toList());
+
+            return CompletableFutureKit.allOf(collect);
         }
     }
 
     /**
-     * Dispatches the queued load requests to the batch execution function and returns a composite future of the result.
+     * Dispatches the queued load requests to the batch execution function and returns a promise of the result.
      * <p>
-     * If batching is disabled, or there are no queued requests, then a succeeded composite future is returned.
+     * If batching is disabled, or there are no queued requests, then a succeeded promise is returned.
      *
-     * @return the composite future of the queued load requests
+     * @return the promise of the queued load requests
      */
-    public PromisedValues<V> dispatch() {
+    public CompletableFuture<List<V>> dispatch() {
         //
         // we copy the pre-loaded set of futures ready for dispatch
         final List<K> keys = new ArrayList<>();
-        final List<CompletableFuture<V>> futureValues = new ArrayList<>();
+        final List<CompletableFuture<V>> queuedFutures = new ArrayList<>();
         synchronized (loaderQueue) {
             loaderQueue.forEach((key, future) -> {
                 keys.add(key);
-                futureValues.add(future);
+                queuedFutures.add(future);
             });
             loaderQueue.clear();
         }
         if (!loaderOptions.batchingEnabled() || keys.size() == 0) {
-            return PromisedValues.allOf(Collections.emptyList());
+            return CompletableFuture.completedFuture(emptyList());
         }
         //
         // order of keys -> values matter in data loader hence the use of linked hash map
@@ -168,28 +177,72 @@ public class DataLoader<K, V> {
         // See https://github.com/facebook/dataloader/blob/master/README.md for more details
         //
 
-        PromisedValues<V> batchOfPromisedValues = batchLoadFunction.load(keys);
-
-        assertState(keys.size() == batchOfPromisedValues.size(), "The size of the promised values MUST be the same size as the key list");
-
         //
         // when the promised list of values completes, we transfer the values into
         // the previously cached future objects that the client already has been given
-        // via calls to load("foo") and loadMany("foo")
+        // via calls to load("foo") and loadMany(["foo","bar"])
         //
-        batchOfPromisedValues.thenAccept(promisedValues -> {
-            for (int idx = 0; idx < futureValues.size(); idx++) {
-                CompletableFuture<V> future = futureValues.get(idx);
-                if (promisedValues.succeeded(idx)) {
-                    V value = promisedValues.get(idx);
-                    future.complete(value);
-                } else {
-                    Throwable cause = promisedValues.cause(idx);
-                    future.completeExceptionally(cause);
-                }
-            }
-        });
-        return batchOfPromisedValues;
+        int maxBatchSize = loaderOptions.maxBatchSize();
+        if (maxBatchSize > 0 && maxBatchSize < keys.size()) {
+            return sliceIntoBatchesOfBatches(keys, queuedFutures, maxBatchSize);
+        } else {
+            return dispatchQueueBatch(keys, queuedFutures);
+        }
+    }
+
+    private CompletableFuture<List<V>> sliceIntoBatchesOfBatches(List<K> keys, List<CompletableFuture<V>> queuedFutures, int maxBatchSize) {
+        // the number of keys is > than what the batch loader function can accept
+        // so make multiple calls to the loader
+        List<CompletableFuture<List<V>>> allBatches = new ArrayList<>();
+        int len = keys.size();
+        int batchCount = (int) Math.ceil(len / (double) maxBatchSize);
+        for (int i = 0; i < batchCount; i++) {
+
+            int fromIndex = i * maxBatchSize;
+            int toIndex = Math.min((i + 1) * maxBatchSize, len);
+
+            List<K> subKeys = keys.subList(fromIndex, toIndex);
+            List<CompletableFuture<V>> subFutures = queuedFutures.subList(fromIndex, toIndex);
+
+            allBatches.add(dispatchQueueBatch(subKeys, subFutures));
+        }
+        //
+        // now reassemble all the futures into one that is the complete set of results
+        return CompletableFuture.allOf(allBatches.toArray(new CompletableFuture[allBatches.size()]))
+                .thenApply(v -> allBatches.stream()
+                        .map(CompletableFuture::join)
+                        .flatMap(Collection::stream)
+                        .collect(Collectors.toList()));
+    }
+
+    private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<CompletableFuture<V>> queuedFutures) {
+        return batchLoadFunction.load(keys)
+                .toCompletableFuture()
+                .thenApply(values -> {
+                    assertState(keys.size() == values.size(), "The size of the promised values MUST be the same size as the key list");
+
+                    for (int idx = 0; idx < queuedFutures.size(); idx++) {
+                        Object value = values.get(idx);
+                        CompletableFuture<V> future = queuedFutures.get(idx);
+                        if (value instanceof Throwable) {
+                            future.completeExceptionally((Throwable) value);
+                        } else {
+                            @SuppressWarnings("unchecked")
+                            V val = (V) value;
+                            future.complete(val);
+                        }
+                    }
+                    return values;
+                }).exceptionally(ex -> {
+                    for (int idx = 0; idx < queuedFutures.size(); idx++) {
+                        K key = keys.get(idx);
+                        CompletableFuture<V> future = queuedFutures.get(idx);
+                        future.completeExceptionally(ex);
+                        // clear any cached view of this key
+                        clear(key);
+                    }
+                    return emptyList();
+                });
     }
 
     /**
@@ -203,10 +256,10 @@ public class DataLoader<K, V> {
     public List<V> dispatchAndJoin() {
         List<V> results = new ArrayList<>();
 
-        List<V> joinedResults = dispatch().toCompletableFuture().join();
+        List<V> joinedResults = dispatch().join();
         results.addAll(joinedResults);
         while (this.dispatchDepth() > 0) {
-            joinedResults = dispatch().toCompletableFuture().join();
+            joinedResults = dispatch().join();
             results.addAll(joinedResults);
         }
         return results;
@@ -233,7 +286,9 @@ public class DataLoader<K, V> {
      */
     public DataLoader<K, V> clear(K key) {
         Object cacheKey = getCacheKey(key);
-        futureCache.delete(cacheKey);
+        synchronized (futureCache) {
+            futureCache.delete(cacheKey);
+        }
         return this;
     }
 
@@ -243,7 +298,9 @@ public class DataLoader<K, V> {
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clearAll() {
-        futureCache.clear();
+        synchronized (futureCache) {
+            futureCache.clear();
+        }
         return this;
     }
 
@@ -257,8 +314,10 @@ public class DataLoader<K, V> {
      */
     public DataLoader<K, V> prime(K key, V value) {
         Object cacheKey = getCacheKey(key);
-        if (!futureCache.containsKey(cacheKey)) {
-            futureCache.set(cacheKey, CompletableFuture.completedFuture(value));
+        synchronized (futureCache) {
+            if (!futureCache.containsKey(cacheKey)) {
+                futureCache.set(cacheKey, CompletableFuture.completedFuture(value));
+            }
         }
         return this;
     }

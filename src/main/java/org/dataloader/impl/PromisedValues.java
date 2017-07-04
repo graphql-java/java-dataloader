@@ -1,47 +1,48 @@
-package org.dataloader;
-
-import org.dataloader.impl.PromisedValuesImpl;
+package org.dataloader.impl;
 
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
 
 /**
- * This allows multiple {@link CompletableFuture}s to be combined together and completed
+ * This allows multiple {@link CompletionStage}s to be combined together and completed
  * as one and should something go wrong, instead of throwing {@link CompletionException}s it captures the cause and returns null for that
  * data value, other wise it allows you to access them as a list of values.
  *
  * This class really encapsulate a list of promised values.  It is considered finished when all of the underlying futures
  * are finished.
  *
- * You can get that list of values via {@link #toList()}.  You can
- * also compose a {@link CompletableFuture} of that list of values via {@link #toCompletableFuture()}
+ * You can get that list of values via {@link #toList()}.  You can also compose a {@link CompletableFuture} of that
+ * list of values via {@link #toCompletableFuture()} ()}
+ *
+ * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
 public interface PromisedValues<T> {
 
     /**
      * Returns a new {@link PromisedValues} that is completed when all of
-     * the given {@link CompletableFuture}s complete.  If any of the given
-     * {@link CompletableFuture}s complete exceptionally, then the returned
+     * the given {@link CompletionStage}s complete.  If any of the given
+     * {@link CompletionStage}s complete exceptionally, then the returned
      * {@link PromisedValues} also does so.
      *
-     * @param cfs the {@link CompletableFuture}s to combine
+     * @param cfs the {@link CompletionStage}s to combine
      * @param <T> the type of values
      *
      * @return a new PromisedValues
      */
-    static <T> PromisedValues<T> allOf(List<CompletableFuture<T>> cfs) {
+    static <T> PromisedValues<T> allOf(List<CompletionStage<T>> cfs) {
         return PromisedValuesImpl.combineAllOf(cfs);
     }
 
     /**
      * Returns a new {@link PromisedValues} that is completed when all of
-     * the given {@link CompletableFuture}s complete.  If any of the given
-     * {@link CompletableFuture}s complete exceptionally, then the returned
+     * the given {@link CompletionStage}s complete.  If any of the given
+     * {@link CompletionStage}s complete exceptionally, then the returned
      * {@link PromisedValues} also does so.
      *
      * @param f1  the 1st completable future
@@ -50,14 +51,14 @@ public interface PromisedValues<T> {
      *
      * @return a new PromisedValues
      */
-    static <T> PromisedValues<T> allOf(CompletableFuture<T> f1, CompletableFuture<T> f2) {
+    static <T> PromisedValues<T> allOf(CompletionStage<T> f1, CompletionStage<T> f2) {
         return PromisedValuesImpl.combineAllOf(asList(f1, f2));
     }
 
     /**
      * Returns a new {@link PromisedValues} that is completed when all of
-     * the given {@link CompletableFuture}s complete.  If any of the given
-     * {@link CompletableFuture}s complete exceptionally, then the returned
+     * the given {@link CompletionStage}s complete.  If any of the given
+     * {@link CompletionStage}s complete exceptionally, then the returned
      * {@link PromisedValues} also does so.
      *
      * @param f1  the 1st completable future
@@ -67,15 +68,15 @@ public interface PromisedValues<T> {
      *
      * @return a new PromisedValues
      */
-    static <T> PromisedValues allOf(CompletableFuture<T> f1, CompletableFuture<T> f2, CompletableFuture<T> f3) {
+    static <T> PromisedValues allOf(CompletionStage<T> f1, CompletionStage<T> f2, CompletionStage<T> f3) {
         return PromisedValuesImpl.combineAllOf(asList(f1, f2, f3));
     }
 
 
     /**
      * Returns a new {@link PromisedValues} that is completed when all of
-     * the given {@link CompletableFuture}s complete.  If any of the given
-     * {@link CompletableFuture}s complete exceptionally, then the returned
+     * the given {@link CompletionStage}s complete.  If any of the given
+     * {@link CompletionStage}s complete exceptionally, then the returned
      * {@link PromisedValues} also does so.
      *
      * @param f1  the 1st completable future
@@ -86,7 +87,7 @@ public interface PromisedValues<T> {
      *
      * @return a new PromisedValues
      */
-    static <T> PromisedValues allOf(CompletableFuture<T> f1, CompletableFuture<T> f2, CompletableFuture<T> f3, CompletableFuture<T> f4) {
+    static <T> PromisedValues allOf(CompletionStage<T> f1, CompletionStage<T> f2, CompletionStage<T> f3, CompletionStage<T> f4) {
         return PromisedValuesImpl.combineAllOf(asList(f1, f2, f3, f4));
     }
 
@@ -192,9 +193,9 @@ public interface PromisedValues<T> {
     Throwable cause();
 
     /**
-     * The true if the {@link CompletableFuture} at the specified index succeeded
+     * The true if the {@link CompletionStage} at the specified index succeeded
      *
-     * @param index the index of the {@link CompletableFuture}
+     * @param index the index of the {@link CompletionStage}
      *
      * @return true if the future at the specified index succeeded
      */
@@ -203,7 +204,7 @@ public interface PromisedValues<T> {
     /**
      * The exception cause at the specified index or null if it didn't fail
      *
-     * @param index the index of the {@link CompletableFuture}
+     * @param index the index of the {@link CompletionStage}
      *
      * @return an exception or null if the future did not fail
      */
@@ -227,7 +228,7 @@ public interface PromisedValues<T> {
     List<T> toList();
 
     /**
-     * @return the number of {@link CompletableFuture}s under the covers
+     * @return the number of {@link CompletionStage}s under the covers
      */
     int size();
 
@@ -244,7 +245,6 @@ public interface PromisedValues<T> {
      * @throws CancellationException if the computation was cancelled
      * @throws CompletionException   if this future completed
      *                               exceptionally or a completion computation threw an exception
-     *
      */
     List<T> join();
 

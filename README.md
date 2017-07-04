@@ -5,14 +5,14 @@
 [ ![Download](https://api.bintray.com/packages/bbakerman/maven/java-dataloader/images/download.svg) ](https://bintray.com/bbakerman/maven/java-dataloader/_latestVersion)
 
 
-This small and simple utility library is a Pure Java 8 port of [Facebook DataLoader](https://github.com/facebook/dataloader). 
+This small and simple utility library is a pure Java 8 port of [Facebook DataLoader](https://github.com/facebook/dataloader). 
 
 It can serve as integral part of your application's data layer to provide a
 consistent API over various back-ends and reduce message communication overhead through batching and caching.
 
 An important use case for `java-dataloader` is improving the efficiency of GraphQL query execution.  Graphql fields
 are resolved in a independent manner and with a true graph of objects, you may be fetching the same object many times.  
-Also a naive implementation of graphql data fetchers can easily lead to the dreaded  "n+1" fetch problem. 
+A naive implementation of graphql data fetchers can easily lead to the dreaded  "n+1" fetch problem. 
 
 There are many other use cases where you can also benefit from using this utility.
 
@@ -67,15 +67,13 @@ a list of keys
 
         BatchLoader<Long, User> userBatchLoader = new BatchLoader<Long, User>() {
             @Override
-            public PromisedValues<User> load(List<Long> userIds) {
-                List<CompletableFuture<User>> futures = userIds.stream()
-                        .map(userId ->
-                                CompletableFuture.supplyAsync(() ->
-                                        userManager.loadUsersById(userId)))
-                        .collect(Collectors.toList());
-                return PromisedValues.allOf(futures);
+            public CompletionStage<List<User>> load(List<Long> userIds) {
+                return CompletableFuture.supplyAsync(() -> {
+                    return userManager.loadUsersById(userIds);
+                });
             }
         };
+
         DataLoader<Long, User> userLoader = new DataLoader<>(userBatchLoader);
 
 ```
@@ -88,6 +86,7 @@ You can then use it to load values which will be `CompleteableFuture` promises t
  
 or you can use it to compose future computations as follows.  The key requirement is that you call
 `dataloader.dispatch()` or its variant `dataloader.dispatchAndJoin()` at some point in order to make the underlying calls happen to the batch loader.
+
 In this version of data loader, this does not happen automatically.  More on this in [Manual dispatching](#manual-dispatching) .
 
 ```java
@@ -126,11 +125,46 @@ maintain minimal outgoing data requests.
 
 In the example above, the first call to dispatch will cause the batched user keys (1 and 2) to be fired at the BatchLoader function to load 2 users.
   
-Since each `thenAccept` callback made more calls to `userLoader` to get the "user they they invited", another 2 user keys are fired at the BatchLoader function for them.    
+Since each `thenAccept` callback made more calls to `userLoader` to get the "user they they invited", another 2 user keys are given at the `BatchLoader` 
+function for them.    
 
-In this case the `userLoader.dispatchAndJoin()` is used to fire a dispatch call, wait for it (aka join it), see if the data loader has more batched entries, (which is does)
-and then it repeats this until the data loader internal queue of keys is empty.  At this point we have made 2 batched calls instead of the niave 4 calls we might have made if
+In this case the `userLoader.dispatchAndJoin()` is used to make a dispatch call, wait for it (aka join it), see if the data loader has more batched entries, (which is does)
+and then it repeats this until the data loader internal queue of keys is empty.  At this point we have made 2 batched calls instead of the naive 4 calls we might have made if
 we did not "batch" the calls to load data.
+
+## Batching requires batch backing APIs
+
+You will notice in our BatchLoader example that the backing service had the ability to get a list of users give a list of user ids in one call.
+ 
+```java
+            public CompletionStage<List<User>> load(List<Long> userIds) {
+                return CompletableFuture.supplyAsync(() -> {
+                    return userManager.loadUsersById(userIds);
+                });
+            }
+```
+ 
+ This is important consideration.  By using `dataloader` you have batched up the request for N keys in a list of keys that can be retrieved at one time.
+ If you don't have batch backing services, then you cant be as efficient as possible if you then have to make N calls for each key.
+ 
+ ```java
+        BatchLoader<Long, User> lessEfficientUserBatchLoader = new BatchLoader<Long, User>() {
+            @Override
+            public CompletionStage<List<User>> load(List<Long> userIds) {
+                return CompletableFuture.supplyAsync(() -> {
+                    //
+                    // notice how it makes N calls to load by single user id out of the batch of N keys
+                    //
+                    return userIds.stream()
+                            .map(id -> userManager.loadUserById(id))
+                            .collect(Collectors.toList());
+                });
+            }
+        };
+
+```
+ 
+That said, with key caching turn on (the default), it may still be more efficient using `dataloader` than without it
 
 ## Differences to reference implementation
 
@@ -161,6 +195,22 @@ and there are also gains to this different mode of operation:
 
 However, with batch execution control comes responsibility! If you forget to make the call to `dispatch()` then the futures
 in the load request queue will never be batched, and thus _will never complete_! So be careful when crafting your loader designs.
+
+### Error object is not a thing in a type safe Java world
+
+In the reference JS implementation if the batch loader returns an `Error` object back then the `loadKey()` promise is rejected
+with that error.  This allows fine grain (per object in the list) sets of error.  If I ask for keys A,B,C and B errors out the promise
+for B can contain a specific error. 
+
+This is not quite as neat in a Java implementation
+
+A batch loader function is defined as `BatchLoader<K, V>` meaning for a key of type `K` it returns a value of type `V`.  
+
+It cant just return some `Exception` as an object of type `V` since Java is type safe.
+
+You in order for a batch loader function to return an `Exception` it must be declared as `BatchLoader<K, Object>` which
+allows both values and exceptions to be returned .  Some type safety is lost in this case if you want
+to use the mix of exceptions and values pattern.
 
 ## Let's get started!
 
@@ -214,13 +264,15 @@ itself.  All the heavy lifting has been done by this project : [vertx-dataloader
 including the extensive testing.
 
 This particular port was done to reduce the dependency on Vertx and to write a pure Java 8 implementation with no dependencies and also
-to use the more normative Java CompletableFuture.  [vertx-core](http://vertx.io/docs/vertx-core/java/) is not a lightweight library by any means
+to use the more normative Java CompletableFuture.  
+
+[vertx-core](http://vertx.io/docs/vertx-core/java/) is not a lightweight library by any means
 so having a pure Java 8 implementation is very desirable.
 
 
 This library is entirely inspired by the great works of [Lee Byron](https://github.com/leebyron) and
 [Nicholas Schrock](https://github.com/schrockn) from [Facebook](https://www.facebook.com/) whom we would like to thank, and
-especially @leebyron for taking the time and effort to provide 100% coverage on the codebase. A set of tests which
+especially @leebyron for taking the time and effort to provide 100% coverage on the codebase. The original set of tests 
 were also ported.
 
 

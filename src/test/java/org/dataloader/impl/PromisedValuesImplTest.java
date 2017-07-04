@@ -1,6 +1,5 @@
 package org.dataloader.impl;
 
-import org.dataloader.PromisedValues;
 import org.junit.Test;
 
 import java.util.Collections;

@@ -31,6 +31,7 @@ public class DataLoaderOptions {
     private boolean cachingEnabled;
     private CacheKey cacheKeyFunction;
     private CacheMap cacheMap;
+    private int maxBatchSize;
 
     /**
      * Creates a new data loader options with default settings.
@@ -38,6 +39,7 @@ public class DataLoaderOptions {
     public DataLoaderOptions() {
         batchingEnabled = true;
         cachingEnabled = true;
+        maxBatchSize = -1;
     }
 
     /**
@@ -51,6 +53,7 @@ public class DataLoaderOptions {
         this.cachingEnabled = other.cachingEnabled;
         this.cacheKeyFunction = other.cacheKeyFunction;
         this.cacheMap = other.cacheMap;
+        this.maxBatchSize = other.maxBatchSize;
     }
 
     public static DataLoaderOptions create() {
@@ -142,6 +145,29 @@ public class DataLoaderOptions {
      */
     public DataLoaderOptions setCacheMap(CacheMap cacheMap) {
         this.cacheMap = cacheMap;
+        return this;
+    }
+
+    /**
+     * Gets the maximum number of keys that will be presented to the {@link BatchLoader} function
+     * before they are split into multiple class
+     *
+     * @return the maximum batch size or -1 if there is no limit
+     */
+    public int maxBatchSize() {
+        return maxBatchSize;
+    }
+
+    /**
+     * Sets the maximum number of keys that will be presented to the {@link BatchLoader} function
+     * before they are split into multiple class
+     *
+     * @param maxBatchSize the maximum batch size
+     *
+     * @return the data loader options for fluent coding
+     */
+    public DataLoaderOptions setMaxBatchSize(int maxBatchSize) {
+        this.maxBatchSize = maxBatchSize;
         return this;
     }
 }
