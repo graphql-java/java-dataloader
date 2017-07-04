@@ -66,18 +66,11 @@ bintray {
     publications = ['maven']
     publish = true
     pkg {
-        repo = 'maven'
+        repo = 'java-dataloader'
         name = "java-dataloader"
         desc = projectDescription
-        userOrg = 'bbakerman'
-        websiteUrl = 'https://github.com/bbakerman/java-dataloader'
-        issueTrackerUrl = 'https://github.com/bbakerman/java-dataloader/issues'
         licenses = ['Apache-2.0']
         vcsUrl = 'https://github.com/bbakerman/java-dataloader.git'
-        labels = ['batch', 'batch-loading', 'completablefuture', 'future', 'asynchronous',
-                  'data-loader', 'dataloader', 'java', 'port', 'facebook', 'graphql']
-        githubRepo = 'bbakerman/java-dataloader'
-        githubReleaseNotesFile = 'README.md'
         version {
             released = new Date()
             vcsTag = project.version
