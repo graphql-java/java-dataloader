@@ -1,7 +1,7 @@
 # java-dataloader
 
-[![Build Status](https://travis-ci.org/bbakerman/java-dataloader.svg?branch=master)](https://travis-ci.org/bbakerman/java-dataloader.svg?branch=master)&nbsp;&nbsp;
-[![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/bbakerman/java-dataloader/blob/master/LICENSE)&nbsp;&nbsp;
+[![Build Status](https://travis-ci.org/graphql-java/java-dataloader.svg?branch=master)](https://travis-ci.org/graphql-java/java-dataloader.svg?branch=master)&nbsp;&nbsp;
+[![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/graphql-java/java-dataloader/blob/master/LICENSE)&nbsp;&nbsp;
 [![Download](https://api.bintray.com/packages/bbakerman/java-dataloader/java-dataloader/images/download.svg) ](https://bintray.com/bbakerman/java-dataloader/java-dataloader/_latestVersion)
 
 This small and simple utility library is a pure Java 8 port of [Facebook DataLoader](https://github.com/facebook/dataloader). 
@@ -53,7 +53,7 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 - Results are ordered according to insertion order of load requests
 - Deals with partial errors when a batch future fails
 - Can disable batching and/or caching in configuration
-- Can supply your own [`CacheMap<K, V>`](https://github.com/bbakerman/java-dataloader/blob/master/src/main/java/io/engagingspaces/vertx/dataloader/CacheMap.java) implementations
+- Can supply your own [`CacheMap<K, V>`](https://github.com/graphql-java/java-dataloader/blob/master/src/main/java/io/engagingspaces/vertx/dataloader/CacheMap.java) implementations
 - Has very high test coverage (see [Acknowledgements](#acknowlegdements))
 
 ## Examples
@@ -284,4 +284,4 @@ This project is licensed under the
 [Apache Commons v2.0](https://www.apache.org/licenses/LICENSE-2.0) license.
 
 Copyright &copy; 2016 Arnold Schrijver, 2017 Brad Baker and others
-[contributors](https://github.com/bbakerman/java-dataloader/graphs/contributors)
+[contributors](https://github.com/graphql-java/java-dataloader/graphs/contributors)

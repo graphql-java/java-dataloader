@@ -27,32 +27,46 @@ artifacts {
 publishing {
     publications {
         maven(MavenPublication) {
-            artifactId "$project.name"
             from components.java
+            groupId 'org.dataloader'
+            artifactId 'java-dataloader'
+            version project.version
 
-            artifact sourcesJar {
-                classifier 'sources'
-            }
-            artifact javadocJar {
-                classifier 'javadoc'
-            }
+            artifact sourcesJar
+            artifact javadocJar
+
             pom.withXml {
                 asNode().children().last() + {
-                    def builder = delegate
-                    builder.name projectTitle
-                    builder.description projectDescription
-                    builder.url 'https://github.com/bbakerman/java-dataloader'
-                    builder.licenses {
-                        builder.license {
-                            builder.name 'The Apache Software License, Version 2.0'
-                            builder.url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                            builder.distribution 'repo'
+                    resolveStrategy = Closure.DELEGATE_FIRST
+                    name 'java-dataloader'
+                    description 'A pure Java 8 port of Facebook Dataloader'
+                    url 'https://github.com/graphql-java/java-dataloader'
+                    inceptionYear '2017'
+
+                    scm {
+                        url 'https://github.com/graphql-java/java-dataloader'
+                        connection 'scm:git@github.com:graphql-java/java-dataloader.git'
+                        developerConnection 'scm:git@github.com:graphql-java/java-dataloader.git'
+                    }
+
+                    licenses {
+                        license {
+                            name 'The Apache Software License, Version 2.0'
+                            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                            distribution 'repo'
                         }
                     }
-                    builder.scm {
-                        builder.url 'scm:git@github.com:bbakerman/java-dataloader.git'
-                        builder.connection 'git@github.com:bbakerman/java-dataloader.git'
-                        builder.developerConnection 'git@github.com:bbakerman/java-dataloader.git'
+
+                    developers {
+                        developer {
+                            id 'bbakerman'
+                            name 'Brad Baker'
+                            email 'bbakerman@gmail.com'
+                        }
+                        developer {
+                            id 'aschrijver'
+                            name 'Arnold Schrijver'
+                        }
                     }
                 }
             }
@@ -66,11 +80,11 @@ bintray {
     publications = ['maven']
     publish = true
     pkg {
-        repo = 'java-dataloader'
+        repo = 'graphql-java'
         name = "java-dataloader"
         desc = projectDescription
         licenses = ['Apache-2.0']
-        vcsUrl = 'https://github.com/bbakerman/java-dataloader.git'
+        vcsUrl = 'https://github.com/graphql-java/java-dataloader.git'
         version {
             released = new Date()
             vcsTag = project.version
