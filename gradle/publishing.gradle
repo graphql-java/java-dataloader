@@ -28,7 +28,7 @@ publishing {
     publications {
         maven(MavenPublication) {
             from components.java
-            groupId 'org.dataloader'
+            groupId 'com.graphql-java'
             artifactId 'java-dataloader'
             version project.version
 
@@ -80,6 +80,7 @@ bintray {
     publications = ['maven']
     publish = true
     pkg {
+        userOrg = 'graphql-java'
         repo = 'graphql-java'
         name = "java-dataloader"
         desc = projectDescription
