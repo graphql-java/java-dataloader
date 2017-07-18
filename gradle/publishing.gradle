@@ -89,6 +89,9 @@ bintray {
         version {
             released = new Date()
             vcsTag = project.version
+            gpg {
+                sign = true
+            }
         }
     }
 }
