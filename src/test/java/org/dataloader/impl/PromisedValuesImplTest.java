@@ -2,9 +2,11 @@ package org.dataloader.impl;
 
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.util.Arrays.asList;
@@ -13,6 +15,7 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
@@ -178,5 +181,35 @@ public class PromisedValuesImplTest {
 
         assertThat(promisedValues.toList(), equalTo(asList(1, null)));
         assertThat(result, equalTo(asList(1, null)));
-   }
+    }
+
+    @Test
+    public void type_generics_compile_as_expected() throws Exception {
+
+        PromisedValues<String> pvList = PromisedValues.allOf(Collections.singletonList(new CompletableFuture<String>()));
+        PromisedValues<String> pvList2 = PromisedValues.allOf(Collections.<CompletionStage<String>>singletonList(new CompletableFuture<>()));
+
+        assertThat(pvList, notNullValue());
+        assertThat(pvList2, notNullValue());
+
+        PromisedValues<String> pv2args = PromisedValues.allOf(new CompletableFuture<>(), new CompletableFuture<>());
+        PromisedValues<String> pv3args = PromisedValues.allOf(new CompletableFuture<>(), new CompletableFuture<>(), new CompletableFuture<>());
+        PromisedValues<String> pv4args = PromisedValues.allOf(new CompletableFuture<>(), new CompletableFuture<>(), new CompletableFuture<>(), new CompletableFuture<>());
+
+        assertThat(pv2args, notNullValue());
+        assertThat(pv3args, notNullValue());
+        assertThat(pv4args, notNullValue());
+
+        PromisedValues<String> pvListOfPVs = PromisedValues.allPromisedValues(Arrays.asList(pv2args, pv3args));
+
+        assertThat(pvListOfPVs, notNullValue());
+
+        PromisedValues<String> pv2ArgsOfPVs = PromisedValues.allPromisedValues(pv2args, pv3args);
+        PromisedValues<String> pv3ArgsOfPVs = PromisedValues.allPromisedValues(pv2args, pv3args, pv4args);
+        PromisedValues<String> pv4ArgsOfPVs = PromisedValues.allPromisedValues(pv2args, pv3args, pv4args, pv2args);
+
+        assertThat(pv2ArgsOfPVs, notNullValue());
+        assertThat(pv3ArgsOfPVs, notNullValue());
+        assertThat(pv4ArgsOfPVs, notNullValue());
+    }
 }

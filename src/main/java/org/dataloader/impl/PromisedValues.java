@@ -35,7 +35,7 @@ public interface PromisedValues<T> {
      *
      * @return a new PromisedValues
      */
-    static <T> PromisedValues<T> allOf(List<CompletionStage<T>> cfs) {
+    static <T> PromisedValues<T> allOf(List<? extends CompletionStage<T>> cfs) {
         return PromisedValuesImpl.combineAllOf(cfs);
     }
 
@@ -68,7 +68,7 @@ public interface PromisedValues<T> {
      *
      * @return a new PromisedValues
      */
-    static <T> PromisedValues allOf(CompletionStage<T> f1, CompletionStage<T> f2, CompletionStage<T> f3) {
+    static <T> PromisedValues<T> allOf(CompletionStage<T> f1, CompletionStage<T> f2, CompletionStage<T> f3) {
         return PromisedValuesImpl.combineAllOf(asList(f1, f2, f3));
     }
 
@@ -87,7 +87,7 @@ public interface PromisedValues<T> {
      *
      * @return a new PromisedValues
      */
-    static <T> PromisedValues allOf(CompletionStage<T> f1, CompletionStage<T> f2, CompletionStage<T> f3, CompletionStage<T> f4) {
+    static <T> PromisedValues<T> allOf(CompletionStage<T> f1, CompletionStage<T> f2, CompletionStage<T> f3, CompletionStage<T> f4) {
         return PromisedValuesImpl.combineAllOf(asList(f1, f2, f3, f4));
     }
 
