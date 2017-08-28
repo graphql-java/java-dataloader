@@ -15,11 +15,11 @@ import static org.dataloader.impl.Assertions.nonNull;
 
 public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
-    private final List<CompletionStage<T>> futures;
+    private final List<? extends CompletionStage<T>> futures;
     private final CompletionStage<Void> controller;
     private AtomicReference<Throwable> cause;
 
-    private PromisedValuesImpl(List<CompletionStage<T>> cs) {
+    private PromisedValuesImpl(List<? extends CompletionStage<T>> cs) {
         this.futures = nonNull(cs);
         this.cause = new AtomicReference<>();
         List<CompletableFuture> cfs = cs.stream().map(CompletionStage::toCompletableFuture).collect(Collectors.toList());
@@ -36,7 +36,7 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
         this.controller = controller;
     }
 
-    public static <T> PromisedValues<T> combineAllOf(List<CompletionStage<T>> cfs) {
+    public static <T> PromisedValues<T> combineAllOf(List<? extends CompletionStage<T>> cfs) {
         return new PromisedValuesImpl<>(nonNull(cfs));
     }
 
