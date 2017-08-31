@@ -23,6 +23,11 @@ public class DataLoaderDispatcherInstrumentation extends NoOpInstrumentation {
 
     @Override
     public InstrumentationContext<CompletableFuture<ExecutionResult>> beginExecutionStrategy(InstrumentationExecutionStrategyParameters parameters) {
-        return (result, t) -> dataLoaderRegistry.dispatchAll();
+        return (result, t) -> {
+            if (t == null) {
+                // only dispatch when there are no errors
+                dataLoaderRegistry.dispatchAll();
+            }
+        };
     }
 }

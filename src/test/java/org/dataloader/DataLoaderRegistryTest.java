@@ -1,11 +1,11 @@
 package org.dataloader;
 
-import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.util.concurrent.CompletableFuture;
 
 import static java.util.Arrays.asList;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 
 public class DataLoaderRegistryTest {
@@ -21,7 +21,7 @@ public class DataLoaderRegistryTest {
 
         registry.register(dlA).register(dlB).register(dlC);
 
-        assertThat(registry.getDataLoaders(), Matchers.equalTo(asList(dlA, dlB, dlC)));
+        assertThat(registry.getDataLoaders(), equalTo(asList(dlA, dlB, dlC)));
 
         // the same dl twice is one add
 
@@ -30,12 +30,12 @@ public class DataLoaderRegistryTest {
 
         registry.register(dlA).register(dlB).register(dlC).register(dlA).register(dlB);
 
-        assertThat(registry.getDataLoaders(), Matchers.equalTo(asList(dlA, dlB, dlC)));
+        assertThat(registry.getDataLoaders(), equalTo(asList(dlA, dlB, dlC)));
 
 
         // and unregister
         registry.unregister(dlC);
 
-        assertThat(registry.getDataLoaders(), Matchers.equalTo(asList(dlA, dlB)));
+        assertThat(registry.getDataLoaders(), equalTo(asList(dlA, dlB)));
     }
 }

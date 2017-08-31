@@ -10,7 +10,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CompletionStage;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -19,20 +19,26 @@ import static org.junit.Assert.assertThat;
 
 public class DataLoaderDispatcherInstrumentationTest {
 
+    class CountingLoader implements BatchLoader<Object, Object> {
+        int invocationCount = 0;
+        List<Object> loadedKeys = new ArrayList<>();
+
+        @Override
+        public CompletionStage<List<Object>> load(List<Object> keys) {
+            invocationCount++;
+            loadedKeys.add(keys);
+            return CompletableFuture.completedFuture(keys);
+        }
+    }
+
     @Test
     public void basic_invocation() throws Exception {
 
-        AtomicInteger invocationCount = new AtomicInteger();
-        final List<Object> loadedKeys = new ArrayList<>();
-        final BatchLoader<Object, Object> identityBatchLoader = keys -> {
-            invocationCount.incrementAndGet();
-            loadedKeys.add(keys);
-            return CompletableFuture.completedFuture(keys);
-        };
+        final CountingLoader batchLoader = new CountingLoader();
 
-        DataLoader<Object, Object> dlA = new DataLoader<>(identityBatchLoader);
-        DataLoader<Object, Object> dlB = new DataLoader<>(identityBatchLoader);
-        DataLoader<Object, Object> dlC = new DataLoader<>(identityBatchLoader);
+        DataLoader<Object, Object> dlA = new DataLoader<>(batchLoader);
+        DataLoader<Object, Object> dlB = new DataLoader<>(batchLoader);
+        DataLoader<Object, Object> dlC = new DataLoader<>(batchLoader);
         DataLoaderRegistry registry = new DataLoaderRegistry()
                 .register(dlA)
                 .register(dlB)
@@ -48,9 +54,28 @@ public class DataLoaderDispatcherInstrumentationTest {
 
         context.onEnd(null, null);
 
-        assertThat(invocationCount.get(), equalTo(3));
+        assertThat(batchLoader.invocationCount, equalTo(3));
 
         // will be [[A],[B],[C]]
-        assertThat(loadedKeys, equalTo(asList(singletonList("A"), singletonList("B"), singletonList("C"))));
+        assertThat(batchLoader.loadedKeys, equalTo(asList(singletonList("A"), singletonList("B"), singletonList("C"))));
+    }
+
+    @Test
+    public void exceptions_wont_cause_dispatches() throws Exception {
+        final CountingLoader batchLoader = new CountingLoader();
+
+        DataLoader<Object, Object> dlA = new DataLoader<>(batchLoader);
+        DataLoaderRegistry registry = new DataLoaderRegistry()
+                .register(dlA);
+
+        DataLoaderDispatcherInstrumentation dispatcher = new DataLoaderDispatcherInstrumentation(registry);
+        InstrumentationContext<CompletableFuture<ExecutionResult>> context = dispatcher.beginExecutionStrategy(null);
+
+        // cause some activity
+        dlA.load("A");
+
+        context.onEnd(null, new RuntimeException("Should not run"));
+
+        assertThat(batchLoader.invocationCount, equalTo(0));
     }
 }
