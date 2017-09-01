@@ -831,6 +831,8 @@ public class DataLoaderTest {
 
         Supplier<Object> nullValue = () -> null;
 
+        AtomicBoolean v4Called = new AtomicBoolean();
+
         CompletableFuture.supplyAsync(nullValue).thenAccept(v1 -> {
             identityLoader.load("a");
             CompletableFuture.supplyAsync(nullValue).thenAccept(v2 -> {
@@ -838,11 +840,15 @@ public class DataLoaderTest {
                 CompletableFuture.supplyAsync(nullValue).thenAccept(v3 -> {
                     identityLoader.load("c");
                     CompletableFuture.supplyAsync(nullValue).thenAccept(
-                            v4 ->
-                                    identityLoader.load("d"));
+                            v4 -> {
+                                identityLoader.load("d");
+                                v4Called.set(true);
+                            });
                 });
             });
         });
+
+        await().untilTrue(v4Called);
 
         identityLoader.dispatchAndJoin();
 
