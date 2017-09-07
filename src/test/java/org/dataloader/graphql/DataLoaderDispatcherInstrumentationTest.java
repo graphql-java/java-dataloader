@@ -40,9 +40,9 @@ public class DataLoaderDispatcherInstrumentationTest {
         DataLoader<Object, Object> dlB = new DataLoader<>(batchLoader);
         DataLoader<Object, Object> dlC = new DataLoader<>(batchLoader);
         DataLoaderRegistry registry = new DataLoaderRegistry()
-                .register(dlA)
-                .register(dlB)
-                .register(dlC);
+                .register("a", dlA)
+                .register("b", dlB)
+                .register("b", dlC);
 
         DataLoaderDispatcherInstrumentation dispatcher = new DataLoaderDispatcherInstrumentation(registry);
         InstrumentationContext<CompletableFuture<ExecutionResult>> context = dispatcher.beginExecutionStrategy(null);
@@ -66,7 +66,7 @@ public class DataLoaderDispatcherInstrumentationTest {
 
         DataLoader<Object, Object> dlA = new DataLoader<>(batchLoader);
         DataLoaderRegistry registry = new DataLoaderRegistry()
-                .register(dlA);
+                .register("a", dlA);
 
         DataLoaderDispatcherInstrumentation dispatcher = new DataLoaderDispatcherInstrumentation(registry);
         InstrumentationContext<CompletableFuture<ExecutionResult>> context = dispatcher.beginExecutionStrategy(null);

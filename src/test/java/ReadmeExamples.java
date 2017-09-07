@@ -124,7 +124,7 @@ public class ReadmeExamples {
         // in this case there is 1 but you can have many
         //
         DataLoaderRegistry registry = new DataLoaderRegistry();
-        registry.register(characterDataLoader);
+        registry.register("character", characterDataLoader);
 
         //
         // this instrumentation implementation will dispatched all the dataloaders
