@@ -38,12 +38,19 @@ import static org.dataloader.impl.Assertions.nonNull;
  * With batching enabled the execution will start after calling {@link DataLoader#dispatch()}, causing the queue of
  * loaded keys to be sent to the batch function, clears the queue, and returns a promise to the values.
  * <p>
- * As batch functions are executed the resulting futures are cached using a cache implementation of choice, so they
- * will only execute once. Individual cache keys can be cleared, so they will be re-fetched when referred to again.
+ * As {@link org.dataloader.BatchLoader} batch functions are executed the resulting futures are cached using a cache
+ * implementation of choice, so they will only execute once. Individual cache keys can be cleared, so they will
+ * be re-fetched when referred to again.
+ * <p>
  * It is also possible to clear the cache entirely, and prime it with values before they are used.
  * <p>
  * Both caching and batching can be disabled. Configuration of the data loader is done by providing a
  * {@link DataLoaderOptions} instance on creation.
+ * <p>
+ * A call to the batch loader might result in individual exception failures for item with the returned list.  if
+ * you want to capture these specific item failures then use {@link org.dataloader.Try} as a return value and
+ * create the data loader with {@link #newDataLoaderWithTry(BatchLoader)} form.  The Try values will be interpreted
+ * as either success values or cause the {@link #load(Object)} promise to complete exceptionally.
  *
  * @param <K> type parameter indicating the type of the data load keys
  * @param <V> type parameter indicating the type of the data that is returned
@@ -57,6 +64,73 @@ public class DataLoader<K, V> {
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
     private final Map<K, CompletableFuture<V>> loaderQueue;
+
+    /**
+     * Creates new DataLoader with the specified batch loader function and default options
+     * (batching, caching and unlimited batch size).
+     *
+     * @param batchLoadFunction the batch load function to use
+     * @param <K>               the key type
+     * @param <V>               the value type
+     *
+     * @return a new DataLoader
+     */
+    public static <K, V> DataLoader<K, V> newDataLoader(BatchLoader<K, V> batchLoadFunction) {
+        return newDataLoader(batchLoadFunction, null);
+    }
+
+    /**
+     * Creates new DataLoader with the specified batch loader function with the provided options
+     *
+     * @param batchLoadFunction the batch load function to use
+     * @param options           the options to use
+     * @param <K>               the key type
+     * @param <V>               the value type
+     *
+     * @return a new DataLoader
+     */
+    public static <K, V> DataLoader<K, V> newDataLoader(BatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
+        return new DataLoader<>(batchLoadFunction, options);
+    }
+
+    /**
+     * Creates new DataLoader with the specified batch loader function and default options
+     * (batching, caching and unlimited batch size) where the batch loader function returns a list of
+     * {@link org.dataloader.Try} objects.
+     *
+     * This allows you to capture both the value that might be returned and also whether exception that might have occurred getting that individual value.  If its important you to
+     * know gther exact status of each item in a batch call and whether it threw exceptions when fetched then
+     * you can use this form to create the data loader.
+     *
+     * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
+     * @param <K>               the key type
+     * @param <V>               the value type
+     *
+     * @return a new DataLoader
+     */
+    public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoader<K, Try<V>> batchLoadFunction) {
+        return newDataLoaderWithTry(batchLoadFunction, null);
+    }
+
+    /**
+     * Creates new DataLoader with the specified batch loader function and with the provided options
+     * where the batch loader function returns a list of
+     * {@link org.dataloader.Try} objects.
+     *
+     * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
+     * @param options           the options to use
+     * @param <K>               the key type
+     * @param <V>               the value type
+     *
+     * @return a new DataLoader
+     *
+     * @see #newDataLoaderWithTry(BatchLoader)
+     */
+    @SuppressWarnings("unchecked")
+    public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoader<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
+        return new DataLoader<>((BatchLoader<K, V>) batchLoadFunction, options);
+    }
+
 
     /**
      * Creates a new data loader with the provided batch load function, and default options.
@@ -215,6 +289,7 @@ public class DataLoader<K, V> {
                         .collect(Collectors.toList()));
     }
 
+    @SuppressWarnings("unchecked")
     private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<CompletableFuture<V>> queuedFutures) {
         return batchLoadFunction.load(keys)
                 .toCompletableFuture()
@@ -226,8 +301,13 @@ public class DataLoader<K, V> {
                         CompletableFuture<V> future = queuedFutures.get(idx);
                         if (value instanceof Throwable) {
                             future.completeExceptionally((Throwable) value);
+                            // we don't clear the cached view of this entry to avoid
+                            // frequently loading the same error
+                        } else if (value instanceof Try) {
+                            // we allow the batch loader to return a Try so we can better represent a computation
+                            // that might have worked or not.
+                            handleTry((Try<V>) value, future);
                         } else {
-                            @SuppressWarnings("unchecked")
                             V val = (V) value;
                             future.complete(val);
                         }
@@ -238,11 +318,19 @@ public class DataLoader<K, V> {
                         K key = keys.get(idx);
                         CompletableFuture<V> future = queuedFutures.get(idx);
                         future.completeExceptionally(ex);
-                        // clear any cached view of this key
+                        // clear any cached view of this key because they all failed
                         clear(key);
                     }
                     return emptyList();
                 });
+    }
+
+    private void handleTry(Try<V> vTry, CompletableFuture<V> future) {
+        if (vTry.isSuccess()) {
+            future.complete(vTry.get());
+        } else {
+            future.completeExceptionally(vTry.getThrowable());
+        }
     }
 
     /**

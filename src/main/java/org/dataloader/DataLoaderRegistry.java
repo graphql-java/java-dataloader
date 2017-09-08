@@ -70,8 +70,8 @@ public class DataLoaderRegistry {
      *
      * @return a data loader or null if its not present
      */
+    @SuppressWarnings("unchecked")
     public <K, V> DataLoader<K, V> getDataLoader(String key) {
-        //noinspection unchecked
         return (DataLoader<K, V>) dataLoaders.get(key);
     }
 

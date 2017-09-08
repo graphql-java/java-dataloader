@@ -42,7 +42,7 @@ public class DataLoaderDispatcherInstrumentationTest {
         DataLoaderRegistry registry = new DataLoaderRegistry()
                 .register("a", dlA)
                 .register("b", dlB)
-                .register("b", dlC);
+                .register("c", dlC);
 
         DataLoaderDispatcherInstrumentation dispatcher = new DataLoaderDispatcherInstrumentation(registry);
         InstrumentationContext<CompletableFuture<ExecutionResult>> context = dispatcher.beginExecutionStrategy(null);
