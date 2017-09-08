@@ -3,12 +3,16 @@ import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLSchema;
 import org.dataloader.BatchLoader;
+import org.dataloader.CacheMap;
 import org.dataloader.DataLoader;
+import org.dataloader.DataLoaderOptions;
 import org.dataloader.DataLoaderRegistry;
+import org.dataloader.Try;
 import org.dataloader.fixtures.User;
 import org.dataloader.fixtures.UserManager;
 import org.dataloader.graphql.DataLoaderDispatcherInstrumentation;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -151,6 +155,115 @@ public class ReadmeExamples {
 
     private List<Object> getCharacterDataViaBatchHTTPApi(List<String> keys) {
         return null;
+    }
+
+
+    private void tryExample() {
+        Try<String> tryS = Try.tryCall(() -> {
+            if (rollDice()) {
+                return "OK";
+            } else {
+                throw new RuntimeException("Bang");
+            }
+        });
+
+        if (tryS.isSuccess()) {
+            System.out.println("It work " + tryS.get());
+        } else {
+            System.out.println("It failed with exception :  " + tryS.getThrowable());
+
+        }
+    }
+
+    private void tryBatcLoader() {
+        DataLoader<String, User> dataLoader = DataLoader.newDataLoaderWithTry(new BatchLoader<String, Try<User>>() {
+            @Override
+            public CompletionStage<List<Try<User>>> load(List<String> keys) {
+                return CompletableFuture.supplyAsync(() -> {
+                    List<Try<User>> users = new ArrayList<>();
+                    for (String key : keys) {
+                        Try<User> userTry = loadUser(key);
+                        users.add(userTry);
+                    }
+                    return users;
+                });
+            }
+        });
+    }
+
+    DataLoader<String, User> userDataLoader;
+
+    private void clearCacheOnError() {
+
+        userDataLoader.load("r2d2").whenComplete((user, throwable) -> {
+            if (throwable != null) {
+                userDataLoader.clear("r2dr");
+                throwable.printStackTrace();
+            } else {
+                processUser(user);
+            }
+        });
+    }
+
+    BatchLoader<String, User> userBatchLoader;
+
+    private void disableCache() {
+        new DataLoader<String, User>(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
+
+
+        userDataLoader.load("A");
+        userDataLoader.load("B");
+        userDataLoader.load("A");
+
+        userDataLoader.dispatch();
+
+        // will result in keys to the batch loader with [ "A", "B", "A" ]
+    }
+
+    class MyCustomCache implements CacheMap {
+        @Override
+        public boolean containsKey(Object key) {
+            return false;
+        }
+
+        @Override
+        public Object get(Object key) {
+            return null;
+        }
+
+        @Override
+        public CacheMap set(Object key, Object value) {
+            return null;
+        }
+
+        @Override
+        public CacheMap delete(Object key) {
+            return null;
+        }
+
+        @Override
+        public CacheMap clear() {
+            return null;
+        }
+    }
+
+    private void customCache() {
+
+        MyCustomCache customCache = new MyCustomCache();
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setCacheMap(customCache);
+        new DataLoader<String, User>(userBatchLoader, options);
+    }
+
+    private void processUser(User user) {
+
+    }
+
+    private Try<User> loadUser(String key) {
+        return null;
+    }
+
+    private boolean rollDice() {
+        return false;
     }
 
 

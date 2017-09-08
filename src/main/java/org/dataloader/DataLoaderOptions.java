@@ -56,7 +56,10 @@ public class DataLoaderOptions {
         this.maxBatchSize = other.maxBatchSize;
     }
 
-    public static DataLoaderOptions create() {
+    /**
+     * @return a new default data loader options that you can then customize
+     */
+    public static DataLoaderOptions newOptions() {
         return new DataLoaderOptions();
     }
 

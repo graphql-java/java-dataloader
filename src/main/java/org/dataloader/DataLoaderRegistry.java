@@ -67,11 +67,13 @@ public class DataLoaderRegistry {
      * Returns the dataloader that was registered under the specified key
      *
      * @param key the key of the data loader
+     * @param <K> the type of keys
+     * @param <V> the type of values
      *
      * @return a data loader or null if its not present
      */
+    @SuppressWarnings("unchecked")
     public <K, V> DataLoader<K, V> getDataLoader(String key) {
-        //noinspection unchecked
         return (DataLoader<K, V>) dataLoaders.get(key);
     }
 

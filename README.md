@@ -25,8 +25,6 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 
 - [Features](#features)
 - [Examples](#examples)
-- [Differences to reference implementation](#differences-to-reference-implementation)
-  - [Manual dispatching](#manual-dispatching)
 - [Let's get started!](#lets-get-started)
   - [Installing](#installing)
   - [Building](#building)
@@ -290,9 +288,136 @@ this was not in place, then all the promises to data will never be dispatched ot
 
 See below for more details on `dataLoader.dispatch()`
 
-## Differences to reference implementation
+### Error object is not a thing in a type safe Java world
 
-### Manual dispatching
+In the reference JS implementation if the batch loader returns an `Error` object back from the `load()` promise is rejected
+with that error.  This allows fine grain (per object in the list) sets of error.  If I ask for keys A,B,C and B errors out the promise
+for B can contain a specific error. 
+
+This is not quite as loose in a Java implementation as Java is a type safe language.
+
+A batch loader function is defined as `BatchLoader<K, V>` meaning for a key of type `K` it returns a value of type `V`.  
+
+It cant just return some `Exception` as an object of type `V`.  Type safety matters.  
+
+However you can use the `Try` data type which can encapsulate a computation that succeeded or returned an exception.
+
+```java
+        Try<String> tryS = Try.tryCall(() -> {
+            if (rollDice()) {
+                return "OK";
+            } else {
+                throw new RuntimeException("Bang");
+            }
+        });
+
+        if (tryS.isSuccess()) {
+            System.out.println("It work " + tryS.get());
+        } else {
+            System.out.println("It failed with exception :  " + tryS.getThrowable());
+
+        }
+```
+
+DataLoader supports this type and you can use this form to create a batch loader that returns a list of `Try` objects, some of which may have succeeded
+and some of which may have failed.  From that data loader can infer the right behavior in terms of the `load(x)` promise.
+
+```java
+        DataLoader<String, User> dataLoader = DataLoader.newDataLoaderWithTry(new BatchLoader<String, Try<User>>() {
+            @Override
+            public CompletionStage<List<Try<User>>> load(List<String> keys) {
+                return CompletableFuture.supplyAsync(() -> {
+                    List<Try<User>> users = new ArrayList<>();
+                    for (String key : keys) {
+                        Try<User> userTry = loadUser(key);
+                        users.add(userTry);
+                    }
+                    return users;
+                });
+            }
+        });
+
+```
+
+On the above example if one of the `Try` objects represents a failure, then its `load()` promise will complete exceptionally and you can 
+react to that, in a type safe manner. 
+
+
+
+## Disabling caching 
+
+In certain uncommon cases, a DataLoader which does not cache may be desirable. 
+
+```java
+    new DataLoader<String, User>(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
+``` 
+
+Calling the above will ensure that every call to `.load()` will produce a new promise, and requested keys will not be saved in memory.
+ 
+However, when the memoization cache is disabled, your batch function will receive an array of keys which may contain duplicates! Each key will 
+be associated with each call to `.load()`. Your batch loader should provide a value for each instance of the requested key as per the contract
+
+```java
+        userDataLoader.load("A");
+        userDataLoader.load("B");
+        userDataLoader.load("A");
+
+        userDataLoader.dispatch();
+
+        // will result in keys to the batch loader with [ "A", "B", "A" ]
+
+``` 
+
+ 
+More complex cache behavior can be achieved by calling `.clear()` or `.clearAll()` rather than disabling the cache completely. 
+ 
+
+## Caching errors
+ 
+If a batch load fails (that is, a batch function returns a rejected CompletionStage), then the requested values will not be cached. 
+However if a batch function returns a `Try` or `Throwable` instance for an individual value, then that will be cached to avoid frequently loading 
+the same problem object.
+ 
+In some circumstances you may wish to clear the cache for these individual problems: 
+
+```java
+        userDataLoader.load("r2d2").whenComplete((user, throwable) -> {
+            if (throwable != null) {
+                userDataLoader.clear("r2dr");
+                throwable.printStackTrace();
+            } else {
+                processUser(user);
+            }
+        });
+```
+
+## The scope of a data loader is important
+
+If you are serving web requests then the data can be specific to the user requesting it.  If you have user specific data
+then you will not want to cache data meant for user A to then later give it user B in a subsequent request.
+
+The scope of your `DataLoader` instances is important.  You might want to create them per web request to ensure data is only cached within that
+web request and no more.
+
+If your data can be shared across web requests then you might want to scope your data loaders so they survive longer than the web request say.
+
+## Custom caches
+
+The default cache behind `DataLoader` is an in memory `HashMap`.  There is no expiry on this and it lives for as long as the data loader
+lives. 
+ 
+However you can create your own custom cache and supply it to the data loader on construction via the `org.dataloader.CacheMap` interface.
+
+```java
+        MyCustomCache customCache = new MyCustomCache();
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setCacheMap(customCache);
+        new DataLoader<String, User>(userBatchLoader, options);
+```
+
+You could choose to use one of the fancy cache implementations from Guava or Kaffeine and wrap it in a `CacheMap` wrapper ready
+for data loader.  They can do fancy things like time eviction and efficient LRU caching.
+
+## Manual dispatching
 
 The original [Facebook DataLoader](https://github.com/facebook/dataloader) was written in Javascript for NodeJS. NodeJS is single-threaded in nature, but simulates
 asynchronous logic by invoking functions on separate threads in an event loop, as explained
@@ -320,21 +445,6 @@ and there are also gains to this different mode of operation:
 However, with batch execution control comes responsibility! If you forget to make the call to `dispatch()` then the futures
 in the load request queue will never be batched, and thus _will never complete_! So be careful when crafting your loader designs.
 
-### Error object is not a thing in a type safe Java world
-
-In the reference JS implementation if the batch loader returns an `Error` object back then the `loadKey()` promise is rejected
-with that error.  This allows fine grain (per object in the list) sets of error.  If I ask for keys A,B,C and B errors out the promise
-for B can contain a specific error. 
-
-This is not quite as neat in a Java implementation
-
-A batch loader function is defined as `BatchLoader<K, V>` meaning for a key of type `K` it returns a value of type `V`.  
-
-It cant just return some `Exception` as an object of type `V` since Java is type safe.
-
-You in order for a batch loader function to return an `Exception` it must be declared as `BatchLoader<K, Object>` which
-allows both values and exceptions to be returned .  Some type safety is lost in this case if you want
-to use the mix of exceptions and values pattern.
 
 ## Let's get started!
 
@@ -350,7 +460,7 @@ repositories {
 }
 
 dependencies {
-    compile 'org.dataloader:java-dataloader:1.0.0'
+    compile 'com.graphql-java:java-dataloader:1.0.2'
 }
 ```
 
@@ -385,13 +495,13 @@ deal with minor changes.
 
 This library was originally written for use within a [VertX world](http://vertx.io/) and it used the vertx-core `Future` classes to implement
 itself.  All the heavy lifting has been done by this project : [vertx-dataloader](https://github.com/engagingspaces/vertx-dataloader)
-including the extensive testing.
+including the extensive testing (which itself came from Facebook).
 
 This particular port was done to reduce the dependency on Vertx and to write a pure Java 8 implementation with no dependencies and also
 to use the more normative Java CompletableFuture.  
 
-[vertx-core](http://vertx.io/docs/vertx-core/java/) is not a lightweight library by any means
-so having a pure Java 8 implementation is very desirable.
+[vertx-core](http://vertx.io/docs/vertx-core/java/) is not a lightweight library by any means so having a pure Java 8 implementation is 
+very desirable.
 
 
 This library is entirely inspired by the great works of [Lee Byron](https://github.com/leebyron) and

@@ -19,6 +19,7 @@ package org.dataloader;
 import org.dataloader.fixtures.User;
 import org.dataloader.fixtures.UserManager;
 import org.dataloader.impl.CompletableFutureKit;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -37,12 +38,14 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
+import static org.dataloader.DataLoaderOptions.newOptions;
 import static org.dataloader.impl.CompletableFutureKit.cause;
 import static org.dataloader.impl.CompletableFutureKit.failedFuture;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertThat;
 
@@ -540,7 +543,7 @@ public class DataLoaderTest {
     public void should_Disable_caching() throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader =
-                idLoader(DataLoaderOptions.create().setCachingEnabled(false), loadCalls);
+                idLoader(newOptions().setCachingEnabled(false), loadCalls);
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
@@ -578,7 +581,7 @@ public class DataLoaderTest {
     @Test
     public void should_Accept_objects_with_a_complex_key() throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = DataLoaderOptions.create().setCacheKeyFunction(getJsonObjectCacheMapFn());
+        DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
         DataLoader<JsonObject, Integer> identityLoader = idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("id", 123);
@@ -599,7 +602,7 @@ public class DataLoaderTest {
     @Test
     public void should_Clear_objects_with_complex_key() throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = DataLoaderOptions.create().setCacheKeyFunction(getJsonObjectCacheMapFn());
+        DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
         DataLoader<JsonObject, Integer> identityLoader = idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("id", 123);
@@ -623,7 +626,7 @@ public class DataLoaderTest {
     @Test
     public void should_Accept_objects_with_different_order_of_keys() throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = DataLoaderOptions.create().setCacheKeyFunction(getJsonObjectCacheMapFn());
+        DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
         DataLoader<JsonObject, Integer> identityLoader = idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("a", 123).put("b", 321);
@@ -645,7 +648,7 @@ public class DataLoaderTest {
     @Test
     public void should_Allow_priming_the_cache_with_an_object_key() throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = DataLoaderOptions.create().setCacheKeyFunction(getJsonObjectCacheMapFn());
+        DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
         DataLoader<JsonObject, JsonObject> identityLoader = idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("id", 123);
@@ -667,7 +670,7 @@ public class DataLoaderTest {
     public void should_Accept_a_custom_cache_map_implementation() throws ExecutionException, InterruptedException {
         CustomCacheMap customMap = new CustomCacheMap();
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = DataLoaderOptions.create().setCacheMap(customMap);
+        DataLoaderOptions options = newOptions().setCacheMap(customMap);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
 
         // Fetches as expected
@@ -717,7 +720,7 @@ public class DataLoaderTest {
     @Test
     public void batching_disabled_should_dispatch_immediately() throws Exception {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = DataLoaderOptions.create().setBatchingEnabled(false);
+        DataLoaderOptions options = newOptions().setBatchingEnabled(false);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
 
         CompletableFuture<String> fa = identityLoader.load("A");
@@ -745,7 +748,7 @@ public class DataLoaderTest {
     @Test
     public void batching_disabled_and_caching_disabled_should_dispatch_immediately_and_forget() throws Exception {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = DataLoaderOptions.create().setBatchingEnabled(false).setCachingEnabled(false);
+        DataLoaderOptions options = newOptions().setBatchingEnabled(false).setCachingEnabled(false);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
 
         CompletableFuture<String> fa = identityLoader.load("A");
@@ -776,7 +779,7 @@ public class DataLoaderTest {
     @Test
     public void batches_multiple_requests_with_max_batch_size() throws Exception {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> identityLoader = idLoader(DataLoaderOptions.create().setMaxBatchSize(2), loadCalls);
+        DataLoader<Integer, Integer> identityLoader = idLoader(newOptions().setMaxBatchSize(2), loadCalls);
 
         CompletableFuture<Integer> f1 = identityLoader.load(1);
         CompletableFuture<Integer> f2 = identityLoader.load(2);
@@ -797,7 +800,7 @@ public class DataLoaderTest {
     @Test
     public void can_split_max_batch_sizes_correctly() throws Exception {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> identityLoader = idLoader(DataLoaderOptions.create().setMaxBatchSize(5), loadCalls);
+        DataLoader<Integer, Integer> identityLoader = idLoader(newOptions().setMaxBatchSize(5), loadCalls);
 
         for (int i = 0; i < 21; i++) {
             identityLoader.load(i);
@@ -827,7 +830,7 @@ public class DataLoaderTest {
     @Test
     public void should_Batch_loads_occurring_within_futures() {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(DataLoaderOptions.create(), loadCalls);
+        DataLoader<String, String> identityLoader = idLoader(newOptions(), loadCalls);
 
         Supplier<Object> nullValue = () -> null;
 
@@ -859,7 +862,7 @@ public class DataLoaderTest {
     @Test
     public void can_call_a_loader_from_a_loader() throws Exception {
         List<Collection<String>> deepLoadCalls = new ArrayList<>();
-        DataLoader<String, String> deepLoader = new DataLoader<>(keys -> {
+        DataLoader<String, String> deepLoader = DataLoader.newDataLoader(keys -> {
             deepLoadCalls.add(keys);
             return CompletableFuture.completedFuture(keys);
         });
@@ -939,6 +942,61 @@ public class DataLoaderTest {
         assertThat(allResults.size(), equalTo(4));
     }
 
+    @Test
+    public void should_handle_Trys_coming_back_from_batchLoader() throws Exception {
+
+        List<List<String>> batchKeyCalls = new ArrayList<>();
+        BatchLoader<String, Try<String>> batchLoader = keys -> {
+            batchKeyCalls.add(keys);
+
+            List<Try<String>> result = new ArrayList<>();
+            for (String key : keys) {
+                if ("bang".equalsIgnoreCase(key)) {
+                    result.add(Try.failed(new RuntimeException(key)));
+                } else {
+                    result.add(Try.succeeded(key));
+                }
+            }
+            return CompletableFuture.completedFuture(result);
+        };
+
+        DataLoader<String, String> dataLoader = DataLoader.newDataLoaderWithTry(batchLoader);
+
+        CompletableFuture<String> a = dataLoader.load("A");
+        CompletableFuture<String> b = dataLoader.load("B");
+        CompletableFuture<String> bang = dataLoader.load("bang");
+
+        dataLoader.dispatch();
+
+        assertThat(a.get(), equalTo("A"));
+        assertThat(b.get(), equalTo("B"));
+        assertThat(bang.isCompletedExceptionally(), equalTo(true));
+        bang.whenComplete((s, throwable) -> {
+            assertThat(s, nullValue());
+            assertThat(throwable, Matchers.instanceOf(RuntimeException.class));
+            assertThat(throwable.getMessage(), equalTo("Bang"));
+        });
+
+        assertThat(batchKeyCalls, equalTo(singletonList(asList("A", "B", "bang"))));
+
+        a = dataLoader.load("A");
+        b = dataLoader.load("B");
+        bang = dataLoader.load("bang");
+
+        dataLoader.dispatch();
+
+        assertThat(a.get(), equalTo("A"));
+        assertThat(b.get(), equalTo("B"));
+        assertThat(bang.isCompletedExceptionally(), equalTo(true));
+        bang.whenComplete((s, throwable) -> {
+            assertThat(s, nullValue());
+            assertThat(throwable, Matchers.instanceOf(RuntimeException.class));
+            assertThat(throwable.getMessage(), equalTo("Bang"));
+        });
+
+        // the failed value should have been cached as per Facebook DL behaviour
+        assertThat(batchKeyCalls, equalTo(singletonList(asList("A", "B", "bang"))));
+    }
 
     private static CacheKey<JsonObject> getJsonObjectCacheMapFn() {
         return key -> key.stream()
@@ -948,7 +1006,7 @@ public class DataLoaderTest {
     }
 
     private static <K, V> DataLoader<K, V> idLoader(DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return new DataLoader<>(keys -> {
+        return DataLoader.newDataLoader(keys -> {
             loadCalls.add(new ArrayList<>(keys));
             @SuppressWarnings("unchecked")
             List<V> values = keys.stream()
