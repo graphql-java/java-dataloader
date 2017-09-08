@@ -6,9 +6,11 @@ import org.junit.Test;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 @SuppressWarnings("ConstantConditions")
@@ -164,4 +166,31 @@ public class TryTest {
         expectThrowable(sTry::reThrow, UnsupportedOperationException.class);
     }
 
+    @Test
+    public void forEach() throws Exception {
+        AtomicReference<String> sRef = new AtomicReference<>();
+        Try<String> sTry = Try.tryCall(() -> "Hello World");
+        sTry.forEach(sRef::set);
+
+        assertThat(sRef.get(), equalTo("Hello World"));
+
+        sRef.set(null);
+        sTry = Try.failed(new RuntimeException("Goodbye Cruel World"));
+        sTry.forEach(sRef::set);
+        assertThat(sRef.get(), nullValue());
+    }
+
+    @Test
+    public void recover() throws Exception {
+
+        Try<String> sTry = Try.failed(new RuntimeException("Goodbye Cruel World"));
+        sTry = sTry.recover(t -> "Hello World");
+
+        assertSuccess(sTry, "Hello World");
+
+        sTry = Try.succeeded("Hello Again");
+        sTry = sTry.recover(t -> "Hello World");
+
+        assertSuccess(sTry, "Hello Again");
+    }
 }

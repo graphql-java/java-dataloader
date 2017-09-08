@@ -45,7 +45,12 @@ compileJava {
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 
-    options.compilerArgs = ["-Xlint:unchecked", "-Xdiags:verbose"]
+    options.compilerArgs = ["-Xlint:unchecked", "-Xdiags:verbose", "-Xdoclint:none"]
+}
+
+task myJavadocs(type: Javadoc) {
+    source = sourceSets.main.allJava
+    options.addStringOption('Xdoclint:none', '-quiet')
 }
 
 dependencies {
