@@ -131,4 +131,36 @@ public class StatisticsCollectorTest {
         assertThat(collector.getOverallStatistics().getBatchLoadCount(), equalTo(3L));
         assertThat(collector.getOverallStatistics().getCacheHitCount(), equalTo(3L));
     }
+
+    @Test
+    public void delegating_collector_works() throws Exception {
+        SimpleStatisticsCollector delegate = new SimpleStatisticsCollector();
+        DelegatingStatisticsCollector collector = new DelegatingStatisticsCollector(delegate);
+
+        assertThat(collector.getStatistics().getLoadCount(), equalTo(0L));
+        assertThat(collector.getStatistics().getBatchLoadCount(), equalTo(0L));
+        assertThat(collector.getStatistics().getCacheHitCount(), equalTo(0L));
+        assertThat(collector.getStatistics().getCacheMissCount(), equalTo(0L));
+
+
+        collector.incrementLoadCount();
+        collector.incrementBatchLoadCount();
+        collector.incrementCacheHitCount();
+
+        assertThat(collector.getStatistics().getLoadCount(), equalTo(1L));
+        assertThat(collector.getStatistics().getBatchLoadCount(), equalTo(1L));
+        assertThat(collector.getStatistics().getCacheHitCount(), equalTo(1L));
+        assertThat(collector.getStatistics().getCacheMissCount(), equalTo(0L));
+
+        assertThat(collector.getDelegateStatistics().getLoadCount(), equalTo(1L));
+        assertThat(collector.getDelegateStatistics().getBatchLoadCount(), equalTo(1L));
+        assertThat(collector.getDelegateStatistics().getCacheHitCount(), equalTo(1L));
+        assertThat(collector.getDelegateStatistics().getCacheMissCount(), equalTo(0L));
+
+        assertThat(delegate.getStatistics().getLoadCount(), equalTo(1L));
+        assertThat(delegate.getStatistics().getBatchLoadCount(), equalTo(1L));
+        assertThat(delegate.getStatistics().getCacheHitCount(), equalTo(1L));
+        assertThat(delegate.getStatistics().getCacheMissCount(), equalTo(0L));
+
+    }
 }
