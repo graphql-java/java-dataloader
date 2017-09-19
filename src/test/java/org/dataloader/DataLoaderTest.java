@@ -19,6 +19,9 @@ package org.dataloader;
 import org.dataloader.fixtures.User;
 import org.dataloader.fixtures.UserManager;
 import org.dataloader.impl.CompletableFutureKit;
+import org.dataloader.stats.SimpleStatisticsCollector;
+import org.dataloader.stats.Statistics;
+import org.dataloader.stats.StatisticsCollector;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
@@ -996,6 +999,112 @@ public class DataLoaderTest {
 
         // the failed value should have been cached as per Facebook DL behaviour
         assertThat(batchKeyCalls, equalTo(singletonList(asList("A", "B", "bang"))));
+    }
+
+    @Test
+    public void stats_are_collected_by_default() throws Exception {
+        BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
+        DataLoader<String, String> loader = new DataLoader<>(batchLoader);
+
+        loader.load("A");
+        loader.load("B");
+        loader.loadMany(asList("C", "D"));
+
+        Statistics stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(4L));
+        assertThat(stats.getBatchLoadCount(), equalTo(0L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(4L));
+        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
+
+        loader.load("A");
+        loader.load("B");
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(6L));
+        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getCacheHitCount(), equalTo(2L));
+    }
+
+
+    @Test
+    public void stats_are_collected_with_specified_collector() throws Exception {
+        // lets prime it with some numbers so we know its ours
+        StatisticsCollector collector = new SimpleStatisticsCollector();
+        collector.incrementLoadCount();
+        collector.incrementBatchLoadCount();
+
+        BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
+        DataLoaderOptions loaderOptions = DataLoaderOptions.newOptions().setStatisticsCollector(() -> collector);
+        DataLoader<String, String> loader = new DataLoader<>(batchLoader, loaderOptions);
+
+        loader.load("A");
+        loader.load("B");
+        loader.loadMany(asList("C", "D"));
+
+        Statistics stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(5L)); // previously primed with 1
+        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(5L));
+        assertThat(stats.getBatchLoadCount(), equalTo(2L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
+
+        loader.load("A");
+        loader.load("B");
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(7L));
+        assertThat(stats.getBatchLoadCount(), equalTo(2L));
+        assertThat(stats.getCacheHitCount(), equalTo(2L));
+    }
+
+    @Test
+    public void stats_are_collected_with_caching_disabled() throws Exception {
+        StatisticsCollector collector = new SimpleStatisticsCollector();
+
+        BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
+        DataLoaderOptions loaderOptions = DataLoaderOptions.newOptions().setStatisticsCollector(() -> collector).setCachingEnabled(false);
+        DataLoader<String, String> loader = new DataLoader<>(batchLoader, loaderOptions);
+
+        loader.load("A");
+        loader.load("B");
+        loader.loadMany(asList("C", "D"));
+
+        Statistics stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(4L));
+        assertThat(stats.getBatchLoadCount(), equalTo(0L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(4L));
+        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
+
+        loader.load("A");
+        loader.load("B");
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(6L));
+        assertThat(stats.getBatchLoadCount(), equalTo(2L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
     }
 
     private static CacheKey<JsonObject> getJsonObjectCacheMapFn() {

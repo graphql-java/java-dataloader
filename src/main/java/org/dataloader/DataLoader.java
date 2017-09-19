@@ -17,6 +17,8 @@
 package org.dataloader;
 
 import org.dataloader.impl.CompletableFutureKit;
+import org.dataloader.stats.Statistics;
+import org.dataloader.stats.StatisticsCollector;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -64,6 +66,7 @@ public class DataLoader<K, V> {
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
     private final Map<K, CompletableFuture<V>> loaderQueue;
+    private final StatisticsCollector stats;
 
     /**
      * Creates new DataLoader with the specified batch loader function and default options
@@ -153,6 +156,7 @@ public class DataLoader<K, V> {
         this.futureCache = determineCacheMap(loaderOptions);
         // order of keys matter in data loader
         this.loaderQueue = new LinkedHashMap<>();
+        this.stats = nonNull(this.loaderOptions.getStatisticsCollector());
     }
 
     @SuppressWarnings("unchecked")
@@ -173,8 +177,11 @@ public class DataLoader<K, V> {
      */
     public CompletableFuture<V> load(K key) {
         Object cacheKey = getCacheKey(nonNull(key));
+        stats.incrementLoadCount();
+
         synchronized (futureCache) {
             if (loaderOptions.cachingEnabled() && futureCache.containsKey(cacheKey)) {
+                stats.incrementCacheHitCount();
                 return futureCache.get(cacheKey);
             }
         }
@@ -191,6 +198,7 @@ public class DataLoader<K, V> {
                     .toCompletableFuture();
             future = batchedLoad
                     .thenApply(list -> list.get(0));
+            stats.incrementBatchLoadCount();
         }
         if (loaderOptions.cachingEnabled()) {
             synchronized (futureCache) {
@@ -291,6 +299,7 @@ public class DataLoader<K, V> {
 
     @SuppressWarnings("unchecked")
     private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<CompletableFuture<V>> queuedFutures) {
+        stats.incrementBatchLoadCount();
         return batchLoadFunction.load(keys)
                 .toCompletableFuture()
                 .thenApply(values -> {
@@ -441,4 +450,15 @@ public class DataLoader<K, V> {
         return loaderOptions.cacheKeyFunction().isPresent() ?
                 loaderOptions.cacheKeyFunction().get().getKey(key) : key;
     }
+
+    /**
+     * Gets the statistics associated with this data loader.  These will have been gather via
+     * the {@link org.dataloader.stats.StatisticsCollector} passed in via {@link DataLoaderOptions#getStatisticsCollector()}
+     *
+     * @return statistics for this data loader
+     */
+    public Statistics getStatistics() {
+        return stats.getStatistics();
+    }
+
 }
