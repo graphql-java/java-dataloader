@@ -12,6 +12,8 @@ public class SimpleStatisticsCollector implements StatisticsCollector {
     private final AtomicLong loadCount = new AtomicLong();
     private final AtomicLong batchLoadCount = new AtomicLong();
     private final AtomicLong cacheHitCount = new AtomicLong();
+    private final AtomicLong batchLoadExceptionCount = new AtomicLong();
+    private final AtomicLong loadErrorCount = new AtomicLong();
 
     @Override
     public long incrementLoadCount() {
@@ -29,8 +31,18 @@ public class SimpleStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
+    public long incrementLoadErrorCount() {
+        return loadErrorCount.incrementAndGet();
+    }
+
+    @Override
+    public long incrementBatchLoadExceptionCount() {
+        return batchLoadExceptionCount.incrementAndGet();
+    }
+
+    @Override
     public Statistics getStatistics() {
-        return new StatisticsImpl(loadCount.get(), batchLoadCount.get(), cacheHitCount.get());
+        return new StatisticsImpl(loadCount.get(), batchLoadCount.get(), cacheHitCount.get(), batchLoadExceptionCount.get(), loadErrorCount.get());
     }
 
     @Override

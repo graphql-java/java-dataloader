@@ -37,6 +37,18 @@ public class DelegatingStatisticsCollector implements StatisticsCollector {
         return collector.incrementCacheHitCount();
     }
 
+    @Override
+    public long incrementLoadErrorCount() {
+        delegateCollector.incrementLoadErrorCount();
+        return collector.incrementLoadErrorCount();
+    }
+
+    @Override
+    public long incrementBatchLoadExceptionCount() {
+        delegateCollector.incrementBatchLoadExceptionCount();
+        return collector.incrementBatchLoadExceptionCount();
+    }
+
     /**
      * @return the statistics of the this collector (and not its delegate)
      */

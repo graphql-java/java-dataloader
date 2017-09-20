@@ -13,11 +13,25 @@ public interface StatisticsCollector {
     long incrementLoadCount();
 
     /**
+     * Called to increment the number of loads that resulted in an object deemed in error
+     *
+     * @return the current value after increment
+     */
+    long incrementLoadErrorCount();
+
+    /**
      * Called to increment the number of batch loads
      *
      * @return the current value after increment
      */
     long incrementBatchLoadCount();
+
+    /**
+     * Called to increment the number of batch loads exceptions
+     *
+     * @return the current value after increment
+     */
+    long incrementBatchLoadExceptionCount();
 
     /**
      * Called to increment the number of cache hits

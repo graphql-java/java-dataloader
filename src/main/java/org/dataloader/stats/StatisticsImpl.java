@@ -5,11 +5,15 @@ public class StatisticsImpl implements Statistics {
     private final long loadCount;
     private final long batchLoadCount;
     private final long cacheHitCount;
+    private final long batchLoadExceptionCount;
+    private final long loadErrorCount;
 
-    public StatisticsImpl(long loadCount, long batchLoadCount, long cacheHitCount) {
+    public StatisticsImpl(long loadCount, long batchLoadCount, long cacheHitCount, long batchLoadExceptionCount, long loadErrorCount) {
         this.loadCount = loadCount;
         this.batchLoadCount = batchLoadCount;
         this.cacheHitCount = cacheHitCount;
+        this.batchLoadExceptionCount = batchLoadExceptionCount;
+        this.loadErrorCount = loadErrorCount;
     }
 
     @Override
@@ -47,11 +51,33 @@ public class StatisticsImpl implements Statistics {
     }
 
     @Override
+    public long getBatchLoadExceptionCount() {
+        return batchLoadExceptionCount;
+    }
+
+    @Override
+    public long getLoadErrorCount() {
+        return loadErrorCount;
+    }
+
+    @Override
+    public float getBatchLoadExceptionRatio() {
+        return ratio(batchLoadExceptionCount, loadCount);
+    }
+
+    @Override
+    public float getLoadErrorRatio() {
+        return ratio(loadErrorCount, loadCount);
+    }
+
+    @Override
     public String toString() {
         return "StatisticsImpl{" +
                 "loadCount=" + loadCount +
                 ", batchLoadCount=" + batchLoadCount +
                 ", cacheHitCount=" + cacheHitCount +
+                ", batchLoadExceptionCount=" + batchLoadExceptionCount +
+                ", loadErrorCount=" + loadErrorCount +
                 '}';
     }
 }

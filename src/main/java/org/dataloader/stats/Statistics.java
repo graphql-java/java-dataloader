@@ -1,7 +1,7 @@
 package org.dataloader.stats;
 
 /**
- * A simple set of statistics of {@link org.dataloader.DataLoader} operations
+ * A simple set of statistics about {@link org.dataloader.DataLoader} operations
  */
 public interface Statistics {
     /**
@@ -33,4 +33,26 @@ public interface Statistics {
      * @return cacheHits / loadCount
      */
     float getCacheHitRatio();
+
+    /**
+     * @return the number of times the {@link org.dataloader.DataLoader} batch loader function throw an exception when trying to get any values
+     */
+    long getBatchLoadExceptionCount();
+
+    /**
+     * @return batchLoadExceptionCount / loadCount
+     */
+    float getBatchLoadExceptionRatio();
+
+    /**
+     * @return the number of times the {@link org.dataloader.DataLoader} batch loader function return an specific object that was in error
+     */
+    long getLoadErrorCount();
+
+
+    /**
+     * @return loadErrorCount / loadCount
+     */
+    float getLoadErrorRatio();
+
 }

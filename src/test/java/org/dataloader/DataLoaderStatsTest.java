@@ -1,0 +1,187 @@
+package org.dataloader;
+
+import org.dataloader.impl.CompletableFutureKit;
+import org.dataloader.stats.SimpleStatisticsCollector;
+import org.dataloader.stats.Statistics;
+import org.dataloader.stats.StatisticsCollector;
+import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+import static java.util.Arrays.asList;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertThat;
+
+/**
+ * Tests related to stats.  DataLoaderTest is getting to big and needs refactoring
+ */
+public class DataLoaderStatsTest {
+
+    @Test
+    public void stats_are_collected_by_default() throws Exception {
+        BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
+        DataLoader<String, String> loader = new DataLoader<>(batchLoader);
+
+        loader.load("A");
+        loader.load("B");
+        loader.loadMany(asList("C", "D"));
+
+        Statistics stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(4L));
+        assertThat(stats.getBatchLoadCount(), equalTo(0L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(4L));
+        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
+
+        loader.load("A");
+        loader.load("B");
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(6L));
+        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getCacheHitCount(), equalTo(2L));
+    }
+
+
+    @Test
+    public void stats_are_collected_with_specified_collector() throws Exception {
+        // lets prime it with some numbers so we know its ours
+        StatisticsCollector collector = new SimpleStatisticsCollector();
+        collector.incrementLoadCount();
+        collector.incrementBatchLoadCount();
+
+        BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
+        DataLoaderOptions loaderOptions = DataLoaderOptions.newOptions().setStatisticsCollector(() -> collector);
+        DataLoader<String, String> loader = new DataLoader<>(batchLoader, loaderOptions);
+
+        loader.load("A");
+        loader.load("B");
+        loader.loadMany(asList("C", "D"));
+
+        Statistics stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(5L)); // previously primed with 1
+        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(5L));
+        assertThat(stats.getBatchLoadCount(), equalTo(2L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
+
+        loader.load("A");
+        loader.load("B");
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(7L));
+        assertThat(stats.getBatchLoadCount(), equalTo(2L));
+        assertThat(stats.getCacheHitCount(), equalTo(2L));
+    }
+
+    @Test
+    public void stats_are_collected_with_caching_disabled() throws Exception {
+        StatisticsCollector collector = new SimpleStatisticsCollector();
+
+        BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
+        DataLoaderOptions loaderOptions = DataLoaderOptions.newOptions().setStatisticsCollector(() -> collector).setCachingEnabled(false);
+        DataLoader<String, String> loader = new DataLoader<>(batchLoader, loaderOptions);
+
+        loader.load("A");
+        loader.load("B");
+        loader.loadMany(asList("C", "D"));
+
+        Statistics stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(4L));
+        assertThat(stats.getBatchLoadCount(), equalTo(0L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(4L));
+        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
+
+        loader.load("A");
+        loader.load("B");
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(6L));
+        assertThat(stats.getBatchLoadCount(), equalTo(2L));
+        assertThat(stats.getCacheHitCount(), equalTo(0L));
+    }
+
+    BatchLoader<String, Try<String>> batchLoaderThatBlows = keys -> {
+        List<Try<String>> values = new ArrayList<>();
+        for (String key : keys) {
+            if (key.startsWith("exception")) {
+                return CompletableFutureKit.failedFuture(new RuntimeException(key));
+            } else if (key.startsWith("bang")) {
+                throw new RuntimeException(key);
+            } else if (key.startsWith("error")) {
+                values.add(Try.failed(new RuntimeException(key)));
+            } else {
+                values.add(Try.succeeded(key));
+            }
+        }
+        return completedFuture(values);
+    };
+
+    @Test
+    public void stats_are_collected_on_exceptions() throws Exception {
+        DataLoader<String, String> loader = DataLoader.newDataLoaderWithTry(batchLoaderThatBlows);
+
+        loader.load("A");
+        loader.load("exception");
+
+        Statistics stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(2L));
+        assertThat(stats.getBatchLoadExceptionCount(), equalTo(0L));
+        assertThat(stats.getLoadErrorCount(), equalTo(0L));
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(2L));
+        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getBatchLoadExceptionCount(), equalTo(1L));
+        assertThat(stats.getLoadErrorCount(), equalTo(0L));
+
+        loader.load("error1");
+        loader.load("error2");
+        loader.load("error3");
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(5L));
+        assertThat(stats.getBatchLoadCount(), equalTo(2L));
+        assertThat(stats.getBatchLoadExceptionCount(), equalTo(1L));
+        assertThat(stats.getLoadErrorCount(), equalTo(3L));
+
+        loader.load("bang");
+
+        loader.dispatch();
+
+        stats = loader.getStatistics();
+        assertThat(stats.getLoadCount(), equalTo(6L));
+        assertThat(stats.getBatchLoadCount(), equalTo(3L));
+        assertThat(stats.getBatchLoadExceptionCount(), equalTo(2L));
+        assertThat(stats.getLoadErrorCount(), equalTo(3L));
+    }
+}

@@ -17,16 +17,22 @@ public class StatisticsCollectorTest {
         assertThat(collector.getStatistics().getBatchLoadCount(), equalTo(0L));
         assertThat(collector.getStatistics().getCacheHitCount(), equalTo(0L));
         assertThat(collector.getStatistics().getCacheMissCount(), equalTo(0L));
+        assertThat(collector.getStatistics().getBatchLoadExceptionCount(), equalTo(0L));
+        assertThat(collector.getStatistics().getLoadErrorCount(), equalTo(0L));
 
 
         collector.incrementLoadCount();
         collector.incrementBatchLoadCount();
         collector.incrementCacheHitCount();
+        collector.incrementBatchLoadExceptionCount();
+        collector.incrementLoadErrorCount();
 
         assertThat(collector.getStatistics().getLoadCount(), equalTo(1L));
         assertThat(collector.getStatistics().getBatchLoadCount(), equalTo(1L));
         assertThat(collector.getStatistics().getCacheHitCount(), equalTo(1L));
         assertThat(collector.getStatistics().getCacheMissCount(), equalTo(0L));
+        assertThat(collector.getStatistics().getBatchLoadExceptionCount(), equalTo(1L));
+        assertThat(collector.getStatistics().getLoadErrorCount(), equalTo(1L));
     }
 
     @Test
@@ -58,6 +64,25 @@ public class StatisticsCollectorTest {
 
         stats = collector.getStatistics();
         assertThat(stats.getCacheHitRatio(), equalTo(2f / 7f));
+
+        collector.incrementLoadCount();
+        collector.incrementLoadCount();
+        collector.incrementLoadCount();
+        collector.incrementBatchLoadExceptionCount();
+        collector.incrementBatchLoadExceptionCount();
+
+        stats = collector.getStatistics();
+        assertThat(stats.getBatchLoadExceptionRatio(), equalTo(2f / 10f));
+
+        collector.incrementLoadCount();
+        collector.incrementLoadCount();
+        collector.incrementLoadCount();
+        collector.incrementLoadErrorCount();
+        collector.incrementLoadErrorCount();
+        collector.incrementLoadErrorCount();
+
+        stats = collector.getStatistics();
+        assertThat(stats.getLoadErrorRatio(), equalTo(3f / 13f));
     }
 
     @Test
@@ -146,21 +171,29 @@ public class StatisticsCollectorTest {
         collector.incrementLoadCount();
         collector.incrementBatchLoadCount();
         collector.incrementCacheHitCount();
+        collector.incrementBatchLoadExceptionCount();
+        collector.incrementLoadErrorCount();
 
         assertThat(collector.getStatistics().getLoadCount(), equalTo(1L));
         assertThat(collector.getStatistics().getBatchLoadCount(), equalTo(1L));
         assertThat(collector.getStatistics().getCacheHitCount(), equalTo(1L));
         assertThat(collector.getStatistics().getCacheMissCount(), equalTo(0L));
+        assertThat(collector.getStatistics().getBatchLoadExceptionCount(), equalTo(1L));
+        assertThat(collector.getStatistics().getLoadErrorCount(), equalTo(1L));
 
         assertThat(collector.getDelegateStatistics().getLoadCount(), equalTo(1L));
         assertThat(collector.getDelegateStatistics().getBatchLoadCount(), equalTo(1L));
         assertThat(collector.getDelegateStatistics().getCacheHitCount(), equalTo(1L));
         assertThat(collector.getDelegateStatistics().getCacheMissCount(), equalTo(0L));
+        assertThat(collector.getDelegateStatistics().getBatchLoadExceptionCount(), equalTo(1L));
+        assertThat(collector.getDelegateStatistics().getLoadErrorCount(), equalTo(1L));
 
         assertThat(delegate.getStatistics().getLoadCount(), equalTo(1L));
         assertThat(delegate.getStatistics().getBatchLoadCount(), equalTo(1L));
         assertThat(delegate.getStatistics().getCacheHitCount(), equalTo(1L));
         assertThat(delegate.getStatistics().getCacheMissCount(), equalTo(0L));
+        assertThat(delegate.getStatistics().getBatchLoadExceptionCount(), equalTo(1L));
+        assertThat(delegate.getStatistics().getLoadErrorCount(), equalTo(1L));
 
     }
 }

@@ -46,6 +46,18 @@ public class ThreadLocalStatisticsCollector implements StatisticsCollector {
         return collector.get().incrementCacheHitCount();
     }
 
+    @Override
+    public long incrementLoadErrorCount() {
+        overallCollector.incrementLoadErrorCount();
+        return collector.get().incrementLoadErrorCount();
+    }
+
+    @Override
+    public long incrementBatchLoadExceptionCount() {
+        overallCollector.incrementBatchLoadExceptionCount();
+        return collector.get().incrementBatchLoadExceptionCount();
+    }
+
     /**
      * This returns the statistics for this thread.
      *
