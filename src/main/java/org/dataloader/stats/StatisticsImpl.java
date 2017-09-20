@@ -7,6 +7,7 @@ public class StatisticsImpl implements Statistics {
 
     private final long loadCount;
     private final long loadErrorCount;
+    private final long batchInvokeCount;
     private final long batchLoadCount;
     private final long batchLoadExceptionCount;
     private final long cacheHitCount;
@@ -15,11 +16,12 @@ public class StatisticsImpl implements Statistics {
      * Zero statistics
      */
     public StatisticsImpl() {
-        this(0, 0, 0, 0, 0);
+        this(0, 0, 0, 0, 0, 0);
     }
 
-    public StatisticsImpl(long loadCount, long loadErrorCount, long batchLoadCount, long batchLoadExceptionCount, long cacheHitCount) {
+    public StatisticsImpl(long loadCount, long loadErrorCount, long batchInvokeCount, long batchLoadCount, long batchLoadExceptionCount, long cacheHitCount) {
         this.loadCount = loadCount;
+        this.batchInvokeCount = batchInvokeCount;
         this.batchLoadCount = batchLoadCount;
         this.cacheHitCount = cacheHitCount;
         this.batchLoadExceptionCount = batchLoadExceptionCount;
@@ -44,6 +46,11 @@ public class StatisticsImpl implements Statistics {
     @Override
     public double getLoadErrorRatio() {
         return ratio(loadErrorCount, loadCount);
+    }
+
+    @Override
+    public long getBatchInvokeCount() {
+        return batchInvokeCount;
     }
 
     @Override
@@ -86,8 +93,11 @@ public class StatisticsImpl implements Statistics {
     public Statistics combine(Statistics other) {
         return new StatisticsImpl(
                 this.loadCount + other.getLoadCount(),
-                this.loadErrorCount + other.getLoadErrorCount(), this.batchLoadCount + other.getBatchLoadCount(),
-                this.batchLoadExceptionCount + other.getBatchLoadExceptionCount(), this.cacheHitCount + other.getCacheHitCount()
+                this.loadErrorCount + other.getLoadErrorCount(),
+                this.batchInvokeCount + other.getBatchInvokeCount(),
+                this.batchLoadCount + other.getBatchLoadCount(),
+                this.batchLoadExceptionCount + other.getBatchLoadExceptionCount(),
+                this.cacheHitCount + other.getCacheHitCount()
         );
     }
 
@@ -98,6 +108,7 @@ public class StatisticsImpl implements Statistics {
         stats.put("loadErrorCount", getLoadErrorCount());
         stats.put("loadErrorRatio", getLoadErrorRatio());
 
+        stats.put("batchInvokeCount", getBatchInvokeCount());
         stats.put("batchLoadCount", getBatchLoadCount());
         stats.put("batchLoadRatio", getBatchLoadRatio());
         stats.put("batchLoadExceptionCount", getBatchLoadExceptionCount());

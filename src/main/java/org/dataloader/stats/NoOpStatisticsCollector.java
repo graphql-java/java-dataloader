@@ -5,7 +5,7 @@ package org.dataloader.stats;
  */
 public class NoOpStatisticsCollector implements StatisticsCollector {
 
-    private static final StatisticsImpl ZERO_STATS = new StatisticsImpl(0, 0, 0, 0, 0);
+    private static final StatisticsImpl ZERO_STATS = new StatisticsImpl();
 
     @Override
     public long incrementLoadCount() {
@@ -18,7 +18,7 @@ public class NoOpStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public long incrementBatchLoadCount() {
+    public long incrementBatchLoadCountBy(long delta) {
         return 0;
     }
 

@@ -193,13 +193,13 @@ public class DataLoader<K, V> {
                 loaderQueue.put(key, future);
             }
         } else {
+            stats.incrementBatchLoadCountBy(1);
             // immediate execution of batch function
             CompletableFuture<List<V>> batchedLoad = batchLoadFunction
                     .load(singletonList(key))
                     .toCompletableFuture();
             future = batchedLoad
                     .thenApply(list -> list.get(0));
-            stats.incrementBatchLoadCount();
         }
         if (loaderOptions.cachingEnabled()) {
             synchronized (futureCache) {
@@ -300,7 +300,7 @@ public class DataLoader<K, V> {
 
     @SuppressWarnings("unchecked")
     private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<CompletableFuture<V>> queuedFutures) {
-        stats.incrementBatchLoadCount();
+        stats.incrementBatchLoadCountBy(keys.size());
         CompletionStage<List<V>> batchLoad;
         try {
             batchLoad = nonNull(batchLoadFunction.load(keys), "Your batch loader function MUST return a non null CompletionStage promise");

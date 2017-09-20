@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class SimpleStatisticsCollector implements StatisticsCollector {
     private final AtomicLong loadCount = new AtomicLong();
+    private final AtomicLong batchInvokeCount = new AtomicLong();
     private final AtomicLong batchLoadCount = new AtomicLong();
     private final AtomicLong cacheHitCount = new AtomicLong();
     private final AtomicLong batchLoadExceptionCount = new AtomicLong();
@@ -20,9 +21,11 @@ public class SimpleStatisticsCollector implements StatisticsCollector {
         return loadCount.incrementAndGet();
     }
 
+
     @Override
-    public long incrementBatchLoadCount() {
-        return batchLoadCount.incrementAndGet();
+    public long incrementBatchLoadCountBy(long delta) {
+        batchInvokeCount.incrementAndGet();
+        return batchLoadCount.addAndGet(delta);
     }
 
     @Override
@@ -42,7 +45,7 @@ public class SimpleStatisticsCollector implements StatisticsCollector {
 
     @Override
     public Statistics getStatistics() {
-        return new StatisticsImpl(loadCount.get(), loadErrorCount.get(), batchLoadCount.get(), batchLoadExceptionCount.get(), cacheHitCount.get());
+        return new StatisticsImpl(loadCount.get(), loadErrorCount.get(), batchInvokeCount.get(), batchLoadCount.get(), batchLoadExceptionCount.get(), cacheHitCount.get());
     }
 
     @Override

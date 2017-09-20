@@ -7,12 +7,17 @@ import java.util.Map;
  */
 public interface Statistics {
     /**
-     * @return the number of times {@link org.dataloader.DataLoader#load(Object)} has been called
+     * @return the number of objects {@link org.dataloader.DataLoader#load(Object)} has been asked to load
      */
     long getLoadCount();
 
     /**
      * @return the number of times the {@link org.dataloader.DataLoader} batch loader function has been called
+     */
+    long getBatchInvokeCount();
+
+    /**
+     * @return the number of objects that the {@link org.dataloader.DataLoader} batch loader function has been asked to load
      */
     long getBatchLoadCount();
 

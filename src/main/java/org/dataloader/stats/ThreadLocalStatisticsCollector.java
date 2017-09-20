@@ -35,9 +35,9 @@ public class ThreadLocalStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public long incrementBatchLoadCount() {
-        overallCollector.incrementBatchLoadCount();
-        return collector.get().incrementBatchLoadCount();
+    public long incrementBatchLoadCountBy(long delta) {
+        overallCollector.incrementBatchLoadCountBy(delta);
+        return collector.get().incrementBatchLoadCountBy(delta);
     }
 
     @Override

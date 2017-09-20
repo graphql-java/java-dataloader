@@ -22,7 +22,7 @@ public class StatisticsCollectorTest {
 
 
         collector.incrementLoadCount();
-        collector.incrementBatchLoadCount();
+        collector.incrementBatchLoadCountBy(1);
         collector.incrementCacheHitCount();
         collector.incrementBatchLoadExceptionCount();
         collector.incrementLoadErrorCount();
@@ -50,7 +50,7 @@ public class StatisticsCollectorTest {
         collector.incrementLoadCount();
         collector.incrementLoadCount();
         collector.incrementLoadCount();
-        collector.incrementBatchLoadCount();
+        collector.incrementBatchLoadCountBy(1);
 
         stats = collector.getStatistics();
         assertThat(stats.getBatchLoadRatio(), equalTo(1d / 4d));
@@ -96,7 +96,7 @@ public class StatisticsCollectorTest {
 
 
         collector.incrementLoadCount();
-        collector.incrementBatchLoadCount();
+        collector.incrementBatchLoadCountBy(1);
         collector.incrementCacheHitCount();
 
         assertThat(collector.getStatistics().getLoadCount(), equalTo(1L));
@@ -110,7 +110,7 @@ public class StatisticsCollectorTest {
         CompletableFuture.supplyAsync(() -> {
 
             collector.incrementLoadCount();
-            collector.incrementBatchLoadCount();
+            collector.incrementBatchLoadCountBy(1);
             collector.incrementCacheHitCount();
 
             // per thread stats here
@@ -129,7 +129,7 @@ public class StatisticsCollectorTest {
         // back on this main thread
 
         collector.incrementLoadCount();
-        collector.incrementBatchLoadCount();
+        collector.incrementBatchLoadCountBy(1);
         collector.incrementCacheHitCount();
 
         // per thread stats here
@@ -169,7 +169,7 @@ public class StatisticsCollectorTest {
 
 
         collector.incrementLoadCount();
-        collector.incrementBatchLoadCount();
+        collector.incrementBatchLoadCountBy(1);
         collector.incrementCacheHitCount();
         collector.incrementBatchLoadExceptionCount();
         collector.incrementLoadErrorCount();
@@ -201,7 +201,7 @@ public class StatisticsCollectorTest {
         StatisticsCollector collector = new NoOpStatisticsCollector();
         collector.incrementLoadErrorCount();
         collector.incrementBatchLoadExceptionCount();
-        collector.incrementBatchLoadCount();
+        collector.incrementBatchLoadCountBy(1);
         collector.incrementCacheHitCount();
 
         assertThat(collector.getStatistics().getLoadCount(), equalTo(0L));

@@ -31,6 +31,7 @@ public class DataLoaderStatsTest {
 
         Statistics stats = loader.getStatistics();
         assertThat(stats.getLoadCount(), equalTo(4L));
+        assertThat(stats.getBatchInvokeCount(), equalTo(0L));
         assertThat(stats.getBatchLoadCount(), equalTo(0L));
         assertThat(stats.getCacheHitCount(), equalTo(0L));
 
@@ -38,7 +39,8 @@ public class DataLoaderStatsTest {
 
         stats = loader.getStatistics();
         assertThat(stats.getLoadCount(), equalTo(4L));
-        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getBatchInvokeCount(), equalTo(1L));
+        assertThat(stats.getBatchLoadCount(), equalTo(4L));
         assertThat(stats.getCacheHitCount(), equalTo(0L));
 
         loader.load("A");
@@ -48,7 +50,8 @@ public class DataLoaderStatsTest {
 
         stats = loader.getStatistics();
         assertThat(stats.getLoadCount(), equalTo(6L));
-        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getBatchInvokeCount(), equalTo(1L));
+        assertThat(stats.getBatchLoadCount(), equalTo(4L));
         assertThat(stats.getCacheHitCount(), equalTo(2L));
     }
 
@@ -58,7 +61,7 @@ public class DataLoaderStatsTest {
         // lets prime it with some numbers so we know its ours
         StatisticsCollector collector = new SimpleStatisticsCollector();
         collector.incrementLoadCount();
-        collector.incrementBatchLoadCount();
+        collector.incrementBatchLoadCountBy(1);
 
         BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
         DataLoaderOptions loaderOptions = DataLoaderOptions.newOptions().setStatisticsCollector(() -> collector);
@@ -70,14 +73,16 @@ public class DataLoaderStatsTest {
 
         Statistics stats = loader.getStatistics();
         assertThat(stats.getLoadCount(), equalTo(5L)); // previously primed with 1
-        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getBatchInvokeCount(), equalTo(1L)); // also primed
+        assertThat(stats.getBatchLoadCount(), equalTo(1L));  // also primed
         assertThat(stats.getCacheHitCount(), equalTo(0L));
 
         loader.dispatch();
 
         stats = loader.getStatistics();
         assertThat(stats.getLoadCount(), equalTo(5L));
-        assertThat(stats.getBatchLoadCount(), equalTo(2L));
+        assertThat(stats.getBatchInvokeCount(), equalTo(2L));
+        assertThat(stats.getBatchLoadCount(), equalTo(5L));
         assertThat(stats.getCacheHitCount(), equalTo(0L));
 
         loader.load("A");
@@ -87,7 +92,8 @@ public class DataLoaderStatsTest {
 
         stats = loader.getStatistics();
         assertThat(stats.getLoadCount(), equalTo(7L));
-        assertThat(stats.getBatchLoadCount(), equalTo(2L));
+        assertThat(stats.getBatchInvokeCount(), equalTo(2L));
+        assertThat(stats.getBatchLoadCount(), equalTo(5L));
         assertThat(stats.getCacheHitCount(), equalTo(2L));
     }
 
@@ -105,6 +111,7 @@ public class DataLoaderStatsTest {
 
         Statistics stats = loader.getStatistics();
         assertThat(stats.getLoadCount(), equalTo(4L));
+        assertThat(stats.getBatchInvokeCount(), equalTo(0L));
         assertThat(stats.getBatchLoadCount(), equalTo(0L));
         assertThat(stats.getCacheHitCount(), equalTo(0L));
 
@@ -112,7 +119,8 @@ public class DataLoaderStatsTest {
 
         stats = loader.getStatistics();
         assertThat(stats.getLoadCount(), equalTo(4L));
-        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getBatchInvokeCount(), equalTo(1L));
+        assertThat(stats.getBatchLoadCount(), equalTo(4L));
         assertThat(stats.getCacheHitCount(), equalTo(0L));
 
         loader.load("A");
@@ -122,7 +130,8 @@ public class DataLoaderStatsTest {
 
         stats = loader.getStatistics();
         assertThat(stats.getLoadCount(), equalTo(6L));
-        assertThat(stats.getBatchLoadCount(), equalTo(2L));
+        assertThat(stats.getBatchInvokeCount(), equalTo(2L));
+        assertThat(stats.getBatchLoadCount(), equalTo(6L));
         assertThat(stats.getCacheHitCount(), equalTo(0L));
     }
 
@@ -158,7 +167,8 @@ public class DataLoaderStatsTest {
 
         stats = loader.getStatistics();
         assertThat(stats.getLoadCount(), equalTo(2L));
-        assertThat(stats.getBatchLoadCount(), equalTo(1L));
+        assertThat(stats.getBatchInvokeCount(), equalTo(1L));
+        assertThat(stats.getBatchLoadCount(), equalTo(2L));
         assertThat(stats.getBatchLoadExceptionCount(), equalTo(1L));
         assertThat(stats.getLoadErrorCount(), equalTo(0L));
 
@@ -170,7 +180,7 @@ public class DataLoaderStatsTest {
 
         stats = loader.getStatistics();
         assertThat(stats.getLoadCount(), equalTo(5L));
-        assertThat(stats.getBatchLoadCount(), equalTo(2L));
+        assertThat(stats.getBatchLoadCount(), equalTo(5L));
         assertThat(stats.getBatchLoadExceptionCount(), equalTo(1L));
         assertThat(stats.getLoadErrorCount(), equalTo(3L));
 
@@ -180,7 +190,7 @@ public class DataLoaderStatsTest {
 
         stats = loader.getStatistics();
         assertThat(stats.getLoadCount(), equalTo(6L));
-        assertThat(stats.getBatchLoadCount(), equalTo(3L));
+        assertThat(stats.getBatchLoadCount(), equalTo(6L));
         assertThat(stats.getBatchLoadExceptionCount(), equalTo(2L));
         assertThat(stats.getLoadErrorCount(), equalTo(3L));
     }

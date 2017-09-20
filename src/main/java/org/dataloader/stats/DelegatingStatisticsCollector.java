@@ -26,9 +26,9 @@ public class DelegatingStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public long incrementBatchLoadCount() {
-        delegateCollector.incrementBatchLoadCount();
-        return collector.incrementBatchLoadCount();
+    public long incrementBatchLoadCountBy(long delta) {
+        delegateCollector.incrementBatchLoadCountBy(delta);
+        return collector.incrementBatchLoadCountBy(delta);
     }
 
     @Override

@@ -22,9 +22,11 @@ public interface StatisticsCollector {
     /**
      * Called to increment the number of batch loads
      *
+     * @param delta how much to add to the count
+     *
      * @return the current value after increment
      */
-    long incrementBatchLoadCount();
+    long incrementBatchLoadCountBy(long delta);
 
     /**
      * Called to increment the number of batch loads exceptions
