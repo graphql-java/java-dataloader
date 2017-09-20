@@ -1,7 +1,6 @@
 package org.dataloader;
 
 import org.dataloader.stats.Statistics;
-import org.dataloader.stats.StatisticsImpl;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -100,7 +99,7 @@ public class DataLoaderRegistry {
      * as the sum of all their statistics
      */
     public Statistics getStatistics() {
-        Statistics stats = new StatisticsImpl();
+        Statistics stats = new Statistics();
         for (DataLoader<?, ?> dataLoader : dataLoaders.values()) {
             stats = stats.combine(dataLoader.getStatistics());
         }

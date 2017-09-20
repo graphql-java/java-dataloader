@@ -7,12 +7,12 @@ import java.util.Map;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 
-public class StatisticsImplTest {
+public class StatisticsTest {
 
     @Test
     public void combine_works() throws Exception {
-        StatisticsImpl one = new StatisticsImpl(1, 5, 6, 2, 4, 3);
-        StatisticsImpl two = new StatisticsImpl(6, 10, 6, 7, 9, 8);
+        Statistics one = new Statistics(1, 5, 6, 2, 4, 3);
+        Statistics two = new Statistics(6, 10, 6, 7, 9, 8);
 
         Statistics combine = one.combine(two);
 
@@ -27,7 +27,7 @@ public class StatisticsImplTest {
     @Test
     public void to_map_works() throws Exception {
 
-        StatisticsImpl one = new StatisticsImpl(10, 2, 11, 3, 4, 5);
+        Statistics one = new Statistics(10, 2, 11, 3, 4, 5);
         Map<String, Number> map = one.toMap();
 
         assertThat(map.get("loadCount"), equalTo(10L));
