@@ -194,6 +194,20 @@ public class StatisticsCollectorTest {
         assertThat(delegate.getStatistics().getCacheMissCount(), equalTo(0L));
         assertThat(delegate.getStatistics().getBatchLoadExceptionCount(), equalTo(1L));
         assertThat(delegate.getStatistics().getLoadErrorCount(), equalTo(1L));
+    }
+
+    @Test
+    public void noop_is_just_that() throws Exception {
+        StatisticsCollector collector = new NoOpStatisticsCollector();
+        collector.incrementLoadErrorCount();
+        collector.incrementBatchLoadExceptionCount();
+        collector.incrementBatchLoadCount();
+        collector.incrementCacheHitCount();
+
+        assertThat(collector.getStatistics().getLoadCount(), equalTo(0L));
+        assertThat(collector.getStatistics().getBatchLoadCount(), equalTo(0L));
+        assertThat(collector.getStatistics().getCacheHitCount(), equalTo(0L));
+        assertThat(collector.getStatistics().getCacheMissCount(), equalTo(0L));
 
     }
 }
