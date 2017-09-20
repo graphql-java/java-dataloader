@@ -193,6 +193,8 @@ public class DataLoaderOptions {
      * the supplier pattern, you can create a new statistics collector on each call or you can reuse
      * a common value
      *
+     * @param statisticsCollector the statistics collector to use
+     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setStatisticsCollector(Supplier<StatisticsCollector> statisticsCollector) {
