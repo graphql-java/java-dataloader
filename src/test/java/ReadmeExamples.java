@@ -5,12 +5,16 @@ import org.dataloader.DataLoaderOptions;
 import org.dataloader.Try;
 import org.dataloader.fixtures.User;
 import org.dataloader.fixtures.UserManager;
+import org.dataloader.stats.Statistics;
+import org.dataloader.stats.ThreadLocalStatisticsCollector;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
+
+import static java.lang.String.format;
 
 @SuppressWarnings("ALL")
 public class ReadmeExamples {
@@ -73,7 +77,6 @@ public class ReadmeExamples {
 
         userLoader.dispatchAndJoin();
     }
-
 
 
     private void tryExample() {
@@ -184,5 +187,20 @@ public class ReadmeExamples {
         return false;
     }
 
+
+    private void statsExample() {
+        Statistics statistics = userDataLoader.getStatistics();
+
+        System.out.println(format("load : %d", statistics.getLoadCount()));
+        System.out.println(format("batch load: %d", statistics.getBatchLoadCount()));
+        System.out.println(format("cache hit: %d", statistics.getCacheHitCount()));
+        System.out.println(format("cache hit ratio: %d", statistics.getCacheHitRatio()));
+    }
+
+    private void statsConfigExample() {
+
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setStatisticsCollector(() -> new ThreadLocalStatisticsCollector());
+        DataLoader<String,User> userDataLoader = DataLoader.newDataLoader(userBatchLoader,options);
+    }
 
 }

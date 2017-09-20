@@ -269,6 +269,38 @@ In some circumstances you may wish to clear the cache for these individual probl
         });
 ```
 
+
+## Statistics on what is happening
+
+`DataLoader` keeps statistics on what is happening.  It can tell you the number of objects asked for, the cache hit number, the number of objects
+asked for via batching and so on.
+
+Knowing what the behaviour of your data is important for you to understand how efficient you are in serving the data via this pattern.
+
+
+```java
+        Statistics statistics = userDataLoader.getStatistics();
+        
+        System.out.println(format("load : %d", statistics.getLoadCount()));
+        System.out.println(format("batch load: %d", statistics.getBatchLoadCount()));
+        System.out.println(format("cache hit: %d", statistics.getCacheHitCount()));
+        System.out.println(format("cache hit ratio: %d", statistics.getCacheHitRatio()));
+
+```
+
+`DataLoaderRegistry` can also roll up the statistics for all data loaders inside it.
+
+You can configure the statistics collector used when you build the data loader
+
+```java
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setStatisticsCollector(() -> new ThreadLocalStatisticsCollector());
+        DataLoader<String,User> userDataLoader = DataLoader.newDataLoader(userBatchLoader,options);
+
+```
+
+Which collector you use is up to you.  It ships with the following: `SimpleStatisticsCollector`, `ThreadLocalStatisticsCollector`, `DelegatingStatisticsCollector` 
+and `NoOpStatisticsCollector`.
+
 ## The scope of a data loader is important
 
 If you are serving web requests then the data can be specific to the user requesting it.  If you have user specific data
