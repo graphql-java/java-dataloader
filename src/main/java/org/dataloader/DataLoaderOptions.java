@@ -16,9 +16,13 @@
 
 package org.dataloader;
 
-import org.dataloader.impl.Assertions;
+import org.dataloader.stats.SimpleStatisticsCollector;
+import org.dataloader.stats.StatisticsCollector;
 
 import java.util.Optional;
+import java.util.function.Supplier;
+
+import static org.dataloader.impl.Assertions.nonNull;
 
 /**
  * Configuration options for {@link DataLoader} instances.
@@ -32,6 +36,7 @@ public class DataLoaderOptions {
     private CacheKey cacheKeyFunction;
     private CacheMap cacheMap;
     private int maxBatchSize;
+    private Supplier<StatisticsCollector> statisticsCollector;
 
     /**
      * Creates a new data loader options with default settings.
@@ -40,6 +45,7 @@ public class DataLoaderOptions {
         batchingEnabled = true;
         cachingEnabled = true;
         maxBatchSize = -1;
+        statisticsCollector = SimpleStatisticsCollector::new;
     }
 
     /**
@@ -48,12 +54,13 @@ public class DataLoaderOptions {
      * @param other the other options instance
      */
     public DataLoaderOptions(DataLoaderOptions other) {
-        Assertions.nonNull(other);
+        nonNull(other);
         this.batchingEnabled = other.batchingEnabled;
         this.cachingEnabled = other.cachingEnabled;
         this.cacheKeyFunction = other.cacheKeyFunction;
         this.cacheMap = other.cacheMap;
         this.maxBatchSize = other.maxBatchSize;
+        this.statisticsCollector = other.statisticsCollector;
     }
 
     /**
@@ -173,4 +180,27 @@ public class DataLoaderOptions {
         this.maxBatchSize = maxBatchSize;
         return this;
     }
+
+    /**
+     * @return the statistics collector to use with these options
+     */
+    public StatisticsCollector getStatisticsCollector() {
+        return nonNull(this.statisticsCollector.get());
+    }
+
+    /**
+     * Sets the statistics collector supplier that will be used with these data loader options.  Since it uses
+     * the supplier pattern, you can create a new statistics collector on each call or you can reuse
+     * a common value
+     *
+     * @param statisticsCollector the statistics collector to use
+     *
+     * @return the data loader options for fluent coding
+     */
+    public DataLoaderOptions setStatisticsCollector(Supplier<StatisticsCollector> statisticsCollector) {
+        this.statisticsCollector = nonNull(statisticsCollector);
+        return this;
+    }
+
+
 }

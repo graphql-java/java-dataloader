@@ -17,6 +17,8 @@
 package org.dataloader;
 
 import org.dataloader.impl.CompletableFutureKit;
+import org.dataloader.stats.Statistics;
+import org.dataloader.stats.StatisticsCollector;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyList;
@@ -64,6 +67,7 @@ public class DataLoader<K, V> {
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
     private final Map<K, CompletableFuture<V>> loaderQueue;
+    private final StatisticsCollector stats;
 
     /**
      * Creates new DataLoader with the specified batch loader function and default options
@@ -153,6 +157,7 @@ public class DataLoader<K, V> {
         this.futureCache = determineCacheMap(loaderOptions);
         // order of keys matter in data loader
         this.loaderQueue = new LinkedHashMap<>();
+        this.stats = nonNull(this.loaderOptions.getStatisticsCollector());
     }
 
     @SuppressWarnings("unchecked")
@@ -173,8 +178,11 @@ public class DataLoader<K, V> {
      */
     public CompletableFuture<V> load(K key) {
         Object cacheKey = getCacheKey(nonNull(key));
+        stats.incrementLoadCount();
+
         synchronized (futureCache) {
             if (loaderOptions.cachingEnabled() && futureCache.containsKey(cacheKey)) {
+                stats.incrementCacheHitCount();
                 return futureCache.get(cacheKey);
             }
         }
@@ -185,6 +193,7 @@ public class DataLoader<K, V> {
                 loaderQueue.put(key, future);
             }
         } else {
+            stats.incrementBatchLoadCountBy(1);
             // immediate execution of batch function
             CompletableFuture<List<V>> batchedLoad = batchLoadFunction
                     .load(singletonList(key))
@@ -291,7 +300,14 @@ public class DataLoader<K, V> {
 
     @SuppressWarnings("unchecked")
     private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<CompletableFuture<V>> queuedFutures) {
-        return batchLoadFunction.load(keys)
+        stats.incrementBatchLoadCountBy(keys.size());
+        CompletionStage<List<V>> batchLoad;
+        try {
+            batchLoad = nonNull(batchLoadFunction.load(keys), "Your batch loader function MUST return a non null CompletionStage promise");
+        } catch (Exception e) {
+            batchLoad = CompletableFutureKit.failedFuture(e);
+        }
+        return batchLoad
                 .toCompletableFuture()
                 .thenApply(values -> {
                     assertState(keys.size() == values.size(), "The size of the promised values MUST be the same size as the key list");
@@ -300,13 +316,20 @@ public class DataLoader<K, V> {
                         Object value = values.get(idx);
                         CompletableFuture<V> future = queuedFutures.get(idx);
                         if (value instanceof Throwable) {
+                            stats.incrementLoadErrorCount();
                             future.completeExceptionally((Throwable) value);
                             // we don't clear the cached view of this entry to avoid
                             // frequently loading the same error
                         } else if (value instanceof Try) {
                             // we allow the batch loader to return a Try so we can better represent a computation
                             // that might have worked or not.
-                            handleTry((Try<V>) value, future);
+                            Try<V> tryValue = (Try<V>) value;
+                            if (tryValue.isSuccess()) {
+                                future.complete(tryValue.get());
+                            } else {
+                                stats.incrementLoadErrorCount();
+                                future.completeExceptionally(tryValue.getThrowable());
+                            }
                         } else {
                             V val = (V) value;
                             future.complete(val);
@@ -314,6 +337,7 @@ public class DataLoader<K, V> {
                     }
                     return values;
                 }).exceptionally(ex -> {
+                    stats.incrementBatchLoadExceptionCount();
                     for (int idx = 0; idx < queuedFutures.size(); idx++) {
                         K key = keys.get(idx);
                         CompletableFuture<V> future = queuedFutures.get(idx);
@@ -323,14 +347,6 @@ public class DataLoader<K, V> {
                     }
                     return emptyList();
                 });
-    }
-
-    private void handleTry(Try<V> vTry, CompletableFuture<V> future) {
-        if (vTry.isSuccess()) {
-            future.complete(vTry.get());
-        } else {
-            future.completeExceptionally(vTry.getThrowable());
-        }
     }
 
     /**
@@ -441,4 +457,15 @@ public class DataLoader<K, V> {
         return loaderOptions.cacheKeyFunction().isPresent() ?
                 loaderOptions.cacheKeyFunction().get().getKey(key) : key;
     }
+
+    /**
+     * Gets the statistics associated with this data loader.  These will have been gather via
+     * the {@link org.dataloader.stats.StatisticsCollector} passed in via {@link DataLoaderOptions#getStatisticsCollector()}
+     *
+     * @return statistics for this data loader
+     */
+    public Statistics getStatistics() {
+        return stats.getStatistics();
+    }
+
 }

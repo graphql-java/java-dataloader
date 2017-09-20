@@ -998,6 +998,7 @@ public class DataLoaderTest {
         assertThat(batchKeyCalls, equalTo(singletonList(asList("A", "B", "bang"))));
     }
 
+
     private static CacheKey<JsonObject> getJsonObjectCacheMapFn() {
         return key -> key.stream()
                 .map(entry -> entry.getKey() + ":" + entry.getValue())

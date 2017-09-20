@@ -14,6 +14,10 @@ public class Assertions {
         return Objects.requireNonNull(t, "nonNull object required");
     }
 
+    public static <T> T nonNull(T t, String message) {
+        return Objects.requireNonNull(t, message);
+    }
+
     private static class AssertionException extends IllegalStateException {
         public AssertionException(String message) {
             super(message);
