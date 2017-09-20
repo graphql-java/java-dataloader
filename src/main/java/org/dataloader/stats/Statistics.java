@@ -1,5 +1,7 @@
 package org.dataloader.stats;
 
+import java.util.Map;
+
 /**
  * A simple set of statistics about {@link org.dataloader.DataLoader} operations
  */
@@ -17,7 +19,7 @@ public interface Statistics {
     /**
      * @return batchLoadCount / loadCount
      */
-    float getBatchLoadRatio();
+    double getBatchLoadRatio();
 
     /**
      * @return the number of times  {@link org.dataloader.DataLoader#load(Object)} resulted in a cache hit
@@ -32,7 +34,7 @@ public interface Statistics {
     /**
      * @return cacheHits / loadCount
      */
-    float getCacheHitRatio();
+    double getCacheHitRatio();
 
     /**
      * @return the number of times the {@link org.dataloader.DataLoader} batch loader function throw an exception when trying to get any values
@@ -42,7 +44,7 @@ public interface Statistics {
     /**
      * @return batchLoadExceptionCount / loadCount
      */
-    float getBatchLoadExceptionRatio();
+    double getBatchLoadExceptionRatio();
 
     /**
      * @return the number of times the {@link org.dataloader.DataLoader} batch loader function return an specific object that was in error
@@ -53,6 +55,20 @@ public interface Statistics {
     /**
      * @return loadErrorCount / loadCount
      */
-    float getLoadErrorRatio();
+    double getLoadErrorRatio();
 
+
+    /**
+     * This will combine this set of statistics with another set of statistics so that they become the combined count of each
+     *
+     * @param statistics the other statistics to combine
+     *
+     * @return a new statistics object of the combined counts
+     */
+    Statistics combine(Statistics statistics);
+
+    /**
+     * @return a map representation of the statistics, perhaps to send over JSON or some such
+     */
+    Map<String, Number> toMap();
 }

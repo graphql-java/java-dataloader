@@ -1,5 +1,8 @@
 package org.dataloader;
 
+import org.dataloader.stats.Statistics;
+import org.dataloader.stats.StatisticsImpl;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -90,5 +93,17 @@ public class DataLoaderRegistry {
      */
     public void dispatchAll() {
         getDataLoaders().forEach(DataLoader::dispatch);
+    }
+
+    /**
+     * @return a combined set of statistics for all data loaders in this registry presented
+     * as the sum of all their statistics
+     */
+    public Statistics getStatistics() {
+        Statistics stats = new StatisticsImpl();
+        for (DataLoader<?, ?> dataLoader : dataLoaders.values()) {
+            stats = stats.combine(dataLoader.getStatistics());
+        }
+        return stats;
     }
 }

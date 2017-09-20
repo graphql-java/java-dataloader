@@ -1,14 +1,24 @@
 package org.dataloader.stats;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 public class StatisticsImpl implements Statistics {
 
     private final long loadCount;
-    private final long batchLoadCount;
-    private final long cacheHitCount;
-    private final long batchLoadExceptionCount;
     private final long loadErrorCount;
+    private final long batchLoadCount;
+    private final long batchLoadExceptionCount;
+    private final long cacheHitCount;
 
-    public StatisticsImpl(long loadCount, long batchLoadCount, long cacheHitCount, long batchLoadExceptionCount, long loadErrorCount) {
+    /**
+     * Zero statistics
+     */
+    public StatisticsImpl() {
+        this(0, 0, 0, 0, 0);
+    }
+
+    public StatisticsImpl(long loadCount, long loadErrorCount, long batchLoadCount, long batchLoadExceptionCount, long cacheHitCount) {
         this.loadCount = loadCount;
         this.batchLoadCount = batchLoadCount;
         this.cacheHitCount = cacheHitCount;
@@ -16,9 +26,24 @@ public class StatisticsImpl implements Statistics {
         this.loadErrorCount = loadErrorCount;
     }
 
+    private double ratio(long numerator, long denominator) {
+        return denominator == 0 ? 0f : ((double) numerator) / ((double) denominator);
+    }
+
     @Override
     public long getLoadCount() {
         return loadCount;
+    }
+
+
+    @Override
+    public long getLoadErrorCount() {
+        return loadErrorCount;
+    }
+
+    @Override
+    public double getLoadErrorRatio() {
+        return ratio(loadErrorCount, loadCount);
     }
 
     @Override
@@ -27,12 +52,18 @@ public class StatisticsImpl implements Statistics {
     }
 
     @Override
-    public float getBatchLoadRatio() {
+    public double getBatchLoadRatio() {
         return ratio(batchLoadCount, loadCount);
     }
 
-    private float ratio(long numerator, long denominator) {
-        return denominator == 0 ? 0f : ((float) numerator) / ((float) denominator);
+    @Override
+    public long getBatchLoadExceptionCount() {
+        return batchLoadExceptionCount;
+    }
+
+    @Override
+    public double getBatchLoadExceptionRatio() {
+        return ratio(batchLoadExceptionCount, loadCount);
     }
 
     @Override
@@ -46,38 +77,45 @@ public class StatisticsImpl implements Statistics {
     }
 
     @Override
-    public float getCacheHitRatio() {
+    public double getCacheHitRatio() {
         return ratio(cacheHitCount, loadCount);
     }
 
+
     @Override
-    public long getBatchLoadExceptionCount() {
-        return batchLoadExceptionCount;
+    public Statistics combine(Statistics other) {
+        return new StatisticsImpl(
+                this.loadCount + other.getLoadCount(),
+                this.loadErrorCount + other.getLoadErrorCount(), this.batchLoadCount + other.getBatchLoadCount(),
+                this.batchLoadExceptionCount + other.getBatchLoadExceptionCount(), this.cacheHitCount + other.getCacheHitCount()
+        );
     }
 
     @Override
-    public long getLoadErrorCount() {
-        return loadErrorCount;
-    }
+    public Map<String, Number> toMap() {
+        Map<String, Number> stats = new LinkedHashMap<>();
+        stats.put("loadCount", getLoadCount());
+        stats.put("loadErrorCount", getLoadErrorCount());
+        stats.put("loadErrorRatio", getLoadErrorRatio());
 
-    @Override
-    public float getBatchLoadExceptionRatio() {
-        return ratio(batchLoadExceptionCount, loadCount);
-    }
+        stats.put("batchLoadCount", getBatchLoadCount());
+        stats.put("batchLoadRatio", getBatchLoadRatio());
+        stats.put("batchLoadExceptionCount", getBatchLoadExceptionCount());
+        stats.put("batchLoadExceptionRatio", getBatchLoadExceptionRatio());
 
-    @Override
-    public float getLoadErrorRatio() {
-        return ratio(loadErrorCount, loadCount);
+        stats.put("cacheHitCount", getCacheHitCount());
+        stats.put("cacheHitRatio", getCacheHitRatio());
+        return stats;
     }
 
     @Override
     public String toString() {
         return "StatisticsImpl{" +
                 "loadCount=" + loadCount +
-                ", batchLoadCount=" + batchLoadCount +
-                ", cacheHitCount=" + cacheHitCount +
-                ", batchLoadExceptionCount=" + batchLoadExceptionCount +
                 ", loadErrorCount=" + loadErrorCount +
+                ", batchLoadCount=" + batchLoadCount +
+                ", batchLoadExceptionCount=" + batchLoadExceptionCount +
+                ", cacheHitCount=" + cacheHitCount +
                 '}';
     }
 }

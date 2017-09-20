@@ -43,8 +43,8 @@ public class StatisticsCollectorTest {
         collector.incrementLoadCount();
 
         Statistics stats = collector.getStatistics();
-        assertThat(stats.getBatchLoadRatio(), equalTo(0f));
-        assertThat(stats.getCacheHitRatio(), equalTo(0f));
+        assertThat(stats.getBatchLoadRatio(), equalTo(0d));
+        assertThat(stats.getCacheHitRatio(), equalTo(0d));
 
 
         collector.incrementLoadCount();
@@ -53,7 +53,7 @@ public class StatisticsCollectorTest {
         collector.incrementBatchLoadCount();
 
         stats = collector.getStatistics();
-        assertThat(stats.getBatchLoadRatio(), equalTo(1f / 4f));
+        assertThat(stats.getBatchLoadRatio(), equalTo(1d / 4d));
 
 
         collector.incrementLoadCount();
@@ -63,7 +63,7 @@ public class StatisticsCollectorTest {
         collector.incrementCacheHitCount();
 
         stats = collector.getStatistics();
-        assertThat(stats.getCacheHitRatio(), equalTo(2f / 7f));
+        assertThat(stats.getCacheHitRatio(), equalTo(2d / 7d));
 
         collector.incrementLoadCount();
         collector.incrementLoadCount();
@@ -72,7 +72,7 @@ public class StatisticsCollectorTest {
         collector.incrementBatchLoadExceptionCount();
 
         stats = collector.getStatistics();
-        assertThat(stats.getBatchLoadExceptionRatio(), equalTo(2f / 10f));
+        assertThat(stats.getBatchLoadExceptionRatio(), equalTo(2d / 10d));
 
         collector.incrementLoadCount();
         collector.incrementLoadCount();
@@ -82,7 +82,7 @@ public class StatisticsCollectorTest {
         collector.incrementLoadErrorCount();
 
         stats = collector.getStatistics();
-        assertThat(stats.getLoadErrorRatio(), equalTo(3f / 13f));
+        assertThat(stats.getLoadErrorRatio(), equalTo(3d / 13d));
     }
 
     @Test

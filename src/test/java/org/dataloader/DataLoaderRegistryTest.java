@@ -1,5 +1,6 @@
 package org.dataloader;
 
+import org.dataloader.stats.Statistics;
 import org.junit.Test;
 
 import java.util.concurrent.CompletableFuture;
@@ -67,5 +68,37 @@ public class DataLoaderRegistryTest {
 
         assertThat(combinedRegistry.getKeys(), hasItems("a", "b", "c", "d"));
         assertThat(combinedRegistry.getDataLoaders(), hasItems(dlA, dlB, dlC, dlD));
+    }
+
+    @Test
+    public void stats_can_be_collected() throws Exception {
+
+        DataLoaderRegistry registry = new DataLoaderRegistry();
+
+        DataLoader<Object, Object> dlA = new DataLoader<>(identityBatchLoader);
+        DataLoader<Object, Object> dlB = new DataLoader<>(identityBatchLoader);
+        DataLoader<Object, Object> dlC = new DataLoader<>(identityBatchLoader);
+
+        registry.register("a", dlA).register("b", dlB).register("c", dlC);
+
+        dlA.load("X");
+        dlB.load("Y");
+        dlC.load("Z");
+
+        registry.dispatchAll();
+
+        dlA.load("X");
+        dlB.load("Y");
+        dlC.load("Z");
+
+        registry.dispatchAll();
+
+        Statistics statistics = registry.getStatistics();
+
+        assertThat(statistics.getLoadCount(), equalTo(6L));
+        assertThat(statistics.getBatchLoadCount(), equalTo(3L));
+        assertThat(statistics.getCacheHitCount(), equalTo(3L));
+        assertThat(statistics.getLoadErrorCount(), equalTo(0L));
+        assertThat(statistics.getBatchLoadExceptionCount(), equalTo(0L));
     }
 }

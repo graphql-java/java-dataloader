@@ -42,7 +42,7 @@ public class SimpleStatisticsCollector implements StatisticsCollector {
 
     @Override
     public Statistics getStatistics() {
-        return new StatisticsImpl(loadCount.get(), batchLoadCount.get(), cacheHitCount.get(), batchLoadExceptionCount.get(), loadErrorCount.get());
+        return new StatisticsImpl(loadCount.get(), loadErrorCount.get(), batchLoadCount.get(), batchLoadExceptionCount.get(), cacheHitCount.get());
     }
 
     @Override
