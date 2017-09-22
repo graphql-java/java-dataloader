@@ -180,10 +180,12 @@ public class DataLoader<K, V> {
         Object cacheKey = getCacheKey(nonNull(key));
         stats.incrementLoadCount();
 
-        synchronized (futureCache) {
-            if (loaderOptions.cachingEnabled() && futureCache.containsKey(cacheKey)) {
-                stats.incrementCacheHitCount();
-                return futureCache.get(cacheKey);
+        if (loaderOptions.cachingEnabled()) {
+            synchronized (futureCache) {
+                if (futureCache.containsKey(cacheKey)) {
+                    stats.incrementCacheHitCount();
+                    return futureCache.get(cacheKey);
+                }
             }
         }
 
