@@ -20,11 +20,10 @@ import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.Statistics;
 import org.dataloader.stats.StatisticsCollector;
 
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -66,7 +65,7 @@ public class DataLoader<K, V> {
     private final BatchLoader<K, V> batchLoadFunction;
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
-    private final Map<K, CompletableFuture<V>> loaderQueue;
+    private final List<SimpleImmutableEntry<K, CompletableFuture<V>>> loaderQueue;
     private final StatisticsCollector stats;
 
     /**
@@ -156,7 +155,7 @@ public class DataLoader<K, V> {
         this.loaderOptions = options == null ? new DataLoaderOptions() : options;
         this.futureCache = determineCacheMap(loaderOptions);
         // order of keys matter in data loader
-        this.loaderQueue = new LinkedHashMap<>();
+        this.loaderQueue = new ArrayList<>();
         this.stats = nonNull(this.loaderOptions.getStatisticsCollector());
     }
 
@@ -192,7 +191,7 @@ public class DataLoader<K, V> {
         CompletableFuture<V> future = new CompletableFuture<>();
         if (loaderOptions.batchingEnabled()) {
             synchronized (loaderQueue) {
-                loaderQueue.put(key, future);
+                loaderQueue.add(new SimpleImmutableEntry<>(key, future));
             }
         } else {
             stats.incrementBatchLoadCountBy(1);
@@ -247,9 +246,9 @@ public class DataLoader<K, V> {
         final List<K> keys = new ArrayList<>();
         final List<CompletableFuture<V>> queuedFutures = new ArrayList<>();
         synchronized (loaderQueue) {
-            loaderQueue.forEach((key, future) -> {
-                keys.add(key);
-                queuedFutures.add(future);
+            loaderQueue.forEach(entry -> {
+                keys.add(entry.getKey());
+                queuedFutures.add(entry.getValue());
             });
             loaderQueue.clear();
         }
