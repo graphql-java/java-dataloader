@@ -575,8 +575,9 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(asList(asList("A", "B"),
                 asList("A", "C"), asList("A", "B", "C"))));
     }
+
     @Test
-    public void should_work_with_duplicate_keys() throws ExecutionException, InterruptedException {
+    public void should_work_with_duplicate_keys_when_caching_disabled() throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader =
                 idLoader(newOptions().setCachingEnabled(false), loadCalls);
@@ -591,6 +592,24 @@ public class DataLoaderTest {
         assertThat(future2.get(), equalTo("B"));
         assertThat(future3.get(), equalTo("A"));
         assertThat(loadCalls, equalTo(singletonList(asList("A", "B", "A"))));
+    }
+
+    @Test
+    public void should_work_with_duplicate_keys_when_caching_enabled() throws ExecutionException, InterruptedException {
+        List<Collection<String>> loadCalls = new ArrayList<>();
+        DataLoader<String, String> identityLoader =
+                idLoader(newOptions().setCachingEnabled(true), loadCalls);
+
+        CompletableFuture<String> future1 = identityLoader.load("A");
+        CompletableFuture<String> future2 = identityLoader.load("B");
+        CompletableFuture<String> future3 = identityLoader.load("A");
+        identityLoader.dispatch();
+
+        await().until(() -> future1.isDone() && future2.isDone() && future3.isDone());
+        assertThat(future1.get(), equalTo("A"));
+        assertThat(future2.get(), equalTo("B"));
+        assertThat(future3.get(), equalTo("A"));
+        assertThat(loadCalls, equalTo(singletonList(asList("A", "B"))));
     }
 
     // It is resilient to job queue ordering
