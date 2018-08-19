@@ -2,7 +2,9 @@ import org.dataloader.BatchLoader;
 import org.dataloader.CacheMap;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
+import org.dataloader.MapBatchLoader;
 import org.dataloader.Try;
+import org.dataloader.fixtures.SecurityCtx;
 import org.dataloader.fixtures.User;
 import org.dataloader.fixtures.UserManager;
 import org.dataloader.stats.Statistics;
@@ -10,6 +12,7 @@ import org.dataloader.stats.ThreadLocalStatisticsCollector;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -78,13 +81,6 @@ public class ReadmeExamples {
         userLoader.dispatchAndJoin();
     }
 
-    private static class SecurityCtx {
-
-        public static Object getCallingUserCtx() {
-            return null;
-        }
-    }
-
     private void callContextExample() {
         BatchLoader<String, String> batchLoader = new BatchLoader<String, String>() {
             @Override
@@ -106,6 +102,20 @@ public class ReadmeExamples {
 
     private CompletionStage<List<String>> callDatabaseForResults(SecurityCtx callCtx, List<String> keys) {
         return null;
+    }
+
+    private void mapBatchLoader() {
+        MapBatchLoader<Long, User> mapBatchLoader = new MapBatchLoader<Long, User>() {
+            @Override
+            public CompletionStage<Map<Long, User>> load(List<Long> userIds, Object context) {
+                SecurityCtx callCtx = (SecurityCtx) context;
+                return CompletableFuture.supplyAsync(() -> userManager.loadMapOfUsersById(callCtx, userIds));
+            }
+        };
+
+        DataLoader<Long, User> userLoader = DataLoader.newDataLoader(mapBatchLoader);
+
+        // ...
     }
 
 
@@ -230,7 +240,7 @@ public class ReadmeExamples {
     private void statsConfigExample() {
 
         DataLoaderOptions options = DataLoaderOptions.newOptions().setStatisticsCollector(() -> new ThreadLocalStatisticsCollector());
-        DataLoader<String,User> userDataLoader = DataLoader.newDataLoader(userBatchLoader,options);
+        DataLoader<String, User> userDataLoader = DataLoader.newDataLoader(userBatchLoader, options);
     }
 
 }

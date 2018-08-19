@@ -19,7 +19,6 @@ package org.dataloader;
 import org.dataloader.fixtures.User;
 import org.dataloader.fixtures.UserManager;
 import org.dataloader.impl.CompletableFutureKit;
-import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -39,8 +38,8 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderOptions.newOptions;
+import static org.dataloader.TestKit.listFrom;
 import static org.dataloader.impl.CompletableFutureKit.cause;
-import static org.dataloader.impl.CompletableFutureKit.failedFuture;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
@@ -855,14 +854,6 @@ public class DataLoaderTest {
 
     }
 
-    private Collection<Integer> listFrom(int i, int max) {
-        List<Integer> ints = new ArrayList<>();
-        for (int j = i; j < max; j++) {
-            ints.add(j);
-        }
-        return ints;
-    }
-
     @Test
     public void should_Batch_loads_occurring_within_futures() {
         List<Collection<String>> loadCalls = new ArrayList<>();
@@ -978,61 +969,6 @@ public class DataLoaderTest {
         assertThat(allResults.size(), equalTo(4));
     }
 
-    @Test
-    public void should_handle_Trys_coming_back_from_batchLoader() throws Exception {
-
-        List<List<String>> batchKeyCalls = new ArrayList<>();
-        BatchLoader<String, Try<String>> batchLoader = keys -> {
-            batchKeyCalls.add(keys);
-
-            List<Try<String>> result = new ArrayList<>();
-            for (String key : keys) {
-                if ("bang".equalsIgnoreCase(key)) {
-                    result.add(Try.failed(new RuntimeException(key)));
-                } else {
-                    result.add(Try.succeeded(key));
-                }
-            }
-            return CompletableFuture.completedFuture(result);
-        };
-
-        DataLoader<String, String> dataLoader = DataLoader.newDataLoaderWithTry(batchLoader);
-
-        CompletableFuture<String> a = dataLoader.load("A");
-        CompletableFuture<String> b = dataLoader.load("B");
-        CompletableFuture<String> bang = dataLoader.load("bang");
-
-        dataLoader.dispatch();
-
-        assertThat(a.get(), equalTo("A"));
-        assertThat(b.get(), equalTo("B"));
-        assertThat(bang.isCompletedExceptionally(), equalTo(true));
-        bang.whenComplete((s, throwable) -> {
-            assertThat(s, nullValue());
-            assertThat(throwable, Matchers.instanceOf(RuntimeException.class));
-            assertThat(throwable.getMessage(), equalTo("Bang"));
-        });
-
-        assertThat(batchKeyCalls, equalTo(singletonList(asList("A", "B", "bang"))));
-
-        a = dataLoader.load("A");
-        b = dataLoader.load("B");
-        bang = dataLoader.load("bang");
-
-        dataLoader.dispatch();
-
-        assertThat(a.get(), equalTo("A"));
-        assertThat(b.get(), equalTo("B"));
-        assertThat(bang.isCompletedExceptionally(), equalTo(true));
-        bang.whenComplete((s, throwable) -> {
-            assertThat(s, nullValue());
-            assertThat(throwable, Matchers.instanceOf(RuntimeException.class));
-            assertThat(throwable.getMessage(), equalTo("Bang"));
-        });
-
-        // the failed value should have been cached as per Facebook DL behaviour
-        assertThat(batchKeyCalls, equalTo(singletonList(asList("A", "B", "bang"))));
-    }
 
 
     private static CacheKey<JsonObject> getJsonObjectCacheMapFn() {
@@ -1057,7 +993,7 @@ public class DataLoaderTest {
             DataLoaderOptions options, List<Collection<K>> loadCalls) {
         return new DataLoader<>(keys -> {
             loadCalls.add(new ArrayList<>(keys));
-            return futureError();
+            return TestKit.futureError();
         }, options);
     }
 
@@ -1086,10 +1022,6 @@ public class DataLoaderTest {
             }
             return CompletableFuture.completedFuture(errors);
         }, options);
-    }
-
-    private static <V> CompletableFuture<V> futureError() {
-        return failedFuture(new IllegalStateException("Error"));
     }
 
 

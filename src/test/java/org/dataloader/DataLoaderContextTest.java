@@ -2,7 +2,9 @@ package org.dataloader;
 
 import org.junit.Test;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -44,6 +46,26 @@ public class DataLoaderContextTest {
     }
 
     @Test
+    public void context_is_passed_to_map_batch_loader_function() throws Exception {
+        MapBatchLoader<String, String> mapBatchLoader = (keys, context) -> {
+            Map<String, String> map = new HashMap<>();
+            keys.forEach(k -> map.put(k, k + "-" + context));
+            return CompletableFuture.completedFuture(map);
+        };
+        DataLoaderOptions options = DataLoaderOptions.newOptions()
+                .setBatchContextProvider(() -> "ctx");
+        DataLoader<String, String> loader = new DataLoader<>(mapBatchLoader, options);
+
+        loader.load("A");
+        loader.load("B");
+        loader.loadMany(asList("C", "D"));
+
+        List<String> results = loader.dispatchAndJoin();
+
+        assertThat(results, equalTo(asList("A-ctx", "B-ctx", "C-ctx", "D-ctx")));
+    }
+
+    @Test
     public void null_is_passed_as_context_if_you_do_nothing() throws Exception {
         BatchLoader<String, String> batchLoader = new BatchLoader<String, String>() {
             @Override
@@ -58,6 +80,24 @@ public class DataLoaderContextTest {
             }
         };
         DataLoader<String, String> loader = new DataLoader<>(batchLoader);
+
+        loader.load("A");
+        loader.load("B");
+        loader.loadMany(asList("C", "D"));
+
+        List<String> results = loader.dispatchAndJoin();
+
+        assertThat(results, equalTo(asList("A-null", "B-null", "C-null", "D-null")));
+    }
+
+    @Test
+    public void null_is_passed_as_context_to_map_loader_if_you_do_nothing() throws Exception {
+        MapBatchLoader<String, String> mapBatchLoader = (keys, context) -> {
+            Map<String, String> map = new HashMap<>();
+            keys.forEach(k -> map.put(k, k + "-" + context));
+            return CompletableFuture.completedFuture(map);
+        };
+        DataLoader<String, String> loader = new DataLoader<>(mapBatchLoader);
 
         loader.load("A");
         loader.load("B");
