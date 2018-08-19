@@ -165,6 +165,34 @@ a list of user ids in one call.
  
 That said, with key caching turn on (the default), it will still be more efficient using `dataloader` than without it.
 
+### Calling the batch loader function with context
+
+Often there is a need to call the batch loader function with some sort of context, such as the calling users security
+credentials or the database connection parameters.  You can do this by implementing a 
+`org.dataloader.BatchContextProvider`.
+
+```java
+        BatchLoader<String, String> batchLoader = new BatchLoader<String, String>() {
+            @Override
+            public CompletionStage<List<String>> load(List<String> keys) {
+                throw new UnsupportedOperationException("This wont be called if you implement the other defaulted method");
+            }
+
+            @Override
+            public CompletionStage<List<String>> load(List<String> keys, Object context) {
+                SecurityCtx callCtx = (SecurityCtx) context;
+                return callDatabaseForResults(callCtx, keys);
+            }
+
+        };
+        DataLoaderOptions options = DataLoaderOptions.newOptions()
+                .setBatchContextProvider(() -> SecurityCtx.getCallingUserCtx());
+        DataLoader<String, String> loader = new DataLoader<>(batchLoader, options);
+
+```
+
+The batch loading code will now receive this context object and it can be used to get to data layers or
+to connect to other systems. 
 
 ### Error object is not a thing in a type safe Java world
 

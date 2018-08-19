@@ -74,11 +74,33 @@ import java.util.concurrent.CompletionStage;
 public interface BatchLoader<K, V> {
 
     /**
-     * Called to batch load the provided keys and return a promise to a list of values
+     * Called to batch load the provided keys and return a promise to a list of values.
+     *
+     * If you need calling context then implement the {@link #load(java.util.List, Object)} method
+     * instead.
      *
      * @param keys the collection of keys to load
      *
      * @return a promise of the values for those keys
      */
     CompletionStage<List<V>> load(List<K> keys);
+
+    /**
+     * Called to batch load the provided keys and return a promise to a list of values.  This default
+     * version can be given a context object to that maybe be useful during the call.  A typical use case
+     * is passing in security credentials or database connection details say.
+     *
+     * This method is implemented as a default method in order to preserve the API for previous
+     * callers.  It is always called first by the {@link org.dataloader.DataLoader} code and simply
+     * delegates to the {@link #load(java.util.List)} method.
+     *
+     * @param keys    the collection of keys to load
+     * @param context a context object that can help with the call
+     *
+     * @return a promise of the values for those keys
+     */
+    @SuppressWarnings("unused")
+    default CompletionStage<List<V>> load(List<K> keys, Object context) {
+        return load(keys);
+    }
 }
