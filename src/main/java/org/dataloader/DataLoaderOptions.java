@@ -31,12 +31,15 @@ import static org.dataloader.impl.Assertions.nonNull;
  */
 public class DataLoaderOptions {
 
+    private static final BatchContextProvider NULL_PROVIDER = () -> null;
+
     private boolean batchingEnabled;
     private boolean cachingEnabled;
     private CacheKey cacheKeyFunction;
     private CacheMap cacheMap;
     private int maxBatchSize;
     private Supplier<StatisticsCollector> statisticsCollector;
+    private BatchContextProvider contextProvider;
 
     /**
      * Creates a new data loader options with default settings.
@@ -46,6 +49,7 @@ public class DataLoaderOptions {
         cachingEnabled = true;
         maxBatchSize = -1;
         statisticsCollector = SimpleStatisticsCollector::new;
+        contextProvider = NULL_PROVIDER;
     }
 
     /**
@@ -61,6 +65,7 @@ public class DataLoaderOptions {
         this.cacheMap = other.cacheMap;
         this.maxBatchSize = other.maxBatchSize;
         this.statisticsCollector = other.statisticsCollector;
+        this.contextProvider = other.contextProvider;
     }
 
     /**
@@ -202,5 +207,22 @@ public class DataLoaderOptions {
         return this;
     }
 
+    /**
+     * @return the batch context provider that will be used to give context to batch load functions
+     */
+    public BatchContextProvider getBatchContextProvider() {
+        return contextProvider;
+    }
 
+    /**
+     * Sets the batch context provider that will be used to give context to batch load functions
+     *
+     * @param contextProvider the batch context provider
+     *
+     * @return the data loader options for fluent coding
+     */
+    public DataLoaderOptions setBatchContextProvider(BatchContextProvider contextProvider) {
+        this.contextProvider = nonNull(contextProvider);
+        return this;
+    }
 }

@@ -196,8 +196,9 @@ public class DataLoader<K, V> {
             } else {
                 stats.incrementBatchLoadCountBy(1);
                 // immediate execution of batch function
+                Object context = loaderOptions.getBatchContextProvider().get();
                 CompletableFuture<List<V>> batchedLoad = batchLoadFunction
-                        .load(singletonList(key))
+                        .load(singletonList(key), context)
                         .toCompletableFuture();
                 future = batchedLoad
                         .thenApply(list -> list.get(0));
@@ -303,7 +304,8 @@ public class DataLoader<K, V> {
         stats.incrementBatchLoadCountBy(keys.size());
         CompletionStage<List<V>> batchLoad;
         try {
-            batchLoad = nonNull(batchLoadFunction.load(keys), "Your batch loader function MUST return a non null CompletionStage promise");
+            Object context = loaderOptions.getBatchContextProvider().get();
+            batchLoad = nonNull(batchLoadFunction.load(keys, context), "Your batch loader function MUST return a non null CompletionStage promise");
         } catch (Exception e) {
             batchLoad = CompletableFutureKit.failedFuture(e);
         }
