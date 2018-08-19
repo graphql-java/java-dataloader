@@ -78,6 +78,36 @@ public class ReadmeExamples {
         userLoader.dispatchAndJoin();
     }
 
+    private static class SecurityCtx {
+
+        public static Object getCallingUserCtx() {
+            return null;
+        }
+    }
+
+    private void callContextExample() {
+        BatchLoader<String, String> batchLoader = new BatchLoader<String, String>() {
+            @Override
+            public CompletionStage<List<String>> load(List<String> keys) {
+                throw new UnsupportedOperationException("This wont be called if you implement the other defaulted method");
+            }
+
+            @Override
+            public CompletionStage<List<String>> load(List<String> keys, Object context) {
+                SecurityCtx callCtx = (SecurityCtx) context;
+                return callDatabaseForResults(callCtx, keys);
+            }
+
+        };
+        DataLoaderOptions options = DataLoaderOptions.newOptions()
+                .setBatchContextProvider(() -> SecurityCtx.getCallingUserCtx());
+        DataLoader<String, String> loader = new DataLoader<>(batchLoader, options);
+    }
+
+    private CompletionStage<List<String>> callDatabaseForResults(SecurityCtx callCtx, List<String> keys) {
+        return null;
+    }
+
 
     private void tryExample() {
         Try<String> tryS = Try.tryCall(() -> {
