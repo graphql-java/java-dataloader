@@ -194,6 +194,42 @@ credentials or the database connection parameters.  You can do this by implement
 The batch loading code will now receive this context object and it can be used to get to data layers or
 to connect to other systems. 
 
+### Returning a Map of results from your batch loader
+
+Often there is not a 1:1 mapping of your batch loaded keys to the values returned.
+
+For example, let's assume you want to load users from a database, you could probably use a query that looks like this:
+
+```sql
+  SELECT * FROM User WHERE id IN (keys)
+```
+ 
+ Given say 10 user id keys you might only get 7 results back.  This can be more naturally represented in a map
+ than in an order list of values when returning values from the batch loader function.
+ 
+ You can use `org.dataloader.MapBatchLoader` for this purpose. 
+ 
+ When the map is processed by the `DataLoader` code, any keys that are missing in the map
+ will be replaced with null values.  The semantics that the number of `DataLoader.load` requests
+ are matched with values is kept.
+ 
+ Your keys provided MUST be first class keys since they will be used to examine the returned map and
+ create the list of results, with nulls filling in for missing values.
+ 
+```java
+        MapBatchLoader<Long, User> mapBatchLoader = new MapBatchLoader<Long, User>() {
+            @Override
+            public CompletionStage<Map<Long, User>> load(List<Long> userIds, Object context) {
+                SecurityCtx callCtx = (SecurityCtx) context;
+                return CompletableFuture.supplyAsync(() -> userManager.loadMapOfUsersById(callCtx, userIds));
+            }
+        };
+
+        DataLoader<Long, User> userLoader = DataLoader.newDataLoader(mapBatchLoader);
+
+        // ...
+```
+
 ### Error object is not a thing in a type safe Java world
 
 In the reference JS implementation if the batch loader returns an `Error` object back from the `load()` promise is rejected

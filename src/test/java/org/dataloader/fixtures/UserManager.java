@@ -1,10 +1,12 @@
 package org.dataloader.fixtures;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@SuppressWarnings({"unused", "SpellCheckingInspection", "NonAsciiCharacters"})
 public class UserManager {
 
     public static final User ILÚVATAR = new User(-1L, -1L, "Ilúvatar");
@@ -47,5 +49,14 @@ public class UserManager {
 
     public List<User> loadUsersById(List<Long> userIds) {
         return userIds.stream().map(this::loadUserById).collect(Collectors.toList());
+    }
+
+    public Map<Long, User> loadMapOfUsersById(SecurityCtx callCtx, List<Long> userIds) {
+        Map<Long, User> map = new HashMap<>();
+        userIds.forEach(userId -> {
+            User user = loadUserById(userId);
+            map.put(userId, user);
+        });
+        return map;
     }
 }

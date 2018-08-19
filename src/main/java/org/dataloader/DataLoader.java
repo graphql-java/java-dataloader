@@ -24,6 +24,7 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -63,6 +64,7 @@ import static org.dataloader.impl.Assertions.nonNull;
 public class DataLoader<K, V> {
 
     private final BatchLoader<K, V> batchLoadFunction;
+    private final MapBatchLoader<K, V> mapBatchLoadFunction;
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
     private final List<SimpleImmutableEntry<K, CompletableFuture<V>>> loaderQueue;
@@ -95,6 +97,35 @@ public class DataLoader<K, V> {
     public static <K, V> DataLoader<K, V> newDataLoader(BatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
         return new DataLoader<>(batchLoadFunction, options);
     }
+
+    /**
+     * Creates new DataLoader with the specified map batch loader function and default options
+     * (batching, caching and unlimited batch size).
+     *
+     * @param mapBatchLoaderFunction the batch load function to use
+     * @param <K>                    the key type
+     * @param <V>                    the value type
+     *
+     * @return a new DataLoader
+     */
+    public static <K, V> DataLoader<K, V> newDataLoader(MapBatchLoader<K, V> mapBatchLoaderFunction) {
+        return newDataLoader(mapBatchLoaderFunction, null);
+    }
+
+    /**
+     * Creates new DataLoader with the specified map batch loader function with the provided options
+     *
+     * @param mapBatchLoaderFunction the batch load function to use
+     * @param options                the options to use
+     * @param <K>                    the key type
+     * @param <V>                    the value type
+     *
+     * @return a new DataLoader
+     */
+    public static <K, V> DataLoader<K, V> newDataLoader(MapBatchLoader<K, V> mapBatchLoaderFunction, DataLoaderOptions options) {
+        return new DataLoader<>(mapBatchLoaderFunction, options);
+    }
+
 
     /**
      * Creates new DataLoader with the specified batch loader function and default options
@@ -134,6 +165,43 @@ public class DataLoader<K, V> {
         return new DataLoader<>((BatchLoader<K, V>) batchLoadFunction, options);
     }
 
+    /**
+     * Creates new DataLoader with the specified map abatch loader function and default options
+     * (batching, caching and unlimited batch size) where the batch loader function returns a list of
+     * {@link org.dataloader.Try} objects.
+     *
+     * This allows you to capture both the value that might be returned and also whether exception that might have occurred getting that individual value.  If its important you to
+     * know gather exact status of each item in a batch call and whether it threw exceptions when fetched then
+     * you can use this form to create the data loader.
+     *
+     * @param mapBatchLoaderFunction the map batch load function to use that uses {@link org.dataloader.Try} objects
+     * @param <K>                    the key type
+     * @param <V>                    the value type
+     *
+     * @return a new DataLoader
+     */
+    public static <K, V> DataLoader<K, V> newDataLoaderWithTry(MapBatchLoader<K, Try<V>> mapBatchLoaderFunction) {
+        return newDataLoaderWithTry(mapBatchLoaderFunction, null);
+    }
+
+    /**
+     * Creates new DataLoader with the specified map batch loader function and with the provided options
+     * where the batch loader function returns a list of
+     * {@link org.dataloader.Try} objects.
+     *
+     * @param mapBatchLoaderFunction the map batch load function to use that uses {@link org.dataloader.Try} objects
+     * @param options                the options to use
+     * @param <K>                    the key type
+     * @param <V>                    the value type
+     *
+     * @return a new DataLoader
+     *
+     * @see #newDataLoaderWithTry(MapBatchLoader)
+     */
+    @SuppressWarnings("unchecked")
+    public static <K, V> DataLoader<K, V> newDataLoaderWithTry(MapBatchLoader<K, Try<V>> mapBatchLoaderFunction, DataLoaderOptions options) {
+        return new DataLoader<>((MapBatchLoader<K, V>) mapBatchLoaderFunction, options);
+    }
 
     /**
      * Creates a new data loader with the provided batch load function, and default options.
@@ -145,18 +213,52 @@ public class DataLoader<K, V> {
     }
 
     /**
+     * Creates a new data loader with the provided map batch load function.
+     *
+     * @param mapBatchLoadFunction the map batch load function to use
+     */
+    public DataLoader(MapBatchLoader<K, V> mapBatchLoadFunction) {
+        this(mapBatchLoadFunction, null);
+    }
+
+    /**
      * Creates a new data loader with the provided batch load function and options.
      *
      * @param batchLoadFunction the batch load function to use
      * @param options           the batch load options
      */
     public DataLoader(BatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
-        this.batchLoadFunction = nonNull(batchLoadFunction);
-        this.loaderOptions = options == null ? new DataLoaderOptions() : options;
+        this.batchLoadFunction = batchLoadFunction;
+        this.mapBatchLoadFunction = null;
+        this.loaderOptions = determineOptions(options);
         this.futureCache = determineCacheMap(loaderOptions);
         // order of keys matter in data loader
         this.loaderQueue = new ArrayList<>();
-        this.stats = nonNull(this.loaderOptions.getStatisticsCollector());
+        this.stats = determineCollector(this.loaderOptions);
+    }
+
+    /**
+     * Creates a new data loader with the provided map batch load function and options.
+     *
+     * @param mapBatchLoadFunction the map batch load function to use
+     * @param options              the batch load options
+     */
+    public DataLoader(MapBatchLoader<K, V> mapBatchLoadFunction, DataLoaderOptions options) {
+        this.batchLoadFunction = null;
+        this.mapBatchLoadFunction = mapBatchLoadFunction;
+        this.loaderOptions = determineOptions(options);
+        this.futureCache = determineCacheMap(loaderOptions);
+        // order of keys matter in data loader
+        this.loaderQueue = new ArrayList<>();
+        this.stats = determineCollector(this.loaderOptions);
+    }
+
+    private StatisticsCollector determineCollector(DataLoaderOptions loaderOptions) {
+        return nonNull(loaderOptions.getStatisticsCollector());
+    }
+
+    private DataLoaderOptions determineOptions(DataLoaderOptions options) {
+        return options == null ? new DataLoaderOptions() : options;
     }
 
     @SuppressWarnings("unchecked")
@@ -197,11 +299,7 @@ public class DataLoader<K, V> {
                 stats.incrementBatchLoadCountBy(1);
                 // immediate execution of batch function
                 Object context = loaderOptions.getBatchContextProvider().get();
-                CompletableFuture<List<V>> batchedLoad = batchLoadFunction
-                        .load(singletonList(key), context)
-                        .toCompletableFuture();
-                future = batchedLoad
-                        .thenApply(list -> list.get(0));
+                future = invokeLoaderImmediately(key, context);
             }
             if (cachingEnabled) {
                 futureCache.set(cacheKey, future);
@@ -209,6 +307,7 @@ public class DataLoader<K, V> {
             return future;
         }
     }
+
 
     /**
      * Requests to load the list of data provided by the specified keys asynchronously, and returns a composite future
@@ -230,6 +329,25 @@ public class DataLoader<K, V> {
 
             return CompletableFutureKit.allOf(collect);
         }
+    }
+
+    private CompletableFuture<V> invokeLoaderImmediately(K key, Object context) {
+        List<K> keys = singletonList(key);
+        CompletionStage<V> singleLoadCall;
+        if (isMapLoader()) {
+            singleLoadCall = mapBatchLoadFunction
+                    .load(keys, context)
+                    .thenApply(map -> map.get(key));
+        } else {
+            singleLoadCall = batchLoadFunction
+                    .load(keys, context)
+                    .thenApply(list -> list.get(0));
+        }
+        return singleLoadCall.toCompletableFuture();
+    }
+
+    private boolean isMapLoader() {
+        return mapBatchLoadFunction != null;
     }
 
     /**
@@ -302,17 +420,11 @@ public class DataLoader<K, V> {
     @SuppressWarnings("unchecked")
     private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<CompletableFuture<V>> queuedFutures) {
         stats.incrementBatchLoadCountBy(keys.size());
-        CompletionStage<List<V>> batchLoad;
-        try {
-            Object context = loaderOptions.getBatchContextProvider().get();
-            batchLoad = nonNull(batchLoadFunction.load(keys, context), "Your batch loader function MUST return a non null CompletionStage promise");
-        } catch (Exception e) {
-            batchLoad = CompletableFutureKit.failedFuture(e);
-        }
+        CompletionStage<List<V>> batchLoad = invokeBatchFunction(keys);
         return batchLoad
                 .toCompletableFuture()
                 .thenApply(values -> {
-                    assertState(keys.size() == values.size(), "The size of the promised values MUST be the same size as the key list");
+                    assertResultSize(keys, values);
 
                     for (int idx = 0; idx < queuedFutures.size(); idx++) {
                         Object value = values.get(idx);
@@ -349,6 +461,45 @@ public class DataLoader<K, V> {
                     }
                     return emptyList();
                 });
+    }
+
+    private CompletionStage<List<V>> invokeBatchFunction(List<K> keys) {
+        CompletionStage<List<V>> batchLoad;
+        try {
+            Object context = loaderOptions.getBatchContextProvider().get();
+            if (isMapLoader()) {
+                batchLoad = invokeMapBatchLoader(keys, context);
+            } else {
+                batchLoad = invokeListBatchLoader(keys, context);
+            }
+        } catch (Exception e) {
+            batchLoad = CompletableFutureKit.failedFuture(e);
+        }
+        return batchLoad;
+    }
+
+    private CompletionStage<List<V>> invokeListBatchLoader(List<K> keys, Object context) {
+        return nonNull(batchLoadFunction.load(keys, context), "Your batch loader function MUST return a non null CompletionStage promise");
+    }
+
+    /*
+     * Turns a map of results that MAY be smaller than the key list back into a list by mapping null
+     * to missing elements.
+     */
+    private CompletionStage<List<V>> invokeMapBatchLoader(List<K> keys, Object context) {
+        CompletionStage<Map<K, V>> mapBatchLoad = nonNull(mapBatchLoadFunction.load(keys, context), "Your batch loader function MUST return a non null CompletionStage promise");
+        return mapBatchLoad.thenApply(map -> {
+            List<V> values = new ArrayList<>();
+            for (K key : keys) {
+                V value = map.get(key);
+                values.add(value);
+            }
+            return values;
+        });
+    }
+
+    private void assertResultSize(List<K> keys, List<V> values) {
+        assertState(keys.size() == values.size(), "The size of the promised values MUST be the same size as the key list");
     }
 
     /**
