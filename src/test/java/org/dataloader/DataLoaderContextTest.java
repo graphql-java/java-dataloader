@@ -45,7 +45,18 @@ public class DataLoaderContextTest {
 
     @Test
     public void null_is_passed_as_context_if_you_do_nothing() throws Exception {
-        BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
+        BatchLoader<String, String> batchLoader = new BatchLoader<String, String>() {
+            @Override
+            public CompletionStage<List<String>> load(List<String> keys) {
+                throw new UnsupportedOperationException("this wont be called");
+            }
+
+            @Override
+            public CompletionStage<List<String>> load(List<String> keys, Object context) {
+                List<String> list = keys.stream().map(k -> k + "-" + context).collect(Collectors.toList());
+                return CompletableFuture.completedFuture(list);
+            }
+        };
         DataLoader<String, String> loader = new DataLoader<>(batchLoader);
 
         loader.load("A");
@@ -54,6 +65,6 @@ public class DataLoaderContextTest {
 
         List<String> results = loader.dispatchAndJoin();
 
-        assertThat(results, equalTo(asList("A", "B", "C", "D")));
+        assertThat(results, equalTo(asList("A-null", "B-null", "C-null", "D-null")));
     }
 }
