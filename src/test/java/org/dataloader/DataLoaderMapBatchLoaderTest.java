@@ -31,7 +31,7 @@ import static org.junit.Assert.assertThat;
  */
 public class DataLoaderMapBatchLoaderTest {
 
-    MapBatchLoader<String, String> evensOnlyMapBatchLoader = (keys, context) -> {
+    MapBatchLoader<String, String> evensOnlyMapBatchLoader = (keys, environment) -> {
         Map<String, String> mapOfResults = new HashMap<>();
         for (int i = 0; i < keys.size(); i++) {
             String k = keys.get(i);
@@ -43,7 +43,7 @@ public class DataLoaderMapBatchLoaderTest {
     };
 
     private static <K, V> DataLoader<K, V> idMapLoader(DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        MapBatchLoader<K, V> kvBatchLoader = (keys, context) -> {
+        MapBatchLoader<K, V> kvBatchLoader = (keys, environment) -> {
             loadCalls.add(new ArrayList<>(keys));
             Map<K, V> map = new HashMap<>();
             //noinspection unchecked
@@ -55,7 +55,7 @@ public class DataLoaderMapBatchLoaderTest {
 
     private static <K, V> DataLoader<K, V> idMapLoaderBlowsUps(
             DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return new DataLoader<>((keys, context) -> {
+        return new DataLoader<>((keys, environment) -> {
             loadCalls.add(new ArrayList<>(keys));
             return futureError();
         }, options);

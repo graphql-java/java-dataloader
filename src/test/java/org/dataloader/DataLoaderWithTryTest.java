@@ -44,7 +44,7 @@ public class DataLoaderWithTryTest {
     public void should_handle_Trys_coming_back_from_map_batchLoader() throws Exception {
 
         List<List<String>> batchKeyCalls = new ArrayList<>();
-        MapBatchLoader<String, Try<String>> batchLoader = (keys, context) -> {
+        MapBatchLoader<String, Try<String>> batchLoader = (keys, environment) -> {
             batchKeyCalls.add(keys);
 
             Map<String, Try<String>> result = new HashMap<>();
