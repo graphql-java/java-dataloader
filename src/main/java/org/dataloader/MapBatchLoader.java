@@ -57,21 +57,19 @@ import java.util.concurrent.CompletionStage;
  * @param <K> type parameter indicating the type of keys to use for data load requests.
  * @param <V> type parameter indicating the type of values returned
  *
- * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
-@FunctionalInterface
 public interface MapBatchLoader<K, V> {
 
     /**
-     * Called to batch load the provided keys and return a promise to a map of values.  It can be given a context object to
+     * Called to batch load the provided keys and return a promise to a map of values.  It can be given an environment object to
      * that maybe be useful during the call.  A typical use case is passing in security credentials or database connection details say.
      *
-     * @param keys    the collection of keys to load
-     * @param context a context object that can help with the call
+     * @param keys        the collection of keys to load
+     * @param environment an environment object that can help with the call
      *
      * @return a promise to a map of values for those keys
      */
     @SuppressWarnings("unused")
-    CompletionStage<Map<K, V>> load(List<K> keys, Object context);
+    CompletionStage<Map<K, V>> load(List<K> keys, BatchLoaderEnvironment environment);
 }

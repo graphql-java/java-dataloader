@@ -10,30 +10,31 @@ import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
+import static org.dataloader.BatchLoaderEnvironment.newBatchLoaderEnvironment;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 
 /**
  * Tests related to context.  DataLoaderTest is getting to big and needs refactoring
  */
-public class DataLoaderContextTest {
+public class DataLoaderBatchLoaderEnvironmentTest {
 
     @Test
     public void context_is_passed_to_batch_loader_function() throws Exception {
         BatchLoader<String, String> batchLoader = new BatchLoader<String, String>() {
             @Override
             public CompletionStage<List<String>> load(List<String> keys) {
-                throw new UnsupportedOperationException("this wont be called");
+                throw new UnsupportedOperationException();
             }
 
             @Override
-            public CompletionStage<List<String>> load(List<String> keys, Object context) {
-                List<String> list = keys.stream().map(k -> k + "-" + context).collect(Collectors.toList());
+            public CompletionStage<List<String>> load(List<String> keys, BatchLoaderEnvironment environment) {
+                List<String> list = keys.stream().map(k -> k + "-" + environment.getContext()).collect(Collectors.toList());
                 return CompletableFuture.completedFuture(list);
             }
         };
         DataLoaderOptions options = DataLoaderOptions.newOptions()
-                .setBatchContextProvider(() -> "ctx");
+                .setBatchLoaderEnvironmentProvider(() -> newBatchLoaderEnvironment().context("ctx").build());
         DataLoader<String, String> loader = new DataLoader<>(batchLoader, options);
 
         loader.load("A");
@@ -47,13 +48,13 @@ public class DataLoaderContextTest {
 
     @Test
     public void context_is_passed_to_map_batch_loader_function() throws Exception {
-        MapBatchLoader<String, String> mapBatchLoader = (keys, context) -> {
+        MapBatchLoader<String, String> mapBatchLoader = (keys, environment) -> {
             Map<String, String> map = new HashMap<>();
-            keys.forEach(k -> map.put(k, k + "-" + context));
+            keys.forEach(k -> map.put(k, k + "-" + environment.getContext()));
             return CompletableFuture.completedFuture(map);
         };
         DataLoaderOptions options = DataLoaderOptions.newOptions()
-                .setBatchContextProvider(() -> "ctx");
+                .setBatchLoaderEnvironmentProvider(() -> newBatchLoaderEnvironment().context("ctx").build());
         DataLoader<String, String> loader = new DataLoader<>(mapBatchLoader, options);
 
         loader.load("A");
@@ -74,8 +75,8 @@ public class DataLoaderContextTest {
             }
 
             @Override
-            public CompletionStage<List<String>> load(List<String> keys, Object context) {
-                List<String> list = keys.stream().map(k -> k + "-" + context).collect(Collectors.toList());
+            public CompletionStage<List<String>> load(List<String> keys, BatchLoaderEnvironment environment) {
+                List<String> list = keys.stream().map(k -> k + "-" + environment.getContext()).collect(Collectors.toList());
                 return CompletableFuture.completedFuture(list);
             }
         };
@@ -92,9 +93,9 @@ public class DataLoaderContextTest {
 
     @Test
     public void null_is_passed_as_context_to_map_loader_if_you_do_nothing() throws Exception {
-        MapBatchLoader<String, String> mapBatchLoader = (keys, context) -> {
+        MapBatchLoader<String, String> mapBatchLoader = (keys, environment) -> {
             Map<String, String> map = new HashMap<>();
-            keys.forEach(k -> map.put(k, k + "-" + context));
+            keys.forEach(k -> map.put(k, k + "-" + environment.getContext()));
             return CompletableFuture.completedFuture(map);
         };
         DataLoader<String, String> loader = new DataLoader<>(mapBatchLoader);

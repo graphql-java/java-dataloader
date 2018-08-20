@@ -165,33 +165,40 @@ a list of user ids in one call.
  
 That said, with key caching turn on (the default), it will still be more efficient using `dataloader` than without it.
 
-### Calling the batch loader function with context
+### Calling the batch loader function with call context environment
 
-Often there is a need to call the batch loader function with some sort of context, such as the calling users security
+Often there is a need to call the batch loader function with some sort of call context environment, such as the calling users security
 credentials or the database connection parameters.  You can do this by implementing a 
-`org.dataloader.BatchContextProvider`.
+`org.dataloader.BatchLoaderEnvironmentProvider`.
 
 ```java
         BatchLoader<String, String> batchLoader = new BatchLoader<String, String>() {
+            //
+            // the reason this method exists is for backwards compatibility.  There are a large
+            // number of existing dataloader clients out there that used this method before the call context was invented
+            // and hence to preserve compatibility we have this unfortunate method declaration.
+            //
             @Override
             public CompletionStage<List<String>> load(List<String> keys) {
-                throw new UnsupportedOperationException("This wont be called if you implement the other defaulted method");
+                throw new UnsupportedOperationException();
             }
 
             @Override
-            public CompletionStage<List<String>> load(List<String> keys, Object context) {
-                SecurityCtx callCtx = (SecurityCtx) context;
+            public CompletionStage<List<String>> load(List<String> keys, BatchLoaderEnvironment environment) {
+                SecurityCtx callCtx = environment.getContext();
                 return callDatabaseForResults(callCtx, keys);
             }
-
         };
-        DataLoaderOptions options = DataLoaderOptions.newOptions()
-                .setBatchContextProvider(() -> SecurityCtx.getCallingUserCtx());
-        DataLoader<String, String> loader = new DataLoader<>(batchLoader, options);
 
+        BatchLoaderEnvironment batchLoaderEnvironment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
+                .context(SecurityCtx.getCallingUserCtx()).build();
+
+        DataLoaderOptions options = DataLoaderOptions.newOptions()
+                .setBatchLoaderEnvironmentProvider(() -> batchLoaderEnvironment);
+        DataLoader<String, String> loader = new DataLoader<>(batchLoader, options);
 ```
 
-The batch loading code will now receive this context object and it can be used to get to data layers or
+The batch loading code will now receive this environment object and it can be used to get context perhaps allowing it
 to connect to other systems. 
 
 ### Returning a Map of results from your batch loader
@@ -219,8 +226,8 @@ For example, let's assume you want to load users from a database, you could prob
 ```java
         MapBatchLoader<Long, User> mapBatchLoader = new MapBatchLoader<Long, User>() {
             @Override
-            public CompletionStage<Map<Long, User>> load(List<Long> userIds, Object context) {
-                SecurityCtx callCtx = (SecurityCtx) context;
+            public CompletionStage<Map<Long, User>> load(List<Long> userIds, BatchLoaderEnvironment environment) {
+                SecurityCtx callCtx = environment.getContext();
                 return CompletableFuture.supplyAsync(() -> userManager.loadMapOfUsersById(callCtx, userIds));
             }
         };
@@ -267,7 +274,7 @@ and some of which may have failed.  From that data loader can infer the right be
 ```java
         DataLoader<String, User> dataLoader = DataLoader.newDataLoaderWithTry(new BatchLoader<String, Try<User>>() {
             @Override
-            public CompletionStage<List<Try<User>>> load(List<String> keys) {
+            public CompletionStage<List<Try<User>>> load(List<String> keys, BatchLoaderEnvironment environment) {
                 return CompletableFuture.supplyAsync(() -> {
                     List<Try<User>> users = new ArrayList<>();
                     for (String key : keys) {
@@ -278,7 +285,6 @@ and some of which may have failed.  From that data loader can infer the right be
                 });
             }
         });
-
 ```
 
 On the above example if one of the `Try` objects represents a failure, then its `load()` promise will complete exceptionally and you can 

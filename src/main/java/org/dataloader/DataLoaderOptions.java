@@ -31,7 +31,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  */
 public class DataLoaderOptions {
 
-    private static final BatchContextProvider NULL_PROVIDER = () -> null;
+    private static final BatchLoaderEnvironmentProvider NULL_PROVIDER = () -> BatchLoaderEnvironment.newBatchLoaderEnvironment().build();
 
     private boolean batchingEnabled;
     private boolean cachingEnabled;
@@ -39,7 +39,7 @@ public class DataLoaderOptions {
     private CacheMap cacheMap;
     private int maxBatchSize;
     private Supplier<StatisticsCollector> statisticsCollector;
-    private BatchContextProvider contextProvider;
+    private BatchLoaderEnvironmentProvider environmentProvider;
 
     /**
      * Creates a new data loader options with default settings.
@@ -49,7 +49,7 @@ public class DataLoaderOptions {
         cachingEnabled = true;
         maxBatchSize = -1;
         statisticsCollector = SimpleStatisticsCollector::new;
-        contextProvider = NULL_PROVIDER;
+        environmentProvider = NULL_PROVIDER;
     }
 
     /**
@@ -65,7 +65,7 @@ public class DataLoaderOptions {
         this.cacheMap = other.cacheMap;
         this.maxBatchSize = other.maxBatchSize;
         this.statisticsCollector = other.statisticsCollector;
-        this.contextProvider = other.contextProvider;
+        this.environmentProvider = other.environmentProvider;
     }
 
     /**
@@ -208,21 +208,21 @@ public class DataLoaderOptions {
     }
 
     /**
-     * @return the batch context provider that will be used to give context to batch load functions
+     * @return the batch environment provider that will be used to give context to batch load functions
      */
-    public BatchContextProvider getBatchContextProvider() {
-        return contextProvider;
+    public BatchLoaderEnvironmentProvider getBatchLoaderEnvironmentProvider() {
+        return environmentProvider;
     }
 
     /**
-     * Sets the batch context provider that will be used to give context to batch load functions
+     * Sets the batch loader environment provider that will be used to give context to batch load functions
      *
-     * @param contextProvider the batch context provider
+     * @param environmentProvider the batch loader environment provider
      *
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setBatchContextProvider(BatchContextProvider contextProvider) {
-        this.contextProvider = nonNull(contextProvider);
+    public DataLoaderOptions setBatchLoaderEnvironmentProvider(BatchLoaderEnvironmentProvider environmentProvider) {
+        this.environmentProvider = nonNull(environmentProvider);
         return this;
     }
 }

@@ -1,4 +1,5 @@
 import org.dataloader.BatchLoader;
+import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.CacheMap;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
@@ -83,20 +84,28 @@ public class ReadmeExamples {
 
     private void callContextExample() {
         BatchLoader<String, String> batchLoader = new BatchLoader<String, String>() {
+            //
+            // the reason this method exists is for backwards compatibility.  There are a large
+            // number of existing dataloader clients out there that used this method before the call context was invented
+            // and hence to preserve compatibility we have this unfortunate method declaration.
+            //
             @Override
             public CompletionStage<List<String>> load(List<String> keys) {
-                throw new UnsupportedOperationException("This wont be called if you implement the other defaulted method");
+                throw new UnsupportedOperationException();
             }
 
             @Override
-            public CompletionStage<List<String>> load(List<String> keys, Object context) {
-                SecurityCtx callCtx = (SecurityCtx) context;
+            public CompletionStage<List<String>> load(List<String> keys, BatchLoaderEnvironment environment) {
+                SecurityCtx callCtx = environment.getContext();
                 return callDatabaseForResults(callCtx, keys);
             }
-
         };
+
+        BatchLoaderEnvironment batchLoaderEnvironment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
+                .context(SecurityCtx.getCallingUserCtx()).build();
+
         DataLoaderOptions options = DataLoaderOptions.newOptions()
-                .setBatchContextProvider(() -> SecurityCtx.getCallingUserCtx());
+                .setBatchLoaderEnvironmentProvider(() -> batchLoaderEnvironment);
         DataLoader<String, String> loader = new DataLoader<>(batchLoader, options);
     }
 
@@ -107,8 +116,8 @@ public class ReadmeExamples {
     private void mapBatchLoader() {
         MapBatchLoader<Long, User> mapBatchLoader = new MapBatchLoader<Long, User>() {
             @Override
-            public CompletionStage<Map<Long, User>> load(List<Long> userIds, Object context) {
-                SecurityCtx callCtx = (SecurityCtx) context;
+            public CompletionStage<Map<Long, User>> load(List<Long> userIds, BatchLoaderEnvironment environment) {
+                SecurityCtx callCtx = environment.getContext();
                 return CompletableFuture.supplyAsync(() -> userManager.loadMapOfUsersById(callCtx, userIds));
             }
         };

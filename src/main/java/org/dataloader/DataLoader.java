@@ -298,8 +298,7 @@ public class DataLoader<K, V> {
             } else {
                 stats.incrementBatchLoadCountBy(1);
                 // immediate execution of batch function
-                Object context = loaderOptions.getBatchContextProvider().get();
-                future = invokeLoaderImmediately(key, context);
+                future = invokeLoaderImmediately(key);
             }
             if (cachingEnabled) {
                 futureCache.set(cacheKey, future);
@@ -329,25 +328,6 @@ public class DataLoader<K, V> {
 
             return CompletableFutureKit.allOf(collect);
         }
-    }
-
-    private CompletableFuture<V> invokeLoaderImmediately(K key, Object context) {
-        List<K> keys = singletonList(key);
-        CompletionStage<V> singleLoadCall;
-        if (isMapLoader()) {
-            singleLoadCall = mapBatchLoadFunction
-                    .load(keys, context)
-                    .thenApply(map -> map.get(key));
-        } else {
-            singleLoadCall = batchLoadFunction
-                    .load(keys, context)
-                    .thenApply(list -> list.get(0));
-        }
-        return singleLoadCall.toCompletableFuture();
-    }
-
-    private boolean isMapLoader() {
-        return mapBatchLoadFunction != null;
     }
 
     /**
@@ -420,7 +400,7 @@ public class DataLoader<K, V> {
     @SuppressWarnings("unchecked")
     private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<CompletableFuture<V>> queuedFutures) {
         stats.incrementBatchLoadCountBy(keys.size());
-        CompletionStage<List<V>> batchLoad = invokeBatchFunction(keys);
+        CompletionStage<List<V>> batchLoad = invokeLoader(keys);
         return batchLoad
                 .toCompletableFuture()
                 .thenApply(values -> {
@@ -463,14 +443,34 @@ public class DataLoader<K, V> {
                 });
     }
 
-    private CompletionStage<List<V>> invokeBatchFunction(List<K> keys) {
+    private boolean isMapLoader() {
+        return mapBatchLoadFunction != null;
+    }
+
+    private CompletableFuture<V> invokeLoaderImmediately(K key) {
+        BatchLoaderEnvironment environment = loaderOptions.getBatchLoaderEnvironmentProvider().get();
+        List<K> keys = singletonList(key);
+        CompletionStage<V> singleLoadCall;
+        if (isMapLoader()) {
+            singleLoadCall = mapBatchLoadFunction
+                    .load(keys, environment)
+                    .thenApply(map -> map.get(key));
+        } else {
+            singleLoadCall = batchLoadFunction
+                    .load(keys, environment)
+                    .thenApply(list -> list.get(0));
+        }
+        return singleLoadCall.toCompletableFuture();
+    }
+
+    private CompletionStage<List<V>> invokeLoader(List<K> keys) {
         CompletionStage<List<V>> batchLoad;
         try {
-            Object context = loaderOptions.getBatchContextProvider().get();
+            BatchLoaderEnvironment environment = loaderOptions.getBatchLoaderEnvironmentProvider().get();
             if (isMapLoader()) {
-                batchLoad = invokeMapBatchLoader(keys, context);
+                batchLoad = invokeMapBatchLoader(keys, environment);
             } else {
-                batchLoad = invokeListBatchLoader(keys, context);
+                batchLoad = invokeListBatchLoader(keys, environment);
             }
         } catch (Exception e) {
             batchLoad = CompletableFutureKit.failedFuture(e);
@@ -478,16 +478,16 @@ public class DataLoader<K, V> {
         return batchLoad;
     }
 
-    private CompletionStage<List<V>> invokeListBatchLoader(List<K> keys, Object context) {
-        return nonNull(batchLoadFunction.load(keys, context), "Your batch loader function MUST return a non null CompletionStage promise");
+    private CompletionStage<List<V>> invokeListBatchLoader(List<K> keys, BatchLoaderEnvironment environment) {
+        return nonNull(batchLoadFunction.load(keys, environment), "Your batch loader function MUST return a non null CompletionStage promise");
     }
 
     /*
      * Turns a map of results that MAY be smaller than the key list back into a list by mapping null
      * to missing elements.
      */
-    private CompletionStage<List<V>> invokeMapBatchLoader(List<K> keys, Object context) {
-        CompletionStage<Map<K, V>> mapBatchLoad = nonNull(mapBatchLoadFunction.load(keys, context), "Your batch loader function MUST return a non null CompletionStage promise");
+    private CompletionStage<List<V>> invokeMapBatchLoader(List<K> keys, BatchLoaderEnvironment environment) {
+        CompletionStage<Map<K, V>> mapBatchLoad = nonNull(mapBatchLoadFunction.load(keys, environment), "Your batch loader function MUST return a non null CompletionStage promise");
         return mapBatchLoad.thenApply(map -> {
             List<V> values = new ArrayList<>();
             for (K key : keys) {
