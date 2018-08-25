@@ -1,9 +1,10 @@
 import org.dataloader.BatchLoader;
 import org.dataloader.BatchLoaderEnvironment;
+import org.dataloader.BatchLoaderWithContext;
 import org.dataloader.CacheMap;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
-import org.dataloader.MapBatchLoader;
+import org.dataloader.MappedBatchLoaderWithContext;
 import org.dataloader.Try;
 import org.dataloader.fixtures.SecurityCtx;
 import org.dataloader.fixtures.User;
@@ -57,7 +58,7 @@ public class ReadmeExamples {
             }
         };
 
-        DataLoader<Long, User> userLoader = new DataLoader<>(userBatchLoader);
+        DataLoader<Long, User> userLoader = DataLoader.newDataLoader(userBatchLoader);
 
         CompletionStage<User> load1 = userLoader.load(1L);
 
@@ -83,17 +84,13 @@ public class ReadmeExamples {
     }
 
     private void callContextExample() {
-        BatchLoader<String, String> batchLoader = new BatchLoader<String, String>() {
-            //
-            // the reason this method exists is for backwards compatibility.  There are a large
-            // number of existing dataloader clients out there that used this method before the call context was invented
-            // and hence to preserve compatibility we have this unfortunate method declaration.
-            //
-            @Override
-            public CompletionStage<List<String>> load(List<String> keys) {
-                throw new UnsupportedOperationException();
-            }
+        BatchLoaderEnvironment batchLoaderEnvironment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
+                .context(SecurityCtx.getCallingUserCtx()).build();
 
+        DataLoaderOptions options = DataLoaderOptions.newOptions()
+                .setBatchLoaderEnvironmentProvider(() -> batchLoaderEnvironment);
+
+        BatchLoaderWithContext<String, String> batchLoader = new BatchLoaderWithContext<String, String>() {
             @Override
             public CompletionStage<List<String>> load(List<String> keys, BatchLoaderEnvironment environment) {
                 SecurityCtx callCtx = environment.getContext();
@@ -101,12 +98,7 @@ public class ReadmeExamples {
             }
         };
 
-        BatchLoaderEnvironment batchLoaderEnvironment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
-                .context(SecurityCtx.getCallingUserCtx()).build();
-
-        DataLoaderOptions options = DataLoaderOptions.newOptions()
-                .setBatchLoaderEnvironmentProvider(() -> batchLoaderEnvironment);
-        DataLoader<String, String> loader = new DataLoader<>(batchLoader, options);
+        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
     }
 
     private CompletionStage<List<String>> callDatabaseForResults(SecurityCtx callCtx, List<String> keys) {
@@ -114,7 +106,7 @@ public class ReadmeExamples {
     }
 
     private void mapBatchLoader() {
-        MapBatchLoader<Long, User> mapBatchLoader = new MapBatchLoader<Long, User>() {
+        MappedBatchLoaderWithContext<Long, User> mapBatchLoader = new MappedBatchLoaderWithContext<Long, User>() {
             @Override
             public CompletionStage<Map<Long, User>> load(List<Long> userIds, BatchLoaderEnvironment environment) {
                 SecurityCtx callCtx = environment.getContext();
@@ -122,7 +114,7 @@ public class ReadmeExamples {
             }
         };
 
-        DataLoader<Long, User> userLoader = DataLoader.newDataLoader(mapBatchLoader);
+        DataLoader<Long, User> userLoader = DataLoader.newMappedDataLoader(mapBatchLoader);
 
         // ...
     }
@@ -178,7 +170,7 @@ public class ReadmeExamples {
     BatchLoader<String, User> userBatchLoader;
 
     private void disableCache() {
-        new DataLoader<String, User>(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
+        DataLoader.newDataLoader(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
 
 
         userDataLoader.load("A");
@@ -221,7 +213,7 @@ public class ReadmeExamples {
 
         MyCustomCache customCache = new MyCustomCache();
         DataLoaderOptions options = DataLoaderOptions.newOptions().setCacheMap(customCache);
-        new DataLoader<String, User>(userBatchLoader, options);
+        DataLoader.newDataLoader(userBatchLoader, options);
     }
 
     private void processUser(User user) {

@@ -41,10 +41,10 @@ public class DataLoaderWithTryTest {
     }
 
     @Test
-    public void should_handle_Trys_coming_back_from_map_batchLoader() throws Exception {
+    public void should_handle_Trys_coming_back_from_mapped_batchLoader() throws Exception {
 
         List<List<String>> batchKeyCalls = new ArrayList<>();
-        MapBatchLoader<String, Try<String>> batchLoader = (keys, environment) -> {
+        MappedBatchLoaderWithContext<String, Try<String>> batchLoader = (keys, environment) -> {
             batchKeyCalls.add(keys);
 
             Map<String, Try<String>> result = new HashMap<>();
@@ -58,7 +58,7 @@ public class DataLoaderWithTryTest {
             return CompletableFuture.completedFuture(result);
         };
 
-        DataLoader<String, String> dataLoader = DataLoader.newDataLoaderWithTry(batchLoader);
+        DataLoader<String, String> dataLoader = DataLoader.newMappedDataLoaderWithTry(batchLoader);
 
         commonTryAsserts(batchKeyCalls, dataLoader);
     }
