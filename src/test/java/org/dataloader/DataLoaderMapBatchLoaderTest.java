@@ -23,7 +23,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 /**
- * Much of the tests that related to {@link org.dataloader.MapBatchLoader} also related to
+ * Much of the tests that related to {@link MappedBatchLoader} also related to
  * {@link org.dataloader.BatchLoader}.  This is white box testing somewhat because we could have repeated
  * ALL the tests in {@link org.dataloader.DataLoaderTest} here as well but chose not to because we KNOW that
  * DataLoader differs only a little in how it handles the 2 types of loader functions. We choose to grab some
@@ -31,7 +31,7 @@ import static org.junit.Assert.assertThat;
  */
 public class DataLoaderMapBatchLoaderTest {
 
-    MapBatchLoader<String, String> evensOnlyMapBatchLoader = (keys, environment) -> {
+    MappedBatchLoader<String, String> evensOnlyMappedBatchLoader = (keys) -> {
         Map<String, String> mapOfResults = new HashMap<>();
         for (int i = 0; i < keys.size(); i++) {
             String k = keys.get(i);
@@ -43,19 +43,19 @@ public class DataLoaderMapBatchLoaderTest {
     };
 
     private static <K, V> DataLoader<K, V> idMapLoader(DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        MapBatchLoader<K, V> kvBatchLoader = (keys, environment) -> {
+        MappedBatchLoader<K, V> kvBatchLoader = (keys) -> {
             loadCalls.add(new ArrayList<>(keys));
             Map<K, V> map = new HashMap<>();
             //noinspection unchecked
             keys.forEach(k -> map.put(k, (V) k));
             return CompletableFuture.completedFuture(map);
         };
-        return DataLoader.newDataLoader(kvBatchLoader, options);
+        return DataLoader.newMappedDataLoader(kvBatchLoader, options);
     }
 
     private static <K, V> DataLoader<K, V> idMapLoaderBlowsUps(
             DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return new DataLoader<>((keys, environment) -> {
+        return new DataLoader<>((keys) -> {
             loadCalls.add(new ArrayList<>(keys));
             return futureError();
         }, options);
@@ -64,7 +64,7 @@ public class DataLoaderMapBatchLoaderTest {
 
     @Test
     public void basic_map_batch_loading() throws Exception {
-        DataLoader<String, String> loader = new DataLoader<>(evensOnlyMapBatchLoader);
+        DataLoader<String, String> loader = DataLoader.newMappedDataLoader(evensOnlyMappedBatchLoader);
 
         loader.load("A");
         loader.load("B");
@@ -173,7 +173,6 @@ public class DataLoaderMapBatchLoaderTest {
         assertThat(future3.get(), equalTo("A"));
         assertThat(loadCalls, equalTo(singletonList(asList("A", "B"))));
     }
-
 
 
 }

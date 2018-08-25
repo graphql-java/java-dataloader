@@ -70,7 +70,7 @@ a list of keys
             }
         };
 
-        DataLoader<Long, User> userLoader = new DataLoader<>(userBatchLoader);
+        DataLoader<Long, User> userLoader = DataLoader.newDataLoader(userBatchLoader);
 
 ```
 
@@ -169,20 +169,17 @@ That said, with key caching turn on (the default), it will still be more efficie
 
 Often there is a need to call the batch loader function with some sort of call context environment, such as the calling users security
 credentials or the database connection parameters.  You can do this by implementing a 
-`org.dataloader.BatchLoaderEnvironmentProvider`.
+`org.dataloader.BatchLoaderEnvironmentProvider` and using one of the `xxxWithContext` batch loading interfaces
+such as `org.dataloader.BatchLoaderWithContext`.
 
 ```java
-        BatchLoader<String, String> batchLoader = new BatchLoader<String, String>() {
-            //
-            // the reason this method exists is for backwards compatibility.  There are a large
-            // number of existing dataloader clients out there that used this method before the call context was invented
-            // and hence to preserve compatibility we have this unfortunate method declaration.
-            //
-            @Override
-            public CompletionStage<List<String>> load(List<String> keys) {
-                throw new UnsupportedOperationException();
-            }
+        BatchLoaderEnvironment batchLoaderEnvironment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
+                .context(SecurityCtx.getCallingUserCtx()).build();
 
+        DataLoaderOptions options = DataLoaderOptions.newOptions()
+                .setBatchLoaderEnvironmentProvider(() -> batchLoaderEnvironment);
+
+        BatchLoaderWithContext<String, String> batchLoader = new BatchLoaderWithContext<String, String>() {
             @Override
             public CompletionStage<List<String>> load(List<String> keys, BatchLoaderEnvironment environment) {
                 SecurityCtx callCtx = environment.getContext();
@@ -190,12 +187,7 @@ credentials or the database connection parameters.  You can do this by implement
             }
         };
 
-        BatchLoaderEnvironment batchLoaderEnvironment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
-                .context(SecurityCtx.getCallingUserCtx()).build();
-
-        DataLoaderOptions options = DataLoaderOptions.newOptions()
-                .setBatchLoaderEnvironmentProvider(() -> batchLoaderEnvironment);
-        DataLoader<String, String> loader = new DataLoader<>(batchLoader, options);
+        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
 ```
 
 The batch loading code will now receive this environment object and it can be used to get context perhaps allowing it
@@ -214,7 +206,7 @@ For example, let's assume you want to load users from a database, you could prob
  Given say 10 user id keys you might only get 7 results back.  This can be more naturally represented in a map
  than in an order list of values when returning values from the batch loader function.
  
- You can use `org.dataloader.MapBatchLoader` for this purpose. 
+ You can use `org.dataloader.MappedBatchLoader` for this purpose. 
  
  When the map is processed by the `DataLoader` code, any keys that are missing in the map
  will be replaced with null values.  The semantics that the number of `DataLoader.load` requests
@@ -297,7 +289,7 @@ react to that, in a type safe manner.
 In certain uncommon cases, a DataLoader which does not cache may be desirable. 
 
 ```java
-    new DataLoader<String, User>(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
+    DataLoader.newDataLoader(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
 ``` 
 
 Calling the above will ensure that every call to `.load()` will produce a new promise, and requested keys will not be saved in memory.
@@ -391,7 +383,7 @@ However you can create your own custom cache and supply it to the data loader on
 ```java
         MyCustomCache customCache = new MyCustomCache();
         DataLoaderOptions options = DataLoaderOptions.newOptions().setCacheMap(customCache);
-        new DataLoader<String, User>(userBatchLoader, options);
+        DataLoader.newDataLoader(userBatchLoader, options);
 ```
 
 You could choose to use one of the fancy cache implementations from Guava or Kaffeine and wrap it in a `CacheMap` wrapper ready
