@@ -360,7 +360,7 @@ public class DataLoader<K, V> {
         this.loaderQueue = new ArrayList<>();
         this.stats = nonNull(this.loaderOptions.getStatisticsCollector());
 
-        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, this.loaderOptions, futureCache, loaderQueue, stats);
+        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, this.loaderOptions, this.futureCache, this.loaderQueue, this.stats);
     }
 
     @SuppressWarnings("unchecked")
