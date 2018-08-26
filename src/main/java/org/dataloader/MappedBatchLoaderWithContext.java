@@ -24,7 +24,7 @@ import java.util.concurrent.CompletionStage;
  * This form of {@link MappedBatchLoader} is given a {@link org.dataloader.BatchLoaderEnvironment} object
  * that encapsulates the calling context.  A typical use case is passing in security credentials or database details
  * for example.
- *
+ * <p>
  * See {@link MappedBatchLoader} for more details on the design invariants that you must implement in order to
  * use this interface.
  */

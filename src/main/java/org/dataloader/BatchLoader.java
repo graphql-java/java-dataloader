@@ -16,21 +16,19 @@
 
 package org.dataloader;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 /**
  * A function that is invoked for batch loading a list of data values indicated by the provided list of keys. The
  * function returns a promise of a list of results of individual load requests.
- *
+ * <p>
  * There are a few constraints that must be upheld:
  * <ul>
  * <li>The list of values must be the same size as the list of keys.</li>
  * <li>Each index in the list of values must correspond to the same index in the list of keys.</li>
  * </ul>
- *
+ * <p>
  * For example, if your batch function was provided the list of keys:
  *
  * <pre>
@@ -50,10 +48,10 @@ import java.util.concurrent.CompletionStage;
  * </pre>
  *
  * then the batch loader function contract has been broken.
- *
+ * <p>
  * The back-end service returned results in a different order than we requested, likely because it was more efficient for it to
  * do so. Also, it omitted a result for key 6, which we may interpret as no value existing for that key.
- *
+ * <p>
  * To uphold the constraints of the batch function, it must return an List of values the same length as
  * the List of keys, and re-order them to ensure each index aligns with the original keys [ 2, 9, 6, 1 ]:
  *
@@ -77,7 +75,7 @@ public interface BatchLoader<K, V> {
 
     /**
      * Called to batch load the provided keys and return a promise to a list of values.
-     *
+     * <p>
      * If you need calling context then implement {@link org.dataloader.BatchLoaderWithContext}
      *
      * @param keys the collection of keys to load
