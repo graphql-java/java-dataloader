@@ -23,7 +23,7 @@ import java.util.concurrent.CompletionStage;
 /**
  * A function that is invoked for batch loading a map of of data values indicated by the provided list of keys. The
  * function returns a promise of a map of results of individual load requests.
- *
+ * <p>
  * There are a few constraints that must be upheld:
  * <ul>
  * <li>The keys MUST be able to be first class keys in a Java map.  Get your equals() and hashCode() methods in order</li>
@@ -32,25 +32,25 @@ import java.util.concurrent.CompletionStage;
  * </li>
  * <li>The function MUST be resilient to the same key being presented twice.</li>
  * </ul>
- *
+ * <p>
  * This form is useful when you don't have a 1:1 mapping of keys to values or when null is an acceptable value for a missing value.
- *
+ * <p>
  * For example, let's assume you want to load users from a database, you could probably use a query that looks like this:
  *
  * <pre>
  *    SELECT * FROM User WHERE id IN (keys)
  * </pre>
- *
+ * <p>
  * Given say 10 user id keys you might only get 7 results back.  This can be more naturally represented in a map
  * than in an ordered list of values from the batch loader function.
- *
+ * <p>
  * When the map is processed by the {@link org.dataloader.DataLoader} code, any keys that are missing in the map
  * will be replaced with null values.  The semantic that the number of {@link org.dataloader.DataLoader#load(Object)} requests
  * are matched with and equal number of values is kept.
- *
+ * <p>
  * This means that if 10 keys are asked for then {@link DataLoader#dispatch()} will return a promise of 10 value results and each
  * of the {@link org.dataloader.DataLoader#load(Object)} will complete with a value, null or an exception.
- *
+ * <p>
  * When caching is disabled, its possible for the same key to be presented in the list of keys more than once.  Your map
  * batch loader function needs to be resilient to this situation.
  *

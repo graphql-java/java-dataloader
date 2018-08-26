@@ -3,9 +3,9 @@ package org.dataloader.stats;
 /**
  * This can collect statistics per thread as well as in an overall sense.  This allows you to snapshot stats for a web request say
  * as well as all requests.
- *
+ * <p>
  * You will want to call {@link #resetThread()} to clean up the thread local aspects of this object per request thread.
- *
+ * <p>
  * ThreadLocals have their place in the Java world but be careful on how you use them.  If you don't clean them up on "request boundaries"
  * then you WILL have misleading statistics.
  *

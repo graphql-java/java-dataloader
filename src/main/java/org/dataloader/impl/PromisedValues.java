@@ -13,10 +13,10 @@ import static java.util.Arrays.asList;
  * This allows multiple {@link CompletionStage}s to be combined together and completed
  * as one and should something go wrong, instead of throwing {@link CompletionException}s it captures the cause and returns null for that
  * data value, other wise it allows you to access them as a list of values.
- *
+ * <p>
  * This class really encapsulate a list of promised values.  It is considered finished when all of the underlying futures
  * are finished.
- *
+ * <p>
  * You can get that list of values via {@link #toList()}.  You can also compose a {@link CompletableFuture} of that
  * list of values via {@link #toCompletableFuture()} ()}
  *

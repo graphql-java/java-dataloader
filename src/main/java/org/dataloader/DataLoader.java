@@ -95,10 +95,10 @@ public class DataLoader<K, V> {
      * Creates new DataLoader with the specified batch loader function and default options
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
-     *
+     * <p>
      * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
-     *
+     * <p>
      * Using Try objects allows you to capture a value returned or an exception that might
      * have occurred trying to get a value. .
      *
@@ -163,10 +163,10 @@ public class DataLoader<K, V> {
      * Creates new DataLoader with the specified batch loader function and default options
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
-     *
+     * <p>
      * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
-     *
+     * <p>
      * Using Try objects allows you to capture a value returned or an exception that might
      * have occurred trying to get a value. .
      *
@@ -230,13 +230,13 @@ public class DataLoader<K, V> {
      * Creates new DataLoader with the specified batch loader function and default options
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
-     *
+     * <p>
      * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
      *
      * Using Try objects allows you to capture a value returned or an exception that might
      * have occurred trying to get a value. .
-     *
+     * <p>
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
@@ -298,10 +298,10 @@ public class DataLoader<K, V> {
      * Creates new DataLoader with the specified batch loader function and default options
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
-     *
+     * <p>
      * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
-     *
+     * <p>
      * Using Try objects allows you to capture a value returned or an exception that might
      * have occurred trying to get a value. .
      *
