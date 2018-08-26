@@ -204,15 +204,15 @@ For example, let's assume you want to load users from a database, you could prob
 ```
  
  Given say 10 user id keys you might only get 7 results back.  This can be more naturally represented in a map
- than in an order list of values when returning values from the batch loader function.
+ than in an ordered list of values from the batch loader function.
  
  You can use `org.dataloader.MappedBatchLoader` for this purpose. 
  
  When the map is processed by the `DataLoader` code, any keys that are missing in the map
- will be replaced with null values.  The semantics that the number of `DataLoader.load` requests
- are matched with values is kept.
+ will be replaced with null values.  The semantic that the number of `DataLoader.load` requests
+ are matched with an equal number of values is kept.
  
- Your keys provided MUST be first class keys since they will be used to examine the returned map and
+ The keys provided MUST be first class keys since they will be used to examine the returned map and
  create the list of results, with nulls filling in for missing values.
  
 ```java

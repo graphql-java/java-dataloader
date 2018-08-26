@@ -57,7 +57,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  */
 public class DataLoader<K, V> {
 
-    private final DataLoaderHelper<K,V> helper;
+    private final DataLoaderHelper<K, V> helper;
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
     private final List<SimpleImmutableEntry<K, CompletableFuture<V>>> loaderQueue;
@@ -96,9 +96,11 @@ public class DataLoader<K, V> {
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
      *
-     * This allows you to capture both the value that might be returned and also whether exception that might have occurred getting that individual value.  If its important you to
-     * know the exact status of each item in a batch call and whether it threw exceptions when fetched then
+     * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
+     *
+     * Using Try objects allows you to capture a value returned or an exception that might
+     * have occurred trying to get a value. .
      *
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
@@ -162,9 +164,11 @@ public class DataLoader<K, V> {
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
      *
-     * This allows you to capture both the value that might be returned and also whether exception that might have occurred getting that individual value.  If its important you to
-     * know the exact status of each item in a batch call and whether it threw exceptions when fetched then
+     * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
+     *
+     * Using Try objects allows you to capture a value returned or an exception that might
+     * have occurred trying to get a value. .
      *
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
@@ -227,9 +231,11 @@ public class DataLoader<K, V> {
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
      *
-     * This allows you to capture both the value that might be returned and also whether exception that might have occurred getting that individual value.  If its important you to
-     * know the exact status of each item in a batch call and whether it threw exceptions when fetched then
+     * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
+     *
+     * Using Try objects allows you to capture a value returned or an exception that might
+     * have occurred trying to get a value. .
      *
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
@@ -293,9 +299,11 @@ public class DataLoader<K, V> {
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
      *
-     * This allows you to capture both the value that might be returned and also whether exception that might have occurred getting that individual value.  If its important you to
-     * know the exact status of each item in a batch call and whether it threw exceptions when fetched then
+     * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
+     *
+     * Using Try objects allows you to capture a value returned or an exception that might
+     * have occurred trying to get a value. .
      *
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
@@ -352,7 +360,7 @@ public class DataLoader<K, V> {
         this.loaderQueue = new ArrayList<>();
         this.stats = nonNull(this.loaderOptions.getStatisticsCollector());
 
-        this.helper = new DataLoaderHelper<>(this, batchLoadFunction,this.loaderOptions, futureCache, loaderQueue, stats);
+        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, this.loaderOptions, futureCache, loaderQueue, stats);
     }
 
     @SuppressWarnings("unchecked")
