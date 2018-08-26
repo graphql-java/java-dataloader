@@ -42,16 +42,16 @@ import java.util.concurrent.CompletionStage;
  * </pre>
  *
  * Given say 10 user id keys you might only get 7 results back.  This can be more naturally represented in a map
- * than in an order list of values when returning values from the batch loader function.
+ * than in an ordered list of values from the batch loader function.
  *
  * When the map is processed by the {@link org.dataloader.DataLoader} code, any keys that are missing in the map
- * will be replaced with null values.  The semantics that the number of {@link org.dataloader.DataLoader#load(Object)} requests
- * are matched with values is kept.
+ * will be replaced with null values.  The semantic that the number of {@link org.dataloader.DataLoader#load(Object)} requests
+ * are matched with and equal number of values is kept.
  *
- * This means that if 10 keys are asked for then {@link DataLoader#dispatch()} will return a promise 10 value results and each
+ * This means that if 10 keys are asked for then {@link DataLoader#dispatch()} will return a promise of 10 value results and each
  * of the {@link org.dataloader.DataLoader#load(Object)} will complete with a value, null or an exception.
  *
- * When caching is disabled, its possible for the same key to be presented in the list of keys more than once.  You map
+ * When caching is disabled, its possible for the same key to be presented in the list of keys more than once.  Your map
  * batch loader function needs to be resilient to this situation.
  *
  * @param <K> type parameter indicating the type of keys to use for data load requests.

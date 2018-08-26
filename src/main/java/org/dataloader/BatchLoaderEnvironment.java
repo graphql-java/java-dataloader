@@ -2,7 +2,7 @@ package org.dataloader;
 
 /**
  * This object is passed to a batch loader as calling context.  It could contain security credentials
- * of the calling users say or database connection parameters that allow the data layer call to succeed.
+ * of the calling users for example or database parameters that allow the data layer call to succeed.
  */
 public class BatchLoaderEnvironment {
 
