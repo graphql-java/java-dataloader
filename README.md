@@ -266,7 +266,7 @@ and some of which may have failed.  From that data loader can infer the right be
 ```java
         DataLoader<String, User> dataLoader = DataLoader.newDataLoaderWithTry(new BatchLoader<String, Try<User>>() {
             @Override
-            public CompletionStage<List<Try<User>>> load(List<String> keys, BatchLoaderEnvironment environment) {
+            public CompletionStage<List<Try<User>>> load(List<String> keys) {
                 return CompletableFuture.supplyAsync(() -> {
                     List<Try<User>> users = new ArrayList<>();
                     for (String key : keys) {
