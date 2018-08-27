@@ -20,11 +20,10 @@ import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.Statistics;
 import org.dataloader.stats.StatisticsCollector;
 
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static org.dataloader.impl.Assertions.nonNull;
 
@@ -60,7 +59,6 @@ public class DataLoader<K, V> {
     private final DataLoaderHelper<K, V> helper;
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
-    private final List<SimpleImmutableEntry<K, CompletableFuture<V>>> loaderQueue;
     private final StatisticsCollector stats;
 
     /**
@@ -237,6 +235,7 @@ public class DataLoader<K, V> {
      * Using Try objects allows you to capture a value returned or an exception that might
      * have occurred trying to get a value. .
      * <p>
+     *
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
@@ -357,10 +356,9 @@ public class DataLoader<K, V> {
         this.loaderOptions = options == null ? new DataLoaderOptions() : options;
         this.futureCache = determineCacheMap(loaderOptions);
         // order of keys matter in data loader
-        this.loaderQueue = new ArrayList<>();
         this.stats = nonNull(this.loaderOptions.getStatisticsCollector());
 
-        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, this.loaderOptions, this.futureCache, this.loaderQueue, this.stats);
+        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, this.loaderOptions, this.futureCache, this.stats);
     }
 
     @SuppressWarnings("unchecked")
@@ -380,7 +378,26 @@ public class DataLoader<K, V> {
      * @return the future of the value
      */
     public CompletableFuture<V> load(K key) {
-        return helper.load(key);
+        return load(key, null);
+    }
+
+    /**
+     * Requests to load the data with the specified key asynchronously, and returns a future of the resulting value.
+     * <p>
+     * If batching is enabled (the default), you'll have to call {@link DataLoader#dispatch()} at a later stage to
+     * start batch execution. If you forget this call the future will never be completed (unless already completed,
+     * and returned from cache).
+     * <p>
+     * The key context object may be useful in the batch loader interfaces such as {@link org.dataloader.BatchLoaderWithContext} or
+     * {@link org.dataloader.MappedBatchLoaderWithContext} to help retrieve data.
+     *
+     * @param key        the key to load
+     * @param keyContext a context object that is specific to this key
+     *
+     * @return the future of the value
+     */
+    public CompletableFuture<V> load(K key, Object keyContext) {
+        return helper.load(key, keyContext);
     }
 
     /**
@@ -396,11 +413,39 @@ public class DataLoader<K, V> {
      * @return the composite future of the list of values
      */
     public CompletableFuture<List<V>> loadMany(List<K> keys) {
-        synchronized (this) {
-            List<CompletableFuture<V>> collect = keys.stream()
-                    .map(this::load)
-                    .collect(Collectors.toList());
+        return loadMany(keys, Collections.emptyList());
+    }
 
+    /**
+     * Requests to load the list of data provided by the specified keys asynchronously, and returns a composite future
+     * of the resulting values.
+     * <p>
+     * If batching is enabled (the default), you'll have to call {@link DataLoader#dispatch()} at a later stage to
+     * start batch execution. If you forget this call the future will never be completed (unless already completed,
+     * and returned from cache).
+     * <p>
+     * The key context object may be useful in the batch loader interfaces such as {@link org.dataloader.BatchLoaderWithContext} or
+     * {@link org.dataloader.MappedBatchLoaderWithContext} to help retrieve data.
+     *
+     * @param keys        the list of keys to load
+     * @param keyContexts the list of key calling context objects
+     *
+     * @return the composite future of the list of values
+     */
+    public CompletableFuture<List<V>> loadMany(List<K> keys, List<Object> keyContexts) {
+        nonNull(keys);
+        nonNull(keyContexts);
+
+        synchronized (this) {
+            List<CompletableFuture<V>> collect = new ArrayList<>();
+            for (int i = 0; i < keys.size(); i++) {
+                K key = keys.get(i);
+                Object keyContext = null;
+                if (i < keyContexts.size()) {
+                    keyContext = keyContexts.get(i);
+                }
+                collect.add(load(key, keyContext));
+            }
             return CompletableFutureKit.allOf(collect);
         }
     }
@@ -441,9 +486,7 @@ public class DataLoader<K, V> {
      * @return the depth of the batched key loads that need to be dispatched
      */
     public int dispatchDepth() {
-        synchronized (this) {
-            return loaderQueue.size();
-        }
+        return helper.dispatchDepth();
     }
 
 

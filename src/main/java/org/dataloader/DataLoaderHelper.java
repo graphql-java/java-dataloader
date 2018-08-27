@@ -3,9 +3,9 @@ package org.dataloader;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.StatisticsCollector;
 
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -26,23 +26,48 @@ import static org.dataloader.impl.Assertions.nonNull;
  */
 class DataLoaderHelper<K, V> {
 
-    private final DataLoader<K,V> dataLoader;
+    class LoaderQueueEntry<K, V> {
+
+        final K key;
+        final V value;
+        final Object callContext;
+
+        public LoaderQueueEntry(K key, V value, Object callContext) {
+            this.key = key;
+            this.value = value;
+            this.callContext = callContext;
+        }
+
+        K getKey() {
+            return key;
+        }
+
+        V getValue() {
+            return value;
+        }
+
+        Object getCallContext() {
+            return callContext;
+        }
+    }
+
+    private final DataLoader<K, V> dataLoader;
     private final Object batchLoadFunction;
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
-    private final List<AbstractMap.SimpleImmutableEntry<K, CompletableFuture<V>>> loaderQueue;
+    private final List<LoaderQueueEntry<K, CompletableFuture<V>>> loaderQueue;
     private final StatisticsCollector stats;
 
-    DataLoaderHelper(DataLoader<K,V> dataLoader, Object batchLoadFunction, DataLoaderOptions loaderOptions, CacheMap<Object, CompletableFuture<V>> futureCache, List<AbstractMap.SimpleImmutableEntry<K, CompletableFuture<V>>> loaderQueue, StatisticsCollector stats) {
+    DataLoaderHelper(DataLoader<K, V> dataLoader, Object batchLoadFunction, DataLoaderOptions loaderOptions, CacheMap<Object, CompletableFuture<V>> futureCache, StatisticsCollector stats) {
         this.dataLoader = dataLoader;
         this.batchLoadFunction = batchLoadFunction;
         this.loaderOptions = loaderOptions;
         this.futureCache = futureCache;
-        this.loaderQueue = loaderQueue;
+        this.loaderQueue = new ArrayList<>();
         this.stats = stats;
     }
 
-    CompletableFuture<V> load(K key) {
+    CompletableFuture<V> load(K key, Object loadContext) {
         synchronized (dataLoader) {
             Object cacheKey = getCacheKey(nonNull(key));
             stats.incrementLoadCount();
@@ -59,11 +84,11 @@ class DataLoaderHelper<K, V> {
 
             CompletableFuture<V> future = new CompletableFuture<>();
             if (batchingEnabled) {
-                loaderQueue.add(new AbstractMap.SimpleImmutableEntry<>(key, future));
+                loaderQueue.add(new LoaderQueueEntry<>(key, future, loadContext));
             } else {
                 stats.incrementBatchLoadCountBy(1);
                 // immediate execution of batch function
-                future = invokeLoaderImmediately(key);
+                future = invokeLoaderImmediately(key, loadContext);
             }
             if (cachingEnabled) {
                 futureCache.set(cacheKey, future);
@@ -83,11 +108,13 @@ class DataLoaderHelper<K, V> {
         //
         // we copy the pre-loaded set of futures ready for dispatch
         final List<K> keys = new ArrayList<>();
+        final List<Object> callContexts = new ArrayList<>();
         final List<CompletableFuture<V>> queuedFutures = new ArrayList<>();
         synchronized (dataLoader) {
             loaderQueue.forEach(entry -> {
                 keys.add(entry.getKey());
                 queuedFutures.add(entry.getValue());
+                callContexts.add(entry.getCallContext());
             });
             loaderQueue.clear();
         }
@@ -107,13 +134,13 @@ class DataLoaderHelper<K, V> {
         //
         int maxBatchSize = loaderOptions.maxBatchSize();
         if (maxBatchSize > 0 && maxBatchSize < keys.size()) {
-            return sliceIntoBatchesOfBatches(keys, queuedFutures, maxBatchSize);
+            return sliceIntoBatchesOfBatches(keys, queuedFutures, callContexts, maxBatchSize);
         } else {
-            return dispatchQueueBatch(keys, queuedFutures);
+            return dispatchQueueBatch(keys, callContexts, queuedFutures);
         }
     }
 
-    private CompletableFuture<List<V>> sliceIntoBatchesOfBatches(List<K> keys, List<CompletableFuture<V>> queuedFutures, int maxBatchSize) {
+    private CompletableFuture<List<V>> sliceIntoBatchesOfBatches(List<K> keys, List<CompletableFuture<V>> queuedFutures, List<Object> callContexts, int maxBatchSize) {
         // the number of keys is > than what the batch loader function can accept
         // so make multiple calls to the loader
         List<CompletableFuture<List<V>>> allBatches = new ArrayList<>();
@@ -126,8 +153,9 @@ class DataLoaderHelper<K, V> {
 
             List<K> subKeys = keys.subList(fromIndex, toIndex);
             List<CompletableFuture<V>> subFutures = queuedFutures.subList(fromIndex, toIndex);
+            List<Object> subCallContexts = callContexts.subList(fromIndex, toIndex);
 
-            allBatches.add(dispatchQueueBatch(subKeys, subFutures));
+            allBatches.add(dispatchQueueBatch(subKeys, subCallContexts, subFutures));
         }
         //
         // now reassemble all the futures into one that is the complete set of results
@@ -139,9 +167,9 @@ class DataLoaderHelper<K, V> {
     }
 
     @SuppressWarnings("unchecked")
-    private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<CompletableFuture<V>> queuedFutures) {
+    private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<Object> callContexts, List<CompletableFuture<V>> queuedFutures) {
         stats.incrementBatchLoadCountBy(keys.size());
-        CompletionStage<List<V>> batchLoad = invokeLoader(keys);
+        CompletionStage<List<V>> batchLoad = invokeLoader(keys, callContexts);
         return batchLoad
                 .toCompletableFuture()
                 .thenApply(values -> {
@@ -190,11 +218,14 @@ class DataLoaderHelper<K, V> {
     }
 
 
-    CompletableFuture<V> invokeLoaderImmediately(K key) {
+    CompletableFuture<V> invokeLoaderImmediately(K key, Object keyContext) {
         List<K> keys = singletonList(key);
         CompletionStage<V> singleLoadCall;
         try {
-            BatchLoaderEnvironment environment = loaderOptions.getBatchLoaderEnvironmentProvider().get();
+            Object context = loaderOptions.getBatchLoaderEnvironmentProvider().getContext();
+            Map<Object, Object> keyContextMap = mkKeyContextMap(keys, singletonList(keyContext));
+            BatchLoaderEnvironment environment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
+                    .context(context).keyContexts(keyContextMap).build();
             if (isMapLoader()) {
                 singleLoadCall = invokeMapBatchLoader(keys, environment).thenApply(list -> list.get(0));
             } else {
@@ -206,10 +237,13 @@ class DataLoaderHelper<K, V> {
         }
     }
 
-    CompletionStage<List<V>> invokeLoader(List<K> keys) {
+    CompletionStage<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts) {
         CompletionStage<List<V>> batchLoad;
         try {
-            BatchLoaderEnvironment environment = loaderOptions.getBatchLoaderEnvironmentProvider().get();
+            Object context = loaderOptions.getBatchLoaderEnvironmentProvider().getContext();
+            Map<Object, Object> keyContextMap = mkKeyContextMap(keys, keyContexts);
+            BatchLoaderEnvironment environment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
+                    .context(context).keyContexts(keyContextMap).build();
             if (isMapLoader()) {
                 batchLoad = invokeMapBatchLoader(keys, environment);
             } else {
@@ -232,11 +266,11 @@ class DataLoaderHelper<K, V> {
         return nonNull(loadResult, "Your batch loader function MUST return a non null CompletionStage promise");
     }
 
+
     /*
      * Turns a map of results that MAY be smaller than the key list back into a list by mapping null
      * to missing elements.
      */
-
     @SuppressWarnings("unchecked")
     private CompletionStage<List<V>> invokeMapBatchLoader(List<K> keys, BatchLoaderEnvironment environment) {
         CompletionStage<Map<K, V>> loadResult;
@@ -258,5 +292,26 @@ class DataLoaderHelper<K, V> {
 
     private boolean isMapLoader() {
         return batchLoadFunction instanceof MappedBatchLoader || batchLoadFunction instanceof MappedBatchLoaderWithContext;
+    }
+
+    private Map<Object, Object> mkKeyContextMap(List<K> keys, List<Object> keyContexts) {
+        Map<Object, Object> map = new HashMap<>();
+        for (int i = 0; i < keys.size(); i++) {
+            K key = keys.get(i);
+            Object keyContext = null;
+            if (i < keyContexts.size()) {
+                keyContext = keyContexts.get(i);
+            }
+            if (keyContext != null) {
+                map.put(key, keyContext);
+            }
+        }
+        return map;
+    }
+
+    int dispatchDepth() {
+        synchronized (dataLoader) {
+            return loaderQueue.size();
+        }
     }
 }

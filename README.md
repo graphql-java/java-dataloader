@@ -168,16 +168,17 @@ That said, with key caching turn on (the default), it will still be more efficie
 ### Calling the batch loader function with call context environment
 
 Often there is a need to call the batch loader function with some sort of call context environment, such as the calling users security
-credentials or the database connection parameters.  You can do this by implementing a 
-`org.dataloader.BatchLoaderEnvironmentProvider` and using one of the `xxxWithContext` batch loading interfaces
-such as `org.dataloader.BatchLoaderWithContext`.
+credentials or the database connection parameters.  
+
+You can do this by implementing a `org.dataloader.BatchLoaderContextProvider` and using one of 
+the batch loading interfaces such as `org.dataloader.BatchLoaderWithContext`.
+
+It will be given a `org.dataloader.BatchLoaderEnvironment` parameter and it can then ask it
+for the context object.
 
 ```java
-        BatchLoaderEnvironment batchLoaderEnvironment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
-                .context(SecurityCtx.getCallingUserCtx()).build();
-
         DataLoaderOptions options = DataLoaderOptions.newOptions()
-                .setBatchLoaderEnvironmentProvider(() -> batchLoaderEnvironment);
+                .setBatchLoaderEnvironmentProvider(() -> SecurityCtx.getCallingUserCtx());
 
         BatchLoaderWithContext<String, String> batchLoader = new BatchLoaderWithContext<String, String>() {
             @Override
