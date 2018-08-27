@@ -210,19 +210,19 @@ public class DataLoaderOptions {
     /**
      * @return the batch environment provider that will be used to give context to batch load functions
      */
-    public BatchLoaderContextProvider getBatchLoaderEnvironmentProvider() {
+    public BatchLoaderContextProvider getBatchLoaderContextProvider() {
         return environmentProvider;
     }
 
     /**
      * Sets the batch loader environment provider that will be used to give context to batch load functions
      *
-     * @param environmentProvider the batch loader environment provider
+     * @param contextProvider the batch loader context provider
      *
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setBatchLoaderEnvironmentProvider(BatchLoaderContextProvider environmentProvider) {
-        this.environmentProvider = nonNull(environmentProvider);
+    public DataLoaderOptions setBatchLoaderContextProvider(BatchLoaderContextProvider contextProvider) {
+        this.environmentProvider = nonNull(contextProvider);
         return this;
     }
 }

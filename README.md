@@ -178,7 +178,7 @@ for the context object.
 
 ```java
         DataLoaderOptions options = DataLoaderOptions.newOptions()
-                .setBatchLoaderEnvironmentProvider(() -> SecurityCtx.getCallingUserCtx());
+                .setBatchLoaderContextProvider(() -> SecurityCtx.getCallingUserCtx());
 
         BatchLoaderWithContext<String, String> batchLoader = new BatchLoaderWithContext<String, String>() {
             @Override

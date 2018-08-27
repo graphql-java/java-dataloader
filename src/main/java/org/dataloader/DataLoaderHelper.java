@@ -222,7 +222,7 @@ class DataLoaderHelper<K, V> {
         List<K> keys = singletonList(key);
         CompletionStage<V> singleLoadCall;
         try {
-            Object context = loaderOptions.getBatchLoaderEnvironmentProvider().getContext();
+            Object context = loaderOptions.getBatchLoaderContextProvider().getContext();
             Map<Object, Object> keyContextMap = mkKeyContextMap(keys, singletonList(keyContext));
             BatchLoaderEnvironment environment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
                     .context(context).keyContexts(keyContextMap).build();
@@ -240,7 +240,7 @@ class DataLoaderHelper<K, V> {
     CompletionStage<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts) {
         CompletionStage<List<V>> batchLoad;
         try {
-            Object context = loaderOptions.getBatchLoaderEnvironmentProvider().getContext();
+            Object context = loaderOptions.getBatchLoaderContextProvider().getContext();
             Map<Object, Object> keyContextMap = mkKeyContextMap(keys, keyContexts);
             BatchLoaderEnvironment environment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
                     .context(context).keyContexts(keyContextMap).build();
