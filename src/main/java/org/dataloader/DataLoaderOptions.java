@@ -31,7 +31,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  */
 public class DataLoaderOptions {
 
-    private static final BatchLoaderEnvironmentProvider NULL_PROVIDER = () -> BatchLoaderEnvironment.newBatchLoaderEnvironment().build();
+    private static final BatchLoaderContextProvider NULL_PROVIDER = () -> null;
 
     private boolean batchingEnabled;
     private boolean cachingEnabled;
@@ -39,7 +39,7 @@ public class DataLoaderOptions {
     private CacheMap cacheMap;
     private int maxBatchSize;
     private Supplier<StatisticsCollector> statisticsCollector;
-    private BatchLoaderEnvironmentProvider environmentProvider;
+    private BatchLoaderContextProvider environmentProvider;
 
     /**
      * Creates a new data loader options with default settings.
@@ -210,7 +210,7 @@ public class DataLoaderOptions {
     /**
      * @return the batch environment provider that will be used to give context to batch load functions
      */
-    public BatchLoaderEnvironmentProvider getBatchLoaderEnvironmentProvider() {
+    public BatchLoaderContextProvider getBatchLoaderEnvironmentProvider() {
         return environmentProvider;
     }
 
@@ -221,7 +221,7 @@ public class DataLoaderOptions {
      *
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setBatchLoaderEnvironmentProvider(BatchLoaderEnvironmentProvider environmentProvider) {
+    public DataLoaderOptions setBatchLoaderEnvironmentProvider(BatchLoaderContextProvider environmentProvider) {
         this.environmentProvider = nonNull(environmentProvider);
         return this;
     }

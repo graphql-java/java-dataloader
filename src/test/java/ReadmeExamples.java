@@ -84,11 +84,8 @@ public class ReadmeExamples {
     }
 
     private void callContextExample() {
-        BatchLoaderEnvironment batchLoaderEnvironment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
-                .context(SecurityCtx.getCallingUserCtx()).build();
-
         DataLoaderOptions options = DataLoaderOptions.newOptions()
-                .setBatchLoaderEnvironmentProvider(() -> batchLoaderEnvironment);
+                .setBatchLoaderEnvironmentProvider(() -> SecurityCtx.getCallingUserCtx());
 
         BatchLoaderWithContext<String, String> batchLoader = new BatchLoaderWithContext<String, String>() {
             @Override
