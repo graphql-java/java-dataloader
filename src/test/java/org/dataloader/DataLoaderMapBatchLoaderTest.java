@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -33,12 +34,14 @@ public class DataLoaderMapBatchLoaderTest {
 
     MappedBatchLoader<String, String> evensOnlyMappedBatchLoader = (keys) -> {
         Map<String, String> mapOfResults = new HashMap<>();
-        for (int i = 0; i < keys.size(); i++) {
-            String k = keys.get(i);
+
+        AtomicInteger index = new AtomicInteger();
+        keys.forEach(k -> {
+            int i = index.getAndIncrement();
             if (i % 2 == 0) {
                 mapOfResults.put(k, k);
             }
-        }
+        });
         return CompletableFuture.completedFuture(mapOfResults);
     };
 
@@ -153,7 +156,9 @@ public class DataLoaderMapBatchLoaderTest {
         assertThat(future1.get(), equalTo("A"));
         assertThat(future2.get(), equalTo("B"));
         assertThat(future3.get(), equalTo("A"));
-        assertThat(loadCalls, equalTo(singletonList(asList("A", "B", "A"))));
+
+        // the map batch functions use a set of keys as input and hence remove duplicates unlike list variant
+        assertThat(loadCalls, equalTo(singletonList(asList("A", "B"))));
     }
 
     @Test

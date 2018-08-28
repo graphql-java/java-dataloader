@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -45,7 +46,7 @@ public class DataLoaderWithTryTest {
 
         List<List<String>> batchKeyCalls = new ArrayList<>();
         MappedBatchLoaderWithContext<String, Try<String>> batchLoader = (keys, environment) -> {
-            batchKeyCalls.add(keys);
+            batchKeyCalls.add(new ArrayList<>(keys));
 
             Map<String, Try<String>> result = new HashMap<>();
             for (String key : keys) {

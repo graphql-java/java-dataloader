@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @SuppressWarnings({"unused", "SpellCheckingInspection", "NonAsciiCharacters"})
@@ -51,7 +52,7 @@ public class UserManager {
         return userIds.stream().map(this::loadUserById).collect(Collectors.toList());
     }
 
-    public Map<Long, User> loadMapOfUsersById(SecurityCtx callCtx, List<Long> userIds) {
+    public Map<Long, User> loadMapOfUsersById(SecurityCtx callCtx, Set<Long> userIds) {
         Map<Long, User> map = new HashMap<>();
         userIds.forEach(userId -> {
             User user = loadUserById(userId);

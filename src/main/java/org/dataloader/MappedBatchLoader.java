@@ -18,19 +18,19 @@ package org.dataloader;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletionStage;
 
 /**
- * A function that is invoked for batch loading a map of of data values indicated by the provided list of keys. The
+ * A function that is invoked for batch loading a map of of data values indicated by the provided set of keys. The
  * function returns a promise of a map of results of individual load requests.
  * <p>
  * There are a few constraints that must be upheld:
  * <ul>
  * <li>The keys MUST be able to be first class keys in a Java map.  Get your equals() and hashCode() methods in order</li>
- * <li>The caller of the {@link org.dataloader.DataLoader} that uses this batch loader function MUSt be able to cope with
+ * <li>The caller of the {@link org.dataloader.DataLoader} that uses this batch loader function MUST be able to cope with
  * null values coming back as results
  * </li>
- * <li>The function MUST be resilient to the same key being presented twice.</li>
  * </ul>
  * <p>
  * This form is useful when you don't have a 1:1 mapping of keys to values or when null is an acceptable value for a missing value.
@@ -50,9 +50,6 @@ import java.util.concurrent.CompletionStage;
  * <p>
  * This means that if 10 keys are asked for then {@link DataLoader#dispatch()} will return a promise of 10 value results and each
  * of the {@link org.dataloader.DataLoader#load(Object)} will complete with a value, null or an exception.
- * <p>
- * When caching is disabled, its possible for the same key to be presented in the list of keys more than once.  Your map
- * batch loader function needs to be resilient to this situation.
  *
  * @param <K> type parameter indicating the type of keys to use for data load requests.
  * @param <V> type parameter indicating the type of values returned
@@ -63,10 +60,10 @@ public interface MappedBatchLoader<K, V> {
     /**
      * Called to batch load the provided keys and return a promise to a map of values.
      *
-     * @param keys        the collection of keys to load
+     * @param keys        the set of keys to load
      *
      * @return a promise to a map of values for those keys
      */
     @SuppressWarnings("unused")
-    CompletionStage<Map<K, V>> load(List<K> keys);
+    CompletionStage<Map<K, V>> load(Set<K> keys);
 }

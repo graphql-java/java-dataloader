@@ -18,6 +18,7 @@ package org.dataloader;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletionStage;
 
 /**
@@ -32,11 +33,11 @@ public interface MappedBatchLoaderWithContext<K, V> {
     /**
      * Called to batch load the provided keys and return a promise to a map of values.
      *
-     * @param keys        the collection of keys to load
+     * @param keys        the set of keys to load
      * @param environment the calling environment
      *
      * @return a promise to a map of values for those keys
      */
     @SuppressWarnings("unused")
-    CompletionStage<Map<K, V>> load(List<K> keys, BatchLoaderEnvironment environment);
+    CompletionStage<Map<K, V>> load(Set<K> keys, BatchLoaderEnvironment environment);
 }
