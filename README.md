@@ -217,15 +217,17 @@ For example, let's assume you want to load users from a database, you could prob
  create the list of results, with nulls filling in for missing values.
  
 ```java
-        MapBatchLoader<Long, User> mapBatchLoader = new MapBatchLoader<Long, User>() {
+        MappedBatchLoaderWithContext<Long, User> mapBatchLoader = new MappedBatchLoaderWithContext<Long, User>() {
             @Override
-            public CompletionStage<Map<Long, User>> load(List<Long> userIds, BatchLoaderEnvironment environment) {
+            public CompletionStage<Map<Long, User>> load(Set<Long> userIds, BatchLoaderEnvironment environment) {
                 SecurityCtx callCtx = environment.getContext();
                 return CompletableFuture.supplyAsync(() -> userManager.loadMapOfUsersById(callCtx, userIds));
             }
         };
 
-        DataLoader<Long, User> userLoader = DataLoader.newDataLoader(mapBatchLoader);
+        DataLoader<Long, User> userLoader = DataLoader.newMappedDataLoader(mapBatchLoader);
+
+        // ...
 
         // ...
 ```

@@ -15,6 +15,7 @@ import org.dataloader.stats.ThreadLocalStatisticsCollector;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -105,7 +106,7 @@ public class ReadmeExamples {
     private void mapBatchLoader() {
         MappedBatchLoaderWithContext<Long, User> mapBatchLoader = new MappedBatchLoaderWithContext<Long, User>() {
             @Override
-            public CompletionStage<Map<Long, User>> load(List<Long> userIds, BatchLoaderEnvironment environment) {
+            public CompletionStage<Map<Long, User>> load(Set<Long> userIds, BatchLoaderEnvironment environment) {
                 SecurityCtx callCtx = environment.getContext();
                 return CompletableFuture.supplyAsync(() -> userManager.loadMapOfUsersById(callCtx, userIds));
             }
