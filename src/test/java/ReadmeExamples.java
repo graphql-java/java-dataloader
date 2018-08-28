@@ -108,7 +108,7 @@ public class ReadmeExamples {
             @Override
             public CompletionStage<Map<Long, User>> load(Set<Long> userIds, BatchLoaderEnvironment environment) {
                 SecurityCtx callCtx = environment.getContext();
-                return CompletableFuture.supplyAsync(() -> userManager.loadMapOfUsersById(callCtx, userIds));
+                return CompletableFuture.supplyAsync(() -> userManager.loadMapOfUsersByIds(callCtx, userIds));
             }
         };
 
