@@ -221,13 +221,11 @@ For example, let's assume you want to load users from a database, you could prob
             @Override
             public CompletionStage<Map<Long, User>> load(Set<Long> userIds, BatchLoaderEnvironment environment) {
                 SecurityCtx callCtx = environment.getContext();
-                return CompletableFuture.supplyAsync(() -> userManager.loadMapOfUsersById(callCtx, userIds));
+                return CompletableFuture.supplyAsync(() -> userManager.loadMapOfUsersByIds(callCtx, userIds));
             }
         };
 
         DataLoader<Long, User> userLoader = DataLoader.newMappedDataLoader(mapBatchLoader);
-
-        // ...
 
         // ...
 ```

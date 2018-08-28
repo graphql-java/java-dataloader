@@ -52,7 +52,7 @@ public class UserManager {
         return userIds.stream().map(this::loadUserById).collect(Collectors.toList());
     }
 
-    public Map<Long, User> loadMapOfUsersById(SecurityCtx callCtx, Set<Long> userIds) {
+    public Map<Long, User> loadMapOfUsersByIds(SecurityCtx callCtx, Set<Long> userIds) {
         Map<Long, User> map = new HashMap<>();
         userIds.forEach(userId -> {
             User user = loadUserById(userId);

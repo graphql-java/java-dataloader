@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -275,10 +276,11 @@ class DataLoaderHelper<K, V> {
     @SuppressWarnings("unchecked")
     private CompletionStage<List<V>> invokeMapBatchLoader(List<K> keys, BatchLoaderEnvironment environment) {
         CompletionStage<Map<K, V>> loadResult;
+        Set<K> setOfKeys = new LinkedHashSet<>(keys);
         if (batchLoadFunction instanceof MappedBatchLoaderWithContext) {
-            loadResult = ((MappedBatchLoaderWithContext<K, V>) batchLoadFunction).load(new LinkedHashSet<>(keys), environment);
+            loadResult = ((MappedBatchLoaderWithContext<K, V>) batchLoadFunction).load(setOfKeys, environment);
         } else {
-            loadResult = ((MappedBatchLoader<K, V>) batchLoadFunction).load(new LinkedHashSet<>(keys));
+            loadResult = ((MappedBatchLoader<K, V>) batchLoadFunction).load(setOfKeys);
         }
         CompletionStage<Map<K, V>> mapBatchLoad = nonNull(loadResult, "Your batch loader function MUST return a non null CompletionStage promise");
         return mapBatchLoad.thenApply(map -> {
