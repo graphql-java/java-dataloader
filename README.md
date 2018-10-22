@@ -194,6 +194,36 @@ for the context object.
 The batch loading code will now receive this environment object and it can be used to get context perhaps allowing it
 to connect to other systems. 
 
+You can also pass in context objects per load call.  This will be captured and passed to the batch loader function.
+
+You can gain access to them as a map by key or as the original list of context objects.
+
+```java
+        DataLoaderOptions options = DataLoaderOptions.newOptions()
+                .setBatchLoaderContextProvider(() -> SecurityCtx.getCallingUserCtx());
+
+        BatchLoaderWithContext<String, String> batchLoader = new BatchLoaderWithContext<String, String>() {
+            @Override
+            public CompletionStage<List<String>> load(List<String> keys, BatchLoaderEnvironment environment) {
+                SecurityCtx callCtx = environment.getContext();
+                //
+                // this is the load context objects in map form by key
+                // in this case [ keyA : contextForA, keyB : contextForB ]
+                //
+                Map<Object, Object> keyContexts = environment.getKeyContexts();
+                //
+                // this is load context in list form
+                //
+                // in this case [ contextForA, contextForB ]
+                return callDatabaseForResults(callCtx, keys);
+            }
+        };
+
+        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
+        loader.load("keyA", "contextForA");
+        loader.load("keyB", "contextForB");
+```
+
 ### Returning a Map of results from your batch loader
 
 Often there is not a 1:1 mapping of your batch loaded keys to the values returned.
