@@ -99,6 +99,32 @@ public class ReadmeExamples {
         DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
     }
 
+    private void keyContextExample() {
+        DataLoaderOptions options = DataLoaderOptions.newOptions()
+                .setBatchLoaderContextProvider(() -> SecurityCtx.getCallingUserCtx());
+
+        BatchLoaderWithContext<String, String> batchLoader = new BatchLoaderWithContext<String, String>() {
+            @Override
+            public CompletionStage<List<String>> load(List<String> keys, BatchLoaderEnvironment environment) {
+                SecurityCtx callCtx = environment.getContext();
+                //
+                // this is the load context objects in map form by key
+                // in this case [ keyA : contextForA, keyB : contextForB ]
+                //
+                Map<Object, Object> keyContexts = environment.getKeyContexts();
+                //
+                // this is load context in list form
+                //
+                // in this case [ contextForA, contextForB ]
+                return callDatabaseForResults(callCtx, keys);
+            }
+        };
+
+        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
+        loader.load("keyA", "contextForA");
+        loader.load("keyB", "contextForB");
+    }
+
     private CompletionStage<List<String>> callDatabaseForResults(SecurityCtx callCtx, List<String> keys) {
         return null;
     }

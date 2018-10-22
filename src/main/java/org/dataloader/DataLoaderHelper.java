@@ -5,7 +5,6 @@ import org.dataloader.stats.StatisticsCollector;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -225,9 +224,8 @@ class DataLoaderHelper<K, V> {
         CompletionStage<V> singleLoadCall;
         try {
             Object context = loaderOptions.getBatchLoaderContextProvider().getContext();
-            Map<Object, Object> keyContextMap = mkKeyContextMap(keys, singletonList(keyContext));
             BatchLoaderEnvironment environment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
-                    .context(context).keyContexts(keyContextMap).build();
+                    .context(context).keyContexts(keys, singletonList(keyContext)).build();
             if (isMapLoader()) {
                 singleLoadCall = invokeMapBatchLoader(keys, environment).thenApply(list -> list.get(0));
             } else {
@@ -243,9 +241,8 @@ class DataLoaderHelper<K, V> {
         CompletionStage<List<V>> batchLoad;
         try {
             Object context = loaderOptions.getBatchLoaderContextProvider().getContext();
-            Map<Object, Object> keyContextMap = mkKeyContextMap(keys, keyContexts);
             BatchLoaderEnvironment environment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
-                    .context(context).keyContexts(keyContextMap).build();
+                    .context(context).keyContexts(keys, keyContexts).build();
             if (isMapLoader()) {
                 batchLoad = invokeMapBatchLoader(keys, environment);
             } else {
@@ -295,21 +292,6 @@ class DataLoaderHelper<K, V> {
 
     private boolean isMapLoader() {
         return batchLoadFunction instanceof MappedBatchLoader || batchLoadFunction instanceof MappedBatchLoaderWithContext;
-    }
-
-    private Map<Object, Object> mkKeyContextMap(List<K> keys, List<Object> keyContexts) {
-        Map<Object, Object> map = new HashMap<>();
-        for (int i = 0; i < keys.size(); i++) {
-            K key = keys.get(i);
-            Object keyContext = null;
-            if (i < keyContexts.size()) {
-                keyContext = keyContexts.get(i);
-            }
-            if (keyContext != null) {
-                map.put(key, keyContext);
-            }
-        }
-        return map;
     }
 
     int dispatchDepth() {
