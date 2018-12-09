@@ -35,6 +35,7 @@ public class DataLoaderOptions {
 
     private boolean batchingEnabled;
     private boolean cachingEnabled;
+    private boolean cachingExceptionsEnabled;
     private CacheKey cacheKeyFunction;
     private CacheMap cacheMap;
     private int maxBatchSize;
@@ -47,6 +48,7 @@ public class DataLoaderOptions {
     public DataLoaderOptions() {
         batchingEnabled = true;
         cachingEnabled = true;
+        cachingExceptionsEnabled = true;
         maxBatchSize = -1;
         statisticsCollector = SimpleStatisticsCollector::new;
         environmentProvider = NULL_PROVIDER;
@@ -61,6 +63,7 @@ public class DataLoaderOptions {
         nonNull(other);
         this.batchingEnabled = other.batchingEnabled;
         this.cachingEnabled = other.cachingEnabled;
+        this.cachingExceptionsEnabled = other.cachingExceptionsEnabled;
         this.cacheKeyFunction = other.cacheKeyFunction;
         this.cacheMap = other.cacheMap;
         this.maxBatchSize = other.maxBatchSize;
@@ -114,6 +117,32 @@ public class DataLoaderOptions {
      */
     public DataLoaderOptions setCachingEnabled(boolean cachingEnabled) {
         this.cachingEnabled = cachingEnabled;
+        return this;
+    }
+
+    /**
+     * Option that determines whether to cache exceptional values (the default), or not.
+     *
+     * For short lived caches (that is request caches) it makes sense to cache exceptions since
+     * its likely the key is still poisoned.  However if you have long lived caches, then it may make
+     * sense to set this to false since the downstream system may have recovered from its failure
+     * mode.
+     *
+     * @return {@code true} when exceptional values are cached is enabled, {@code false} otherwise
+     */
+    public boolean cachingExceptionsEnabled() {
+        return cachingExceptionsEnabled;
+    }
+
+    /**
+     * Sets the option that determines whether exceptional values are cachedis enabled.
+     *
+     * @param cachingExceptionsEnabled {@code true} to enable caching exceptional values, {@code false} otherwise
+     *
+     * @return the data loader options for fluent coding
+     */
+    public DataLoaderOptions setCachingExceptionsEnabled(boolean cachingExceptionsEnabled) {
+        this.cachingExceptionsEnabled = cachingExceptionsEnabled;
         return this;
     }
 

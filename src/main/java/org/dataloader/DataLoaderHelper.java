@@ -176,14 +176,14 @@ class DataLoaderHelper<K, V> {
                 .thenApply(values -> {
                     assertResultSize(keys, values);
 
+                    List<K> clearCacheKeys = new ArrayList<>();
                     for (int idx = 0; idx < queuedFutures.size(); idx++) {
                         Object value = values.get(idx);
                         CompletableFuture<V> future = queuedFutures.get(idx);
                         if (value instanceof Throwable) {
                             stats.incrementLoadErrorCount();
                             future.completeExceptionally((Throwable) value);
-                            // we don't clear the cached view of this entry to avoid
-                            // frequently loading the same error
+                            clearCacheKeys.add(keys.get(idx));
                         } else if (value instanceof Try) {
                             // we allow the batch loader to return a Try so we can better represent a computation
                             // that might have worked or not.
@@ -193,12 +193,14 @@ class DataLoaderHelper<K, V> {
                             } else {
                                 stats.incrementLoadErrorCount();
                                 future.completeExceptionally(tryValue.getThrowable());
+                                clearCacheKeys.add(keys.get(idx));
                             }
                         } else {
                             V val = (V) value;
                             future.complete(val);
                         }
                     }
+                    possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
                     return values;
                 }).exceptionally(ex -> {
                     stats.incrementBatchLoadExceptionCount();
@@ -216,6 +218,19 @@ class DataLoaderHelper<K, V> {
 
     private void assertResultSize(List<K> keys, List<V> values) {
         assertState(keys.size() == values.size(), "The size of the promised values MUST be the same size as the key list");
+    }
+
+    private void possiblyClearCacheEntriesOnExceptions(List<K> keys) {
+        if (keys.isEmpty()) {
+            return;
+        }
+        // by default we don't clear the cached view of this entry to avoid
+        // frequently loading the same error.  This works for short lived request caches
+        // but might work against long lived caches.  Hence we have an option that allows
+        // it to be cleared
+        if (!loaderOptions.cachingExceptionsEnabled()) {
+            keys.forEach(dataLoader::clear);
+        }
     }
 
 
