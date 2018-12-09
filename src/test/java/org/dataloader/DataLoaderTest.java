@@ -42,7 +42,6 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertThat;
 
@@ -416,6 +415,29 @@ public class DataLoaderTest {
         assertThat(cause(future2), instanceOf(IllegalStateException.class));
 
         assertThat(loadCalls, equalTo(singletonList(singletonList(1))));
+    }
+
+    @Test
+    public void should_NOT_Cache_failed_fetches_if_told_not_too() {
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setCachingExceptionsEnabled(false);
+        List<Collection<Integer>> loadCalls = new ArrayList<>();
+        DataLoader<Integer, Object> errorLoader = idLoaderAllExceptions(options, loadCalls);
+
+        CompletableFuture<Object> future1 = errorLoader.load(1);
+        errorLoader.dispatch();
+
+        await().until(future1::isDone);
+        assertThat(future1.isCompletedExceptionally(), is(true));
+        assertThat(cause(future1), instanceOf(IllegalStateException.class));
+
+        CompletableFuture<Object> future2 = errorLoader.load(1);
+        errorLoader.dispatch();
+
+        await().until(future2::isDone);
+        assertThat(future2.isCompletedExceptionally(), is(true));
+        assertThat(cause(future2), instanceOf(IllegalStateException.class));
+
+        assertThat(loadCalls, equalTo(asList(singletonList(1), singletonList(1))));
     }
 
 
@@ -966,7 +988,6 @@ public class DataLoaderTest {
 
         assertThat(allResults.size(), equalTo(4));
     }
-
 
 
     private static CacheKey<JsonObject> getJsonObjectCacheMapFn() {
