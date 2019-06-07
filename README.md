@@ -457,9 +457,7 @@ Gradle users configure the `java-dataloader` dependency in `build.gradle`:
 
 ```
 repositories {
-    maven {
-        jcenter()
-    }
+    jcenter()
 }
 
 dependencies {
