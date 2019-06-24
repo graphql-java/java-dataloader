@@ -17,7 +17,7 @@ public class TestKit {
         return ints;
     }
 
-    static <V> CompletableFuture<V> futureError() {
+    public static <V> CompletableFuture<V> futureError() {
         return failedFuture(new IllegalStateException("Error"));
     }
 }
