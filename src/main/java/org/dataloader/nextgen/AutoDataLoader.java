@@ -5,9 +5,7 @@
  */
 package org.dataloader.nextgen;
 
-import java.util.ArrayDeque;
 import static java.util.Collections.emptyList;
-import java.util.Deque;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -22,7 +20,7 @@ import org.dataloader.DataLoader;
  */
 public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, AutoCloseable {
     private final Dispatcher dispatcher;
-    private final Deque<CompletableFuture<List<V>>> results = new ArrayDeque<>();
+    private volatile CompletableFuture<List<V>> result;
     private volatile Consumer<AutoDataLoader<K, V>> addResult;
     
     public AutoDataLoader(BatchLoader<K, V> batchLoadFunction) {
@@ -57,12 +55,12 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
     }
 
     private void newResult () {
-        results.push(new CompletableFuture<List<V>>());
+        result = new CompletableFuture<List<V>>();
         addResult = o -> {};
     }
     
     public CompletableFuture<List<V>> dispatchResult () {
-        return results.peek();
+        return result;
     }
     
     @Override
