@@ -1003,9 +1003,7 @@ public class AutoDataLoaderTest {
 //                        .stream()
 //                        .map(userManager::loadUserById)
 //                        .collect(Collectors.toList()));
-        AutoDataLoaderOptions options = new AutoDataLoaderOptions()
-            .setDispatchAndJoin(true);
-        AutoDataLoader<Long, User> userLoader = new AutoDataLoader<>(userBatchLoader, options, dispatcher);
+        AutoDataLoader<Long, User> userLoader = new AutoDataLoader<>(userBatchLoader, dispatcher);
 
         AtomicBoolean gandalfCalled = new AtomicBoolean(false);
         AtomicBoolean sarumanCalled = new AtomicBoolean(false);

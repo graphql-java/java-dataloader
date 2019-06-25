@@ -10,11 +10,9 @@ import static java.util.Collections.emptyList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import org.dataloader.BatchLoader;
 import org.dataloader.DataLoader;
 
@@ -24,7 +22,6 @@ import org.dataloader.DataLoader;
  */
 public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, AutoCloseable {
     private final Dispatcher dispatcher;
-    private final Runnable runnableDelegate;
     private final Deque<CompletableFuture<List<V>>> results = new ArrayDeque<>();
     private volatile Consumer<AutoDataLoader<K, V>> addResult;
     
@@ -44,12 +41,6 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
         super(batchLoadFunction, options);
 
         newResult();
-        this.runnableDelegate = Optional
-            .ofNullable(options)
-            .map(AutoDataLoaderOptions::dispatchAndJoin)
-            .filter(Predicate.isEqual(true))
-            .map(notUsed -> (Runnable)(() -> dispatchFully().join()))            
-            .orElse((Runnable)() -> dispatchFully());
         
         Objects.requireNonNull(dispatcher);
         this.dispatcher = dispatcher.register(this);
@@ -88,22 +79,18 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
 
     @Override
     public void run() {        
-        runnableDelegate.run();
-    }
-    
-    protected CompletableFuture<Void> dispatchFully () {
-        return deepDispatch()
+        dispatchFully()
             .thenAccept(value -> {
                 dispatchResult().complete(value);
                 addResult = AutoDataLoader::newResult;                    
             });
     }
 
-    private CompletableFuture<List<V>> deepDispatch () {
+    private CompletableFuture<List<V>> dispatchFully () {
         return (dispatchDepth() > 0)
             ? super.dispatch()
-                .thenApply(value -> {
-                    value.addAll(deepDispatch().join());
+                .thenCombine(dispatchFully(), (value, temp) -> {
+                    value.addAll(temp);
                     return value;
                 })
             : completedFuture(emptyList());
