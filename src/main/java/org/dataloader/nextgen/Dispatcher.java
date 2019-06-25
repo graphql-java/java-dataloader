@@ -23,7 +23,6 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import java.util.stream.Stream;
-import org.dataloader.DataLoader;
 
 /**
  *
@@ -64,23 +63,11 @@ public class Dispatcher extends RecursiveAction implements RunnableFuture<Void>,
         return this;
     }
     
-    public Dispatcher register (DataLoader dataLoader) {
-        Objects.requireNonNull(dataLoader);
-        
-        return register(dataLoader::dispatch);
-    }
-    
     public Dispatcher unregister (Runnable dispatcher) {
         Objects.requireNonNull(dispatcher);
         
         dispatchers.remove(dispatcher);
         return this;
-    }
-    
-    public Dispatcher unregister (DataLoader dataLoader) {
-        Objects.requireNonNull(dataLoader);
-        
-        return unregister(dataLoader::dispatch);
     }
     
     private static boolean isWaiting (Thread thread) {
@@ -169,9 +156,9 @@ public class Dispatcher extends RecursiveAction implements RunnableFuture<Void>,
 
             tasks
                 .stream()
-                .peek(Objects::requireNonNull)
-                .map(Runnable.class::cast)
-                .forEach(Runnable::run);
+                .map(Objects::requireNonNull)
+                .forEach(r -> ((Runnable)r).run())/*
+                .forEach(ForkJoinTask::quietlyJoin)*/;
 
             return tasks;
         }

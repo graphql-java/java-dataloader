@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.supplyAsync;
 import java.util.function.Consumer;
 import org.dataloader.BatchLoader;
 import org.dataloader.DataLoader;
@@ -21,7 +22,7 @@ import org.dataloader.DataLoader;
  *
  * @author gkesler
  */
-public class AutoDataLoader<K, V> extends DataLoader<K, V> implements AutoCloseable {
+public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, AutoCloseable {
     private final Dispatcher dispatcher;
     private final Deque<CompletableFuture<List<V>>> results = new ArrayDeque<>();
     private volatile Consumer<AutoDataLoader<K, V>> addResult;
@@ -44,7 +45,7 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements AutoClosea
         newResult();
         
         Objects.requireNonNull(dispatcher);
-        this.dispatcher = dispatcher.register(this::dispatchFully);
+        this.dispatcher = dispatcher.register(this);
     }
 
     @Override
@@ -54,7 +55,7 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements AutoClosea
 
     @Override
     public void close() throws Exception {
-        dispatcher.unregister(this::dispatchFully);
+        dispatcher.unregister(this);
     }
 
     private void newResult () {
@@ -76,20 +77,28 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements AutoClosea
     public CompletableFuture<V> load(K key, Object keyContext) {
         addResult.accept(this);
         return super.load(key, keyContext);
+//                .thenApply(value -> {
+//                    System.out.println("load: " + Thread.currentThread().getName() + " key=" + key + ", value=" + value + ", depth=" + dispatchDepth());
+//                    return value;
+//                });
+    }
+
+    @Override
+    public void run() {
+        if (!dispatchResult().isDone()) {
+            dispatchFully().join();
+        }
     }
     
     protected CompletableFuture<List<V>> dispatchFully () {
-        addResult = AutoDataLoader::newResult;
-//        return super.dispatch()
-//            .thenCompose(value -> {
-//                CompletableFuture<List<V>> result = results.peek();
-//                result.complete(value);
-//                return result;
-//            });
         return deepDispatch()
                 .thenCompose(value -> {
-                    CompletableFuture<List<V>> result = results.peek();
-                    result.complete(value);
+                    CompletableFuture<List<V>> result = dispatchResult();
+                    if (result.complete(value)) {
+                        addResult = AutoDataLoader::newResult;
+//                        System.out.println("dispatchFully: " + Thread.currentThread().getName() + " completed, value=" + value + ", depth=" + dispatchDepth());
+                    }
+                    
                     return result;
                 });
     }
@@ -97,11 +106,22 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements AutoClosea
     private CompletableFuture<List<V>> deepDispatch () {
         addResult = AutoDataLoader::newResult;
         return super.dispatch()
-            .thenCombine(dispatchDepth() > 0 ? deepDispatch() : completedFuture(emptyList()), 
-                (left, right) -> {
-                    left.addAll((List<V>)right);
-                    return left;
-                });
+            .thenApply(value -> {
+                System.out.println("deepDispatch: " + Thread.currentThread().getName() + " value=" + value + ", depth=" + dispatchDepth());
+                return value;
+            })
+//            .thenCombine(dispatchDepth() > 0 ? deepDispatch() : completedFuture(emptyList()), 
+//                (left, right) -> {
+//                    left.addAll((List<V>)right);
+//                    return left;
+//                });
+            .thenApply(value -> {
+                if (dispatchDepth() > 0) {
+                    value.addAll(deepDispatch().join());
+                }
+                
+                return value;
+            });
     }
     
     @Override
@@ -111,29 +131,5 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements AutoClosea
     
     public List<V> dispatchAndJoin() {
         return dispatchResult().join();
-//        return super.dispatchAndJoin();
-    }
-    
-    private class Result extends CompletableFuture<List<V>> {
-        @Override
-        public boolean complete(List<V> value) {
-            System.out.println("completing...value=" + value);
-            addValue(value);
-            if (dispatchDepth() == 0) {
-                System.out.println("completed! result=" + result);
-                return super.complete(result);
-            }
-            
-            return false;
-        }
-        
-        private void addValue (List<V> value) {
-            if (result == null)
-                result = value;
-            else 
-                result.addAll(value);
-        }
-        
-        private List<V> result;
     }
 }

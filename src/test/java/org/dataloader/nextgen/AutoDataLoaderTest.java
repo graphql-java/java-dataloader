@@ -964,13 +964,18 @@ public class AutoDataLoaderTest {
         CompletableFuture<String> a2 = aLoader.load("A2");
         CompletableFuture<String> b1 = bLoader.load("B1");
         CompletableFuture<String> b2 = bLoader.load("B2");
+//
+//        CompletableFuture.allOf(
+//                aLoader.dispatch(),
+//                deepLoader.dispatch(),
+//                bLoader.dispatch(),
+//                deepLoader.dispatch()
+//        ).join();
 
-        CompletableFuture.allOf(
-                aLoader.dispatch(),
-                deepLoader.dispatch(),
-                bLoader.dispatch(),
-                deepLoader.dispatch()
-        ).join();
+        await().until(a1::isDone);
+        await().until(a2::isDone);
+        await().until(b1::isDone);
+        await().until(b2::isDone);
 
         assertThat(a1.get(), equalTo("A1"));
         assertThat(a2.get(), equalTo("A2"));
@@ -989,7 +994,6 @@ public class AutoDataLoaderTest {
     }
 
     @Test
-    @Ignore
     public void should_allow_composition_of_data_loader_calls() throws Exception {
         UserManager userManager = new UserManager();
 
@@ -1009,6 +1013,13 @@ public class AutoDataLoaderTest {
                             gandalfCalled.set(true);
                             assertThat(invitedBy.getName(), equalTo("Manwë"));
                         }));
+//
+//        userLoader.load(1L)
+//                .thenCompose(user -> userLoader.load(user.getInvitedByID()))                
+//                .thenAccept(invitedBy -> {
+//                    gandalfCalled.set(true);
+//                    assertThat(invitedBy, equalTo("Manwë"));
+//                });
 
         userLoader.load(2L)
                 .thenAccept(user -> userLoader.load(user.getInvitedByID())
@@ -1016,6 +1027,20 @@ public class AutoDataLoaderTest {
                             sarumanCalled.set(true);
                             assertThat(invitedBy.getName(), equalTo("Aulë"));
                         }));
+//
+//        userLoader.load(2L)
+//                .thenCompose(user -> userLoader.load(user.getInvitedByID()))
+//                .thenAccept(invitedBy -> {
+//                    sarumanCalled.set(true);
+//                    assertThat(invitedBy.getName(), equalTo("Aulë"));
+//                });
+//
+//        userLoader.load(3L)
+//                .thenAccept(user -> userLoader.load(user.getInvitedByID())
+//                        .thenAccept(invitedBy -> {
+//                            sarumanCalled.set(true);
+//                            assertThat(invitedBy.getName(), equalTo("Oromë"));
+//                        }));
 
 //        List<User> allResults = userLoader.dispatchAndJoin();
 //        System.out.println("allResults=" + allResults);
