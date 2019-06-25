@@ -6,15 +6,15 @@
 package org.dataloader.nextgen;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import static java.util.Collections.emptyList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.concurrent.CompletableFuture.supplyAsync;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import org.dataloader.BatchLoader;
 import org.dataloader.DataLoader;
 
@@ -24,6 +24,7 @@ import org.dataloader.DataLoader;
  */
 public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, AutoCloseable {
     private final Dispatcher dispatcher;
+    private final Runnable runnableDelegate;
     private final Deque<CompletableFuture<List<V>>> results = new ArrayDeque<>();
     private volatile Consumer<AutoDataLoader<K, V>> addResult;
     
@@ -43,6 +44,12 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
         super(batchLoadFunction, options);
 
         newResult();
+        this.runnableDelegate = Optional
+            .ofNullable(options)
+            .map(AutoDataLoaderOptions::dispatchAndJoin)
+            .filter(Predicate.isEqual(true))
+            .map(notUsed -> (Runnable)(() -> dispatchFully().join()))            
+            .orElse((Runnable)() -> dispatchFully());
         
         Objects.requireNonNull(dispatcher);
         this.dispatcher = dispatcher.register(this);
@@ -70,59 +77,38 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
     @Override
     public CompletableFuture<List<V>> loadMany(List<K> keys, List<Object> keyContexts) {
         addResult.accept(this);
-        return super.loadMany(keys, keyContexts); //To change body of generated methods, choose Tools | Templates.
+        return super.loadMany(keys, keyContexts); 
     }
 
     @Override
     public CompletableFuture<V> load(K key, Object keyContext) {
         addResult.accept(this);
         return super.load(key, keyContext);
-//                .thenApply(value -> {
-//                    System.out.println("load: " + Thread.currentThread().getName() + " key=" + key + ", value=" + value + ", depth=" + dispatchDepth());
-//                    return value;
-//                });
     }
 
     @Override
-    public void run() {
-        if (!dispatchResult().isDone()) {
-            dispatchFully().join();
-        }
+    public void run() {        
+        runnableDelegate.run();
     }
     
-    protected CompletableFuture<List<V>> dispatchFully () {
+    protected CompletableFuture<Void> dispatchFully () {
         return deepDispatch()
-                .thenCompose(value -> {
-                    CompletableFuture<List<V>> result = dispatchResult();
-                    if (result.complete(value)) {
-                        addResult = AutoDataLoader::newResult;
-//                        System.out.println("dispatchFully: " + Thread.currentThread().getName() + " completed, value=" + value + ", depth=" + dispatchDepth());
-                    }
-                    
-                    return result;
-                });
-    }
-    
-    private CompletableFuture<List<V>> deepDispatch () {
-        addResult = AutoDataLoader::newResult;
-        return super.dispatch()
-            .thenApply(value -> {
-                System.out.println("deepDispatch: " + Thread.currentThread().getName() + " value=" + value + ", depth=" + dispatchDepth());
-                return value;
-            })
-//            .thenCombine(dispatchDepth() > 0 ? deepDispatch() : completedFuture(emptyList()), 
-//                (left, right) -> {
-//                    left.addAll((List<V>)right);
-//                    return left;
-//                });
-            .thenApply(value -> {
-                if (dispatchDepth() > 0) {
-                    value.addAll(deepDispatch().join());
-                }
-                
-                return value;
+            .thenAccept(value -> {
+                dispatchResult().complete(value);
+                addResult = AutoDataLoader::newResult;                    
             });
     }
+
+    private CompletableFuture<List<V>> deepDispatch () {
+        return (dispatchDepth() > 0)
+            ? super.dispatch()
+                .thenApply(value -> {
+                    value.addAll(deepDispatch().join());
+                    return value;
+                })
+            : completedFuture(emptyList());
+    }
+    
     
     @Override
     public CompletableFuture<List<V>> dispatch() {

@@ -31,6 +31,7 @@ public class AutoDataLoaderOptions extends DataLoaderOptions {
     public static final Dispatcher SHARED_DISPATCHER = new Dispatcher();
 
     private Dispatcher dispatcher;
+    private boolean dispatchAndJoin = false;
 
     /**
      * Creates a new data loader options with default settings.
@@ -163,6 +164,15 @@ public class AutoDataLoaderOptions extends DataLoaderOptions {
      */
     public AutoDataLoaderOptions setDispatcher (Dispatcher dispatcher) {
         this.dispatcher = dispatcher;
+        return this;
+    }
+    
+    public boolean dispatchAndJoin () {
+        return dispatchAndJoin;
+    }
+    
+    public AutoDataLoaderOptions setDispatchAndJoin (boolean value) {
+        this.dispatchAndJoin = value;
         return this;
     }
 }

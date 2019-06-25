@@ -940,10 +940,8 @@ public class AutoDataLoaderTest {
 
     @Test
     public void can_call_a_loader_from_a_loader() throws Exception {
-//        List<Collection<String>> deepLoadCalls = new ArrayList<>();
         Set<String> deepLoadCalls = new HashSet<>();
         DataLoader<String, String> deepLoader = new AutoDataLoader(keys -> {
-//            deepLoadCalls.add(keys);
             deepLoadCalls.addAll(keys);
             return CompletableFuture.completedFuture(keys);
         }, dispatcher);
@@ -988,8 +986,6 @@ public class AutoDataLoaderTest {
         assertThat(bLoadCalls, equalTo(
                 singletonList(asList("B1", "B2"))));
 
-//        assertThat(deepLoadCalls, equalTo(
-//                asList(asList("A1", "A2"), asList("B1", "B2"))));
         assertThat(deepLoadCalls, equalTo(new HashSet<>(asList("A1", "A2", "B1", "B2"))));
     }
 
@@ -1002,55 +998,39 @@ public class AutoDataLoaderTest {
                         .stream()
                         .map(userManager::loadUserById)
                         .collect(Collectors.toList()));
-        AutoDataLoader<Long, User> userLoader = new AutoDataLoader<>(userBatchLoader, dispatcher);
+//        BatchLoader<Long, User> userBatchLoader = userIds -> CompletableFuture
+//                .completedFuture(userIds
+//                        .stream()
+//                        .map(userManager::loadUserById)
+//                        .collect(Collectors.toList()));
+        AutoDataLoaderOptions options = new AutoDataLoaderOptions()
+            .setDispatchAndJoin(true);
+        AutoDataLoader<Long, User> userLoader = new AutoDataLoader<>(userBatchLoader, options, dispatcher);
 
         AtomicBoolean gandalfCalled = new AtomicBoolean(false);
         AtomicBoolean sarumanCalled = new AtomicBoolean(false);
 
-        userLoader.load(1L)
+        CompletableFuture<?> gandalf = userLoader.load(1L)
                 .thenAccept(user -> userLoader.load(user.getInvitedByID())
                         .thenAccept(invitedBy -> {
                             gandalfCalled.set(true);
                             assertThat(invitedBy.getName(), equalTo("Manwë"));
                         }));
-//
-//        userLoader.load(1L)
-//                .thenCompose(user -> userLoader.load(user.getInvitedByID()))                
-//                .thenAccept(invitedBy -> {
-//                    gandalfCalled.set(true);
-//                    assertThat(invitedBy, equalTo("Manwë"));
-//                });
 
-        userLoader.load(2L)
+        CompletableFuture<?> saruman = userLoader.load(2L)
                 .thenAccept(user -> userLoader.load(user.getInvitedByID())
                         .thenAccept(invitedBy -> {
                             sarumanCalled.set(true);
                             assertThat(invitedBy.getName(), equalTo("Aulë"));
                         }));
-//
-//        userLoader.load(2L)
-//                .thenCompose(user -> userLoader.load(user.getInvitedByID()))
-//                .thenAccept(invitedBy -> {
-//                    sarumanCalled.set(true);
-//                    assertThat(invitedBy.getName(), equalTo("Aulë"));
-//                });
-//
-//        userLoader.load(3L)
-//                .thenAccept(user -> userLoader.load(user.getInvitedByID())
-//                        .thenAccept(invitedBy -> {
-//                            sarumanCalled.set(true);
-//                            assertThat(invitedBy.getName(), equalTo("Oromë"));
-//                        }));
-
-//        List<User> allResults = userLoader.dispatchAndJoin();
-//        System.out.println("allResults=" + allResults);
 
         await().untilTrue(gandalfCalled);
         await().untilTrue(sarumanCalled);
         
-        List<User> allResults = userLoader.dispatch().join();
-        System.out.println("allResults=" + allResults);
-        assertThat(allResults.size(), equalTo(4));
+        new CompletableFuture<List<User>>()
+            .acceptEither(userLoader.dispatchResult(), allResults -> {
+                assertThat(allResults.size(), equalTo(4));
+            });
     }
 
 
