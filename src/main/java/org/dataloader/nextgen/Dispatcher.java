@@ -80,7 +80,7 @@ public class Dispatcher extends RecursiveAction implements RunnableFuture<Void>,
         return true;
     }
     
-    private static <T> T ifNull (T value, T defaultValue) {
+    private static <T> T defaultIfNull (T value, T defaultValue) {
         return (value == null)
             ? defaultValue
             : value;
@@ -103,10 +103,11 @@ public class Dispatcher extends RecursiveAction implements RunnableFuture<Void>,
                 .entrySet()
                 .stream()
                 .flatMap(e -> Stream
-                    .concat(e.getValue()
+                    .concat(
+                        e.getValue()
                             .stream()
                             .map(Dispatcher::wrap), 
-                        ifNull(pendingTasks.remove(e.getKey()), Collections.<ForkJoinTask<?>>emptyList())
+                        defaultIfNull(pendingTasks.remove(e.getKey()), Collections.<ForkJoinTask<?>>emptyList())
                             .stream()
                     )
                 )
