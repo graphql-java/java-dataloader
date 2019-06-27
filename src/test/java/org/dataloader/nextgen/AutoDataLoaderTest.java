@@ -38,6 +38,7 @@ import static java.util.Collections.singletonList;
 import java.util.HashSet;
 import java.util.Set;
 import static java.util.concurrent.CompletableFuture.allOf;
+import java.util.concurrent.Executors;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.TestKit.listFrom;
 import static org.dataloader.impl.CompletableFutureKit.cause;

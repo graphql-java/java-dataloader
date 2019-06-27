@@ -103,7 +103,7 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
                 LOGGER.trace("completing...requested={}, received={}", requested, receivedSize);
                 if (requested == receivedSize) {
                     if (!result.complete(received)) {
-                        LOGGER.warn("attempt to complete already completed result");
+                        LOGGER.trace("attempt to complete already completed result");
                     }
 
                     resultCreator = AutoDataLoader::newResult;

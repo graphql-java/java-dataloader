@@ -12,9 +12,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +57,7 @@ public class Dispatcher implements AutoCloseable {
     private final Map<AutoDataLoader, Thread> dataLoaders = new ConcurrentHashMap<>();
     private final Queue<Command> commands = new ConcurrentLinkedQueue<>();
     private volatile Executor executor;
-    private final UnaryOperator<Command> invoker;
+    private final BiFunction<Command, Executor, Command> invoker;
 
     private static final Executor CLOSED_EXECUTOR = new Executor() {
         @Override
@@ -71,7 +73,7 @@ public class Dispatcher implements AutoCloseable {
      * @param executor executor to run Dispatcher tasks
      */
     public Dispatcher (Executor executor) {
-        this(executor, Invoker::invoke);
+        this(executor, Command::executeWith);
     }
     
     /**
@@ -80,7 +82,7 @@ public class Dispatcher implements AutoCloseable {
      * @param executor executor to run Dispatcher tasks
      */
     public Dispatcher (ForkJoinPool executor) {
-        this(executor, command -> (Command)command.fork());
+        this(executor, Command::forkWith);
     }
 
     /**
@@ -92,7 +94,7 @@ public class Dispatcher implements AutoCloseable {
         this(ForkJoinPool.commonPool());
     }
     
-    private Dispatcher (Executor executor, UnaryOperator<Command> invoker) {
+    private Dispatcher (Executor executor, BiFunction<Command, Executor, Command> invoker) {
         Objects.requireNonNull(executor);
         Objects.requireNonNull(invoker);
         
@@ -147,7 +149,7 @@ public class Dispatcher implements AutoCloseable {
         
         if (running.compareAndSet(false, true)) {
             LOGGER.trace("scheduling execution for {}", command);
-            executor.execute(command);
+            invoker.apply(command, executor);
         } else {
             LOGGER.trace("enqued command {}", command);
             commands.offer(command);
@@ -175,15 +177,6 @@ public class Dispatcher implements AutoCloseable {
         LOGGER.trace("closed!");
     }
     
-    private static class Invoker {
-        static Command invoke (Command command) {
-            Objects.requireNonNull(command);
-
-            command.run();
-            return command;
-        }
-    }
-    
     protected abstract class Command extends RecursiveAction implements RunnableFuture<Void> {
         protected abstract void execute ();
                 
@@ -193,13 +186,10 @@ public class Dispatcher implements AutoCloseable {
                 LOGGER.trace("executing command {}", this);
                 execute();
             } finally {
-//                Command next = next();
-                Command next = commands.poll();
+                Command next = next();
                 if (next != null) {
                     LOGGER.trace("scheduling next command {}", next);
-                    invoker
-                        .apply(next)
-                        .quietlyJoin();
+                    invoker.apply(next, executor);
                 } else {
                     LOGGER.trace("no more commands");
                     running.lazySet(false);
@@ -218,6 +208,17 @@ public class Dispatcher implements AutoCloseable {
         @Override
         public void run() {
             invoke();
+        }
+        
+        public Command forkWith (Executor executor) {
+            return ForkJoinTask.inForkJoinPool()
+                ? (Command)fork()
+                : executeWith(executor);
+        }
+        
+        public Command executeWith (Executor executor) {
+            executor.execute(this);
+            return this;
         }
     }
     
