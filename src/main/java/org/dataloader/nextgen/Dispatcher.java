@@ -17,7 +17,6 @@ import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
-import java.util.function.UnaryOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,14 +33,23 @@ import org.slf4j.LoggerFactory;
  * {@code 
  *    Dispatcher commonPoolDispatcher = new Dispatcher();
  *    BatchLoader<K, V> batchLoader = ...
- *    AutoDataLoader<K, V> commonPoolLoader = new AutoDataLoader<>(batchLoader, commonPoolDispatcher);
+ *    AutoDataLoader<K, V> commonPoolLoader = new AutoDataLoader<>(batchLoader, new AutoDataLoaderOptions());
  * }
  * 
  * To create AutoDataLoader that is limited to run on 1 thread use the folllowing code
  * {@code 
- *    Dispatcher commonPoolDispatcher = new Dispatcher(Executors.newSingleThreadExecutor());
+ *    Dispatcher singleThreadDispatcher = new Dispatcher(Executors.newSingleThreadExecutor());
  *    BatchLoader<K, V> batchLoader = ...
- *    AutoDataLoader<K, V> commonPoolLoader = new AutoDataLoader<>(batchLoader, commonPoolDispatcher);
+ *    AutoDataLoader<K, V> commonPoolLoader = new AutoDataLoader<>(batchLoader, singleThreadDispatcher);
+ * }
+ * 
+ * To create AutoDataLoader with DataLoaderOptions and to choose threading model, use the code
+ * below:
+ * {@code 
+ *    Dispatcher singleThreadDispatcher = new Dispatcher(Executors.newSingleThreadExecutor());
+ *    AutoDataLoaderOptions options = new AutoDataLoaderOptions().setDispatcher(singleThreadDispatcher);
+ *    BatchLoader<K, V> batchLoader = ...
+ *    AutoDataLoader<K, V> commonPoolLoader = new AutoDataLoader<>(batchLoader, options);
  * }
  * 
  * @see AutoDataLoader#load(java.lang.Object) 
