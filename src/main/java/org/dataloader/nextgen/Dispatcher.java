@@ -180,10 +180,7 @@ public class Dispatcher implements AutoCloseable {
         @Override
         protected void execute() {
             // wait while thread is running
-            while (closing.compareAndSet(false, false) && 
-                    isRunning(owner)) {
-//                Thread.yield();
-            }
+            while (closing.compareAndSet(false, false) && isRunning(owner));
             
             // and now do the dispatch
             dataLoader.run();
