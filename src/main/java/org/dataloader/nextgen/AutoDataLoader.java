@@ -42,7 +42,7 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
     }
     
     public AutoDataLoader(BatchLoader<K, V> batchLoadFunction, AutoDataLoaderOptions options) {
-        this(batchLoadFunction, options, options.getDispatcher());
+        this(batchLoadFunction, options, options.dispatcher());
     }
     
     private AutoDataLoader(BatchLoader<K, V> batchLoadFunction, AutoDataLoaderOptions options, Dispatcher dispatcher) {

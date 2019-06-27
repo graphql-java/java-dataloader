@@ -95,8 +95,6 @@ public class Dispatcher implements AutoCloseable {
 
     /**
      * Creates a new instance that uses ForkJoinPool.commonPool()
-     * 
-     * @param executor executor to run Dispatcher tasks
      */
     public Dispatcher () {
         this(ForkJoinPool.commonPool());

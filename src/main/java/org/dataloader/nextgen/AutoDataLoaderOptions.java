@@ -149,17 +149,19 @@ public class AutoDataLoaderOptions extends DataLoaderOptions {
     }
     
     /**
+     * Retrieves Dispatcher instance configured on this data loader opitons
      * 
-     * @return 
+     * @return configured Dispatcher object
      */
-    public Dispatcher getDispatcher () {
+    public Dispatcher dispatcher () {
         return dispatcher;
     }
     
     /**
+     * Sets a Dispatcher to be used by AutoDataLoaders created with this object
      * 
-     * @param dispatcher
-     * @return 
+     * @param dispatcher new Dispatcher for these options
+     * @return this instance to allow method chaining
      */
     public AutoDataLoaderOptions setDispatcher (Dispatcher dispatcher) {
         this.dispatcher = dispatcher;
