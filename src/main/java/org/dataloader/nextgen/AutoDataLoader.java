@@ -11,7 +11,6 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.dataloader.BatchLoader;
@@ -20,12 +19,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
- * @author gkesler
+ * An extension to the existing DataLoader that is automatically triggered 
+ * by a background thread when the loading thread awaits for the data to arrive.
+ * 
+ * @author <a href="https://github.com/gkesler/">Greg Kesler</a>
  */
 public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, AutoCloseable {
     private final Dispatcher dispatcher;
-    private final AtomicInteger requested = new AtomicInteger(0);
+    private volatile int requested;
     private volatile List<V> received = emptyList();
     private volatile CompletableFuture<List<V>> result = completedFuture(emptyList());
     private volatile Consumer<AutoDataLoader<K, V>> resultCreator = AutoDataLoader::newResult;
@@ -62,7 +63,7 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
     }
 
     private void newResult () {
-        requested.set(0);
+        requested = 0;
         received = new CopyOnWriteArrayList<>();
         result = new CompletableFuture<List<V>>();
         resultCreator = o -> {};
@@ -87,7 +88,7 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
         if (loaderOptions.batchingEnabled()) {
             LOGGER.trace("requesting dispatch for batched loader");
             resultCreator.accept(this);
-            dispatcher.dispatch(this);
+            dispatcher.addToBatch(this);
         }
         
         return load;
@@ -100,7 +101,7 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
                 received.addAll(value);
                 int receivedSize = received.size();
                 LOGGER.trace("completing...requested={}, received={}", requested, receivedSize);
-                if (requested.compareAndSet(receivedSize, receivedSize)) {
+                if (requested == receivedSize) {
                     if (!result.complete(received)) {
                         LOGGER.warn("attempt to complete already completed result");
                     }
@@ -113,7 +114,7 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
 
     private CompletableFuture<List<V>> dispatchFully () {
         int dispatchDepth = dispatchDepth();
-        requested.getAndAdd(dispatchDepth);
+        requested += dispatchDepth;
         LOGGER.trace("dispatchFully...dispatchDept={}, requested={}", dispatchDepth, requested);
         return (dispatchDepth > 0)
             ? super.dispatch()

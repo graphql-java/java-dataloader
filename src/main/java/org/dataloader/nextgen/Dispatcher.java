@@ -20,7 +20,33 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
+ * "Magic" class to run AutoDataLoader batched dispatch mechanizm when
+ * the data loader client thread becomes awaiting for results. 
+ * Upon the requestor starts waiting, the temporary dispatcher thread
+ * kicks off and triggers AutoDataLoader.run method. Inferred load requests
+ * are also batched into the final result available via overriden AutoDataLoader.dispatch()
+ * method.
+ * 
+ * To create AutoDataLoader that fully utilizes ForkJoinPool lightweight threading
+ * use the following code
+ * {@code 
+ *    Dispatcher commonPoolDispatcher = new Dispatcher();
+ *    BatchLoader<K, V> batchLoader = ...
+ *    AutoDataLoader<K, V> commonPoolLoader = new AutoDataLoader<>(batchLoader, commonPoolDispatcher);
+ * }
+ * 
+ * To create AutoDataLoader that is limited to run on 1 thread use the folllowing code
+ * {@code 
+ *    Dispatcher commonPoolDispatcher = new Dispatcher(Executors.newSingleThreadExecutor());
+ *    BatchLoader<K, V> batchLoader = ...
+ *    AutoDataLoader<K, V> commonPoolLoader = new AutoDataLoader<>(batchLoader, commonPoolDispatcher);
+ * }
+ * 
+ * @see AutoDataLoader#load(java.lang.Object) 
+ * @see AutoDataLoader#loadMany(java.util.List) 
+ * @see AutoDataLoader#run() 
+ * @see AutoDataLoader#dispatch() 
+ * 
  * @author <a href="https://github.com/gkesler/">Greg Kesler</a>
  */
 public class Dispatcher implements AutoCloseable {
@@ -39,14 +65,29 @@ public class Dispatcher implements AutoCloseable {
     };
     private static final Logger LOGGER = LoggerFactory.getLogger(Dispatcher.class);
     
+    /**
+     * Creates a new instance with specified Executor.
+     * 
+     * @param executor executor to run Dispatcher tasks
+     */
     public Dispatcher (Executor executor) {
         this(executor, Invoker::invoke);
     }
     
+    /**
+     * Creates a new instance with specified ForkJoinPool.
+     * 
+     * @param executor executor to run Dispatcher tasks
+     */
     public Dispatcher (ForkJoinPool executor) {
         this(executor, command -> (Command)command.fork());
     }
 
+    /**
+     * Creates a new instance that uses ForkJoinPool.commonPool()
+     * 
+     * @param executor executor to run Dispatcher tasks
+     */
     public Dispatcher () {
         this(ForkJoinPool.commonPool());
     }
@@ -64,6 +105,14 @@ public class Dispatcher implements AutoCloseable {
         close();
     }
 
+    /**
+     * Registers an new AutoDataLoader with this Dispatcher.
+     * Dispatcher will associate current thread with the new data loader
+     * and it will monitor the state in order to trigger data loader dispatch
+     * 
+     * @param dataLoader a data loader to monitor
+     * @return this instance to allow method chaining
+     */
     public Dispatcher register (AutoDataLoader dataLoader) {
         Objects.requireNonNull(dataLoader);
         
@@ -71,6 +120,12 @@ public class Dispatcher implements AutoCloseable {
         return this;
     }
     
+    /**
+     * Unregisters a AutoDataLoader from this Dispatcher.
+     * 
+     * @param dataLoader a data loader to unregister
+     * @return this instance to allow method chaining
+     */
     public Dispatcher unregister (AutoDataLoader dataLoader) {
         Objects.requireNonNull(dataLoader);
         
@@ -78,7 +133,11 @@ public class Dispatcher implements AutoCloseable {
         return this;
     }
     
-    public void dispatch (AutoDataLoader dataLoader) {
+    /**
+     * Requests to schedule batching for the specified data loader
+     * @param dataLoader data loader to schedule dispatch
+     */
+    public void addToBatch (AutoDataLoader dataLoader) {
         LOGGER.trace("dispatch requested for {}", dataLoader);
         request(new DispatchCommand(dataLoader));
     }
@@ -164,7 +223,7 @@ public class Dispatcher implements AutoCloseable {
     
     private class DispatchCommand extends Command {
         private final AutoDataLoader dataLoader;
-        private final Thread owner;
+        private final Thread requestor;
 
         DispatchCommand (AutoDataLoader dataLoader) {
             Objects.requireNonNull(dataLoader);
@@ -174,13 +233,13 @@ public class Dispatcher implements AutoCloseable {
                 throw new IllegalArgumentException("Unknown DataLoader " + dataLoader);
             
             this.dataLoader = dataLoader;
-            this.owner = thread;
+            this.requestor = thread;
         }
         
         @Override
         protected void execute() {
             // wait while thread is running
-            while (closing.compareAndSet(false, false) && isRunning(owner));
+            while (closing.compareAndSet(false, false) && isRunning(requestor));
             
             // and now do the dispatch
             dataLoader.run();
@@ -190,7 +249,7 @@ public class Dispatcher implements AutoCloseable {
         public int hashCode() {
             int hash = 7;
             hash = 59 * hash + Objects.hashCode(this.dataLoader);
-            hash = 59 * hash + Objects.hashCode(this.owner);
+            hash = 59 * hash + Objects.hashCode(this.requestor);
             return hash;
         }
 
@@ -209,7 +268,7 @@ public class Dispatcher implements AutoCloseable {
             if (!Objects.equals(this.dataLoader, other.dataLoader)) {
                 return false;
             }
-            if (!Objects.equals(this.owner, other.owner)) {
+            if (!Objects.equals(this.requestor, other.requestor)) {
                 return false;
             }
             return true;
@@ -217,7 +276,7 @@ public class Dispatcher implements AutoCloseable {
 
         @Override
         public String toString() {
-            return "DispatchCommand{" + "dataLoader=" + dataLoader + ", owner=" + owner + '}';
+            return "DispatchCommand{" + "dataLoader=" + dataLoader + ", owner=" + requestor + '}';
         }
     }
 }

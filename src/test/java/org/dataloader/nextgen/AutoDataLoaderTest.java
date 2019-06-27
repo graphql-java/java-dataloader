@@ -38,12 +38,9 @@ import static java.util.Collections.singletonList;
 import java.util.HashSet;
 import java.util.Set;
 import static java.util.concurrent.CompletableFuture.allOf;
-import java.util.concurrent.Executors;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.TestKit.listFrom;
 import static org.dataloader.impl.CompletableFutureKit.cause;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
@@ -51,7 +48,6 @@ import static org.hamcrest.Matchers.is;
 import org.junit.After;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
@@ -59,14 +55,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests for {@link DataLoader}.
+ * Tests for {@link AutoDataLoader}.
  * <p>
  * The tests are a port of the existing tests in
  * the <a href="https://github.com/facebook/dataloader">facebook/dataloader</a> project.
  * <p>
  * Acknowledgments go to <a href="https://github.com/leebyron">Lee Byron</a> for providing excellent coverage.
  *
- * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
+ * @author <a href="https://github.com/gkesler/">Greg Kesler</a>
  */
 public class AutoDataLoaderTest {
     private Dispatcher dispatcher;
