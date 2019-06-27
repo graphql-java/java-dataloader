@@ -37,6 +37,7 @@ repositories {
     }
 }
 
+def slf4jVersion = '1.7.25'
 def releaseVersion = System.properties.RELEASE_VERSION
 version = releaseVersion ? releaseVersion : new SimpleDateFormat('yyyy-MM-dd\'T\'HH-mm-ss').format(new Date())
 group = 'org.dataloader'
@@ -55,6 +56,8 @@ task myJavadocs(type: Javadoc) {
 }
 
 dependencies {
+    compile 'org.slf4j:slf4j-api:' + slf4jVersion
+    testCompile 'org.slf4j:slf4j-simple:' + slf4jVersion
     testCompile "junit:junit:$junitVersion"
     testCompile 'org.awaitility:awaitility:2.0.0'
 }

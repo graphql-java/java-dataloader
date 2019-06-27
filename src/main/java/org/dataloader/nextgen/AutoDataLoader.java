@@ -10,9 +10,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import org.dataloader.BatchLoader;
 import org.dataloader.DataLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -20,8 +25,12 @@ import org.dataloader.DataLoader;
  */
 public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, AutoCloseable {
     private final Dispatcher dispatcher;
-    private volatile CompletableFuture<List<V>> result;
-    private volatile Consumer<AutoDataLoader<K, V>> addResult;
+    private final AtomicInteger requested = new AtomicInteger(0);
+    private volatile List<V> received = emptyList();
+    private volatile CompletableFuture<List<V>> result = completedFuture(emptyList());
+    private volatile Consumer<AutoDataLoader<K, V>> resultCreator = AutoDataLoader::newResult;
+    
+    private static final Logger LOGGER = LoggerFactory.getLogger(AutoDataLoader.class);
     
     public AutoDataLoader(BatchLoader<K, V> batchLoadFunction) {
         this(batchLoadFunction, new Dispatcher());
@@ -35,10 +44,8 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
         this(batchLoadFunction, options, options.getDispatcher());
     }
     
-    public AutoDataLoader(BatchLoader<K, V> batchLoadFunction, AutoDataLoaderOptions options, Dispatcher dispatcher) {
+    private AutoDataLoader(BatchLoader<K, V> batchLoadFunction, AutoDataLoaderOptions options, Dispatcher dispatcher) {
         super(batchLoadFunction, options);
-
-        newResult();
         
         Objects.requireNonNull(dispatcher);
         this.dispatcher = dispatcher.register(this);
@@ -55,37 +62,60 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
     }
 
     private void newResult () {
+        requested.set(0);
+        received = new CopyOnWriteArrayList<>();
         result = new CompletableFuture<List<V>>();
-        addResult = o -> {};
-    }
-    
-    public CompletableFuture<List<V>> dispatchResult () {
-        return result;
+        resultCreator = o -> {};
+        LOGGER.trace("created new result future");
     }
     
     @Override
     public CompletableFuture<List<V>> loadMany(List<K> keys, List<Object> keyContexts) {
-        addResult.accept(this);
-        return super.loadMany(keys, keyContexts); 
+        LOGGER.trace("loadMany requested, keys={}", keys);
+        return dispatchIfNecessary(() -> super.loadMany(keys, keyContexts));
     }
 
     @Override
     public CompletableFuture<V> load(K key, Object keyContext) {
-        addResult.accept(this);
-        return super.load(key, keyContext);
+        LOGGER.trace("load requested, key={}", key);
+        return dispatchIfNecessary(() -> super.load(key, keyContext));
     }
 
+    private synchronized <E> CompletableFuture<E> dispatchIfNecessary (Supplier<CompletableFuture<E>> loader) {
+        CompletableFuture<E> load = loader.get();
+        
+        if (loaderOptions.batchingEnabled()) {
+            LOGGER.trace("requesting dispatch for batched loader");
+            resultCreator.accept(this);
+            dispatcher.dispatch(this);
+        }
+        
+        return load;
+    }
+    
     @Override
     public void run() {        
         dispatchFully()
             .thenAccept(value -> {
-                dispatchResult().complete(value);
-                addResult = AutoDataLoader::newResult;                    
+                received.addAll(value);
+                int receivedSize = received.size();
+                LOGGER.trace("completing...requested={}, received={}", requested, receivedSize);
+                if (requested.compareAndSet(receivedSize, receivedSize)) {
+                    if (!result.complete(received)) {
+                        LOGGER.warn("attempt to complete already completed result");
+                    }
+
+                    resultCreator = AutoDataLoader::newResult;
+                    LOGGER.trace("run completed!");
+                }
             });
     }
 
     private CompletableFuture<List<V>> dispatchFully () {
-        return (dispatchDepth() > 0)
+        int dispatchDepth = dispatchDepth();
+        requested.getAndAdd(dispatchDepth);
+        LOGGER.trace("dispatchFully...dispatchDept={}, requested={}", dispatchDepth, requested);
+        return (dispatchDepth > 0)
             ? super.dispatch()
                 .thenCombine(dispatchFully(), (value, temp) -> {
                     value.addAll(temp);
@@ -97,10 +127,11 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
     
     @Override
     public CompletableFuture<List<V>> dispatch() {
-        return dispatchResult();
+        return result;
     }
     
+    @Override
     public List<V> dispatchAndJoin() {
-        return dispatchResult().join();
+        return result.join();
     }
 }

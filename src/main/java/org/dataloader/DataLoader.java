@@ -57,7 +57,7 @@ import static org.dataloader.impl.Assertions.nonNull;
 public class DataLoader<K, V> {
 
     private final DataLoaderHelper<K, V> helper;
-    private final DataLoaderOptions loaderOptions;
+    protected final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
     private final StatisticsCollector stats;
 

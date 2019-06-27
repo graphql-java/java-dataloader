@@ -37,9 +37,13 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import java.util.HashSet;
 import java.util.Set;
+import static java.util.concurrent.CompletableFuture.allOf;
+import java.util.concurrent.Executors;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.TestKit.listFrom;
 import static org.dataloader.impl.CompletableFutureKit.cause;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
@@ -47,8 +51,12 @@ import static org.hamcrest.Matchers.is;
 import org.junit.After;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import org.junit.Before;
-import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests for {@link DataLoader}.
@@ -63,8 +71,14 @@ import org.junit.Ignore;
 public class AutoDataLoaderTest {
     private Dispatcher dispatcher;
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AutoDataLoaderTest.class);
+    
     @Before
     public void setUp () throws Exception {
+        LOGGER.info("==========================================================");
+        LOGGER.info("| {}", testName.getMethodName());
+        LOGGER.info("==========================================================");
+        
         dispatcher = new Dispatcher();
     }
     
@@ -73,6 +87,9 @@ public class AutoDataLoaderTest {
         dispatcher.close();
         dispatcher = null;
     }
+    
+    @Rule
+    public TestName testName = new TestName();
     
     @Test
     public void should_Build_a_really_really_simple_data_loader() {
@@ -299,9 +316,9 @@ public class AutoDataLoaderTest {
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
 //        CompletableFuture<List<String>> composite = identityLoader.dispatch();
-        CompletableFuture<List<String>> composite = identityLoader.dispatchResult();
 
-        await().until(composite::isDone);
+//        await().until(composite::isDone);
+        await().until(() -> future1.isDone() && future2.isDone());
         assertThat(future1.get(), equalTo("X"));
         assertThat(future2.get(), equalTo("B"));
 
@@ -311,9 +328,9 @@ public class AutoDataLoaderTest {
         CompletableFuture<String> future1a = identityLoader.load("A");
         CompletableFuture<String> future2a = identityLoader.load("B");
 //        CompletableFuture<List<String>> composite2 = identityLoader.dispatch();
-        CompletableFuture<List<String>> composite2 = identityLoader.dispatchResult();
 
-        await().until(composite2::isDone);
+//        await().until(composite2::isDone);
+        await().until(() -> future1a.isDone() && future2a.isDone());
         assertThat(future1a.get(), equalTo("X"));
         assertThat(future2a.get(), equalTo("B"));
         assertThat(loadCalls, equalTo(singletonList(singletonList("B"))));
@@ -329,9 +346,9 @@ public class AutoDataLoaderTest {
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
 //        CompletableFuture<List<String>> composite = identityLoader.dispatch();
-        CompletableFuture<List<String>> composite = identityLoader.dispatchResult();
 
-        await().until(composite::isDone);
+//        await().until(composite::isDone);
+        await().until(() -> future1.isDone() && future2.isDone());
         assertThat(future1.get(), equalTo("X"));
         assertThat(future2.get(), equalTo("B"));
 
@@ -341,9 +358,9 @@ public class AutoDataLoaderTest {
         CompletableFuture<String> future1a = identityLoader.load("A");
         CompletableFuture<String> future2a = identityLoader.load("B");
 //        CompletableFuture<List<String>> composite2 = identityLoader.dispatch();
-        CompletableFuture<List<String>> composite2 = identityLoader.dispatchResult();
 
-        await().until(composite2::isDone);
+//        await().until(composite2::isDone);
+        await().until(() -> future1a.isDone() && future2a.isDone());
         assertThat(future1a.get(), equalTo("Y"));
         assertThat(future2a.get(), equalTo("Y"));
         assertThat(loadCalls, equalTo(singletonList(singletonList("B"))));
@@ -402,8 +419,9 @@ public class AutoDataLoaderTest {
         CompletableFuture<Object> future2 = evenLoader.load(2);
         CompletableFuture<Object> future3 = evenLoader.load(3);
         CompletableFuture<Object> future4 = evenLoader.load(4);
-//        CompletableFuture<List<Object>> result = evenLoader.dispatch();
-        CompletableFuture<List<Object>> result = evenLoader.dispatchResult();
+        
+        await().until(allOf(future1, future2, future3, future4)::isDone);
+        CompletableFuture<List<Object>> result = evenLoader.dispatch();
         result.thenAccept(promisedValues -> success.set(true));
 
         await().untilAtomic(success, is(true));
@@ -551,12 +569,12 @@ public class AutoDataLoaderTest {
 
         // Fetches as expected
 
-        identityLoader.load(keyA);
-        identityLoader.load(keyB);
+        CompletableFuture<Object> a = identityLoader.load(keyA);
+        CompletableFuture<Object> b = identityLoader.load(keyB);
 
-//        identityLoader.dispatch().thenAccept(promisedValues -> {
-        await().until(identityLoader.dispatchResult()::isDone);
-        identityLoader.dispatchResult().thenAccept(promisedValues -> {
+//        await().until(identityLoader.dispatch()::isDone);
+        await().until(() -> a.isDone() && b.isDone());
+        identityLoader.dispatch().thenAccept(promisedValues -> {
             assertThat(promisedValues.get(0), equalTo(keyA));
             assertThat(promisedValues.get(1), equalTo(keyB));
         });
@@ -571,12 +589,12 @@ public class AutoDataLoaderTest {
         //noinspection SuspiciousMethodCalls
         loadCalls.remove(keyA);
 
-        identityLoader.load(keyA);
-        identityLoader.load(keyB);
+        CompletableFuture<Object> nextA = identityLoader.load(keyA);
+        CompletableFuture<Object> nextB = identityLoader.load(keyB);
 
-//        identityLoader.dispatch().thenAccept(promisedValues -> {
-        await().until(identityLoader.dispatchResult()::isDone);
-        identityLoader.dispatchResult().thenAccept(promisedValues -> {
+//        await().until(identityLoader.dispatch()::isDone);
+        await().until(allOf(nextA, nextA)::isDone);
+        identityLoader.dispatch().thenAccept(promisedValues -> {
             assertThat(promisedValues.get(0), equalTo(keyA));
             assertThat(identityLoader.getCacheKey(keyB), equalTo(keyB));
         });
@@ -761,9 +779,9 @@ public class AutoDataLoaderTest {
         CompletableFuture future1 = identityLoader.load("a");
         CompletableFuture future2 = identityLoader.load("b");
 //        CompletableFuture<List<String>> composite = identityLoader.dispatch();
-        CompletableFuture<List<String>> composite = identityLoader.dispatchResult();
 
-        await().until(composite::isDone);
+//        await().until(composite::isDone);
+        await().until(allOf(future1, future2)::isDone);
         assertThat(future1.get(), equalTo("a"));
         assertThat(future2.get(), equalTo("b"));
 
@@ -773,9 +791,8 @@ public class AutoDataLoaderTest {
         CompletableFuture future3 = identityLoader.load("c");
         CompletableFuture future2a = identityLoader.load("b");
 //        composite = identityLoader.dispatch();
-        composite = identityLoader.dispatchResult();
 
-        await().until(composite::isDone);
+        await().until(() -> future3.isDone() && future2a.isDone());
         assertThat(future3.get(), equalTo("c"));
         assertThat(future2a.get(), equalTo("b"));
 
@@ -789,9 +806,9 @@ public class AutoDataLoaderTest {
 
         CompletableFuture future2b = identityLoader.load("b");
 //        composite = identityLoader.dispatch();
-        composite = identityLoader.dispatchResult();
 
-        await().until(composite::isDone);
+//        await().until(composite::isDone);
+        await().until(future2b::isDone);
         assertThat(future2b.get(), equalTo("b"));
         assertThat(loadCalls, equalTo(asList(asList("a", "b"),
                 singletonList("c"), singletonList("b"))));
@@ -817,7 +834,7 @@ public class AutoDataLoaderTest {
         CompletableFuture<String> fb1 = identityLoader.load("B");
 
         List<String> values = CompletableFutureKit.allOf(asList(fa, fb, fa1, fb1)).join();
-
+        
         assertThat(fa.join(), equalTo("A"));
         assertThat(fb.join(), equalTo("B"));
         assertThat(fa1.join(), equalTo("A"));
@@ -873,7 +890,7 @@ public class AutoDataLoaderTest {
 
 //        identityLoader.dispatch();
 
-        CompletableFuture.allOf(f1, f2, f3).join();
+        await().until(allOf(f1, f2, f3)::isDone);
 
         assertThat(f1.join(), equalTo(1));
         assertThat(f2.join(), equalTo(2));
@@ -888,8 +905,9 @@ public class AutoDataLoaderTest {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         AutoDataLoader<Integer, Integer> identityLoader = idLoader(newOptions().setMaxBatchSize(5), loadCalls, dispatcher);
 
+        List<CompletableFuture<Integer>> futures = new ArrayList<>();
         for (int i = 0; i < 21; i++) {
-            identityLoader.load(i);
+            futures.add(identityLoader.load(i));
         }
         List<Collection<Integer>> expectedCalls = new ArrayList<>();
         expectedCalls.add(listFrom(0, 5));
@@ -898,12 +916,11 @@ public class AutoDataLoaderTest {
         expectedCalls.add(listFrom(15, 20));
         expectedCalls.add(listFrom(20, 21));
 
-//        List<Integer> result = identityLoader.dispatch().join();
-        List<Integer> result = identityLoader.dispatchResult().join();
+        await().until(allOf(futures.toArray(new CompletableFuture[futures.size()]))::isDone);
+        List<Integer> result = identityLoader.dispatch().join();
 
         assertThat(result, equalTo(listFrom(0, 21)));
         assertThat(loadCalls, equalTo(expectedCalls));
-
     }
 
     @Test
@@ -969,11 +986,7 @@ public class AutoDataLoaderTest {
 //                bLoader.dispatch(),
 //                deepLoader.dispatch()
 //        ).join();
-
-        await().until(a1::isDone);
-        await().until(a2::isDone);
-        await().until(b1::isDone);
-        await().until(b2::isDone);
+        await().until(allOf(a1, a2, b1, b2)::isDone);
 
         assertThat(a1.get(), equalTo("A1"));
         assertThat(a2.get(), equalTo("A2"));
@@ -990,6 +1003,7 @@ public class AutoDataLoaderTest {
     }
 
     @Test
+//    @Ignore
     public void should_allow_composition_of_data_loader_calls() throws Exception {
         UserManager userManager = new UserManager();
 
@@ -998,11 +1012,6 @@ public class AutoDataLoaderTest {
                         .stream()
                         .map(userManager::loadUserById)
                         .collect(Collectors.toList()));
-//        BatchLoader<Long, User> userBatchLoader = userIds -> CompletableFuture
-//                .completedFuture(userIds
-//                        .stream()
-//                        .map(userManager::loadUserById)
-//                        .collect(Collectors.toList()));
         AutoDataLoader<Long, User> userLoader = new AutoDataLoader<>(userBatchLoader, dispatcher);
 
         AtomicBoolean gandalfCalled = new AtomicBoolean(false);
@@ -1025,10 +1034,8 @@ public class AutoDataLoaderTest {
         await().untilTrue(gandalfCalled);
         await().untilTrue(sarumanCalled);
         
-        new CompletableFuture<List<User>>()
-            .acceptEither(userLoader.dispatchResult(), allResults -> {
-                assertThat(allResults.size(), equalTo(4));
-            });
+        List<User> allResults = userLoader.dispatch().join();
+        assertThat(allResults.size(), equalTo(4));
     }
 
 
@@ -1047,7 +1054,7 @@ public class AutoDataLoaderTest {
                     .map(k -> (V) k)
                     .collect(Collectors.toList());
             return CompletableFuture.completedFuture(values);
-        }, options, dispatcher);
+        }, options.setDispatcher(dispatcher));
     }
 
     private static <K, V> AutoDataLoader<K, V> idLoaderBlowsUps(
@@ -1055,7 +1062,7 @@ public class AutoDataLoaderTest {
         return new AutoDataLoader<>(keys -> {
             loadCalls.add(new ArrayList<>(keys));
             return TestKit.futureError();
-        }, options, dispatcher);
+        }, options.setDispatcher(dispatcher));
     }
 
     private static <K> AutoDataLoader<K, Object> idLoaderAllExceptions(
@@ -1065,7 +1072,7 @@ public class AutoDataLoaderTest {
 
             List<Object> errors = keys.stream().map(k -> new IllegalStateException("Error")).collect(Collectors.toList());
             return CompletableFuture.completedFuture(errors);
-        }, options, dispatcher);
+        }, options.setDispatcher(dispatcher));
     }
 
     private static AutoDataLoader<Integer, Object> idLoaderOddEvenExceptions(
@@ -1082,7 +1089,7 @@ public class AutoDataLoaderTest {
                 }
             }
             return CompletableFuture.completedFuture(errors);
-        }, options, dispatcher);
+        }, options.setDispatcher(dispatcher));
     }
 
 
