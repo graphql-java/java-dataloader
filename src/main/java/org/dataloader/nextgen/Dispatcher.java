@@ -221,9 +221,12 @@ public class Dispatcher implements AutoCloseable {
         }
         
         public Command forkWith (Executor executor) {
-            return ForkJoinTask.inForkJoinPool()
-                ? (Command)fork()
-                : executeWith(executor);
+            if (ForkJoinTask.inForkJoinPool()) {
+                fork().quietlyJoin();
+                return this;                    
+            } else {
+                return executeWith(executor);
+            }
         }
         
         public Command executeWith (Executor executor) {
