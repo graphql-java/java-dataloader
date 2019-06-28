@@ -946,8 +946,10 @@ public class AutoDataLoaderTest {
 
         await().untilTrue(v4Called);
 
-        identityLoader.dispatchAndJoin();
+//        identityLoader.dispatchAndJoin();
 
+        // check number of elements in the loadCalls list
+        assertThat(loadCalls.size(), equalTo(1));
         assertThat(loadCalls, equalTo(
                 singletonList(asList("a", "b", "c", "d"))));
     }
