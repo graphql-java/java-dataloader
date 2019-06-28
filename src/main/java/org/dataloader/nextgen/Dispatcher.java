@@ -150,7 +150,7 @@ public class Dispatcher implements AutoCloseable {
      * @param dataLoader data loader to schedule dispatch
      */
     public void scheduleBatch (AutoDataLoader dataLoader) {
-        LOGGER.trace("dispatch requested for {}", dataLoader);
+        LOGGER.debug("dispatch requested for {}", dataLoader);
         request(new DispatchCommand(dataLoader));
     }
     
@@ -158,10 +158,10 @@ public class Dispatcher implements AutoCloseable {
         Objects.requireNonNull(command);
         
         if (running.compareAndSet(false, true)) {
-            LOGGER.trace("scheduling execution for {}", command);
+            LOGGER.debug("scheduling execution for {}", command);
             invoker.apply(command, executor);
         } else {
-            LOGGER.trace("enqued command {}", command);
+            LOGGER.debug("enqued command {}", command);
             commands.offer(command);
         }
     } 
@@ -178,7 +178,7 @@ public class Dispatcher implements AutoCloseable {
 
     @Override
     public void close() {
-        LOGGER.trace("close requested...");
+        LOGGER.debug("close requested...");
         // close executor
         executor = CLOSED_EXECUTOR;
         closing.set(true);
@@ -186,7 +186,7 @@ public class Dispatcher implements AutoCloseable {
         while (running.compareAndSet(true, true)) {
             Thread.yield();
         }
-        LOGGER.trace("closed!");
+        LOGGER.debug("closed!");
     }
     
     protected abstract class Command extends RecursiveAction implements RunnableFuture<Void> {
@@ -195,15 +195,15 @@ public class Dispatcher implements AutoCloseable {
         @Override
         protected void compute() {
             try {
-                LOGGER.trace("executing command {}", this);
+                LOGGER.debug("executing command {}", this);
                 execute();
             } finally {
                 Command next = next();
                 if (next != null) {
-                    LOGGER.trace("scheduling next command {}", next);
+                    LOGGER.debug("scheduling next command {}", next);
                     invoker.apply(next, executor);
                 } else {
-                    LOGGER.trace("no more commands");
+                    LOGGER.debug("no more commands");
                     running.lazySet(false);
                 }
                 LOGGER.debug("finished command {}", this);

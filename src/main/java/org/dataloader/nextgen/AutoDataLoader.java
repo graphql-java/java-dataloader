@@ -67,18 +67,18 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
         received = new CopyOnWriteArrayList<>();
         result = new CompletableFuture<List<V>>();
         resultCreator = o -> {};
-        LOGGER.trace("created new result future");
+        LOGGER.debug("created new result future");
     }
     
     @Override
     public CompletableFuture<List<V>> loadMany(List<K> keys, List<Object> keyContexts) {
-        LOGGER.trace("loadMany requested, keys={}", keys);
+        LOGGER.debug("loadMany requested, keys={}", keys);
         return dispatchIfNecessary(() -> super.loadMany(keys, keyContexts));
     }
 
     @Override
     public CompletableFuture<V> load(K key, Object keyContext) {
-        LOGGER.trace("load requested, key={}", key);
+        LOGGER.debug("load requested, key={}", key);
         return dispatchIfNecessary(() -> super.load(key, keyContext));
     }
 
@@ -86,7 +86,7 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
         CompletableFuture<E> load = loader.get();
         
         if (loaderOptions.batchingEnabled()) {
-            LOGGER.trace("requesting dispatch for batched loader");
+            LOGGER.debug("requesting dispatch for batched loader");
             resultCreator.accept(this);
             dispatcher.scheduleBatch(this);
         }
@@ -100,22 +100,26 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
             .thenAccept(value -> {
                 received.addAll(value);
                 int receivedSize = received.size();
-                LOGGER.trace("completing...requested={}, received={}", requested, receivedSize);
+                LOGGER.debug("completing...requested={}, received={}", requested, receivedSize);
                 if (requested == receivedSize) {
                     if (!result.complete(received)) {
-                        LOGGER.trace("attempt to complete already completed result");
+                        LOGGER.debug("attempt to complete already completed result");
                     }
 
                     resultCreator = AutoDataLoader::newResult;
-                    LOGGER.trace("run completed!");
+                    LOGGER.debug("run completed!");
                 }
             });
     }
 
     private CompletableFuture<List<V>> dispatchFully () {
-        int dispatchDepth = dispatchDepth();
-        requested += dispatchDepth;
-        LOGGER.trace("dispatchFully...dispatchDept={}, requested={}", dispatchDepth, requested);
+        int dispatchDepth;
+        synchronized (this) {
+            dispatchDepth = dispatchDepth();
+            requested += dispatchDepth;
+        }
+        LOGGER.debug("dispatchFully...dispatchDept={}, requested={}", dispatchDepth, requested);
+        
         return (dispatchDepth > 0)
             ? super.dispatch()
                 .thenCombine(dispatchFully(), (value, temp) -> {
