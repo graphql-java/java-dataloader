@@ -96,7 +96,7 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
     
     @Override
     public void run() {        
-        dispatch0()
+        dispatchFully()
             .thenAccept(value -> {
                 received.addAll(value);
                 int receivedSize = received.size();
@@ -112,11 +112,17 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
             });
     }
 
-    private CompletableFuture<List<V>> dispatch0 () {
+    private CompletableFuture<List<V>> dispatchFully () {
         int dispatchDepth = dispatchDepth();
         requested += dispatchDepth;
         LOGGER.trace("dispatchFully...dispatchDept={}, requested={}", dispatchDepth, requested);
-        return super.dispatch();
+        return (dispatchDepth > 0)
+            ? super.dispatch()
+                .thenCombine(dispatchFully(), (value, temp) -> {
+                    value.addAll(temp);
+                    return value;
+                })
+            : completedFuture(emptyList());
     }
     
     
