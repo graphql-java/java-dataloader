@@ -121,12 +121,10 @@ public class Dispatcher implements AutoCloseable {
      * @param dataLoader a data loader to monitor
      * @return this instance to allow method chaining
      */
-    public Dispatcher register (AutoDataLoader dataLoader) {
+    public synchronized Dispatcher register (AutoDataLoader dataLoader) {
         Objects.requireNonNull(dataLoader);
         
-        synchronized (dataLoaders) {
-            dataLoaders.put(dataLoader, Thread.currentThread());
-        }
+        dataLoaders.put(dataLoader, Thread.currentThread());
         return this;
     }
     
@@ -136,13 +134,15 @@ public class Dispatcher implements AutoCloseable {
      * @param dataLoader a data loader to unregister
      * @return this instance to allow method chaining
      */
-    public Dispatcher unregister (AutoDataLoader dataLoader) {
+    public synchronized Dispatcher unregister (AutoDataLoader dataLoader) {
         Objects.requireNonNull(dataLoader);
         
-        synchronized (dataLoaders) {
-            dataLoaders.remove(dataLoader);
-        }
+        dataLoaders.remove(dataLoader);
         return this;
+    }
+    
+    private synchronized Thread ownerOf (AutoDataLoader dataLoader) {
+        return dataLoaders.get(dataLoader);
     }
     
     /**
@@ -166,10 +166,10 @@ public class Dispatcher implements AutoCloseable {
         }
     } 
             
-    private static boolean isRunning (Thread thread) {
+    private static boolean isWaiting (Thread thread) {
         switch (thread.getState()) {
-            case NEW:
-            case RUNNABLE:
+            case WAITING:
+            case TIMED_WAITING:
                 return true;
         }
         
@@ -183,7 +183,9 @@ public class Dispatcher implements AutoCloseable {
         executor = CLOSED_EXECUTOR;
         closing.set(true);
         // what for all dispatched tasks to stop
-        while (running.compareAndSet(true, true));
+        while (running.compareAndSet(true, true)) {
+            Thread.yield();
+        }
         LOGGER.trace("closed!");
     }
     
@@ -236,25 +238,23 @@ public class Dispatcher implements AutoCloseable {
     
     private class DispatchCommand extends Command {
         private final AutoDataLoader dataLoader;
-        private final Thread requestor;
+        private final Thread owner;
 
         DispatchCommand (AutoDataLoader dataLoader) {
             Objects.requireNonNull(dataLoader);
             
-            synchronized (dataLoaders) {
-                Thread thread = dataLoaders.get(dataLoader);
-                if (thread == null)
-                    throw new IllegalArgumentException("Unknown DataLoader " + dataLoader);
-
-                this.dataLoader = dataLoader;
-                this.requestor = thread;
-            }
+            this.dataLoader = dataLoader;
+            this.owner = ownerOf(dataLoader);
+            if (owner == null)
+                throw new IllegalArgumentException("Unknown DataLoader " + dataLoader);
         }
         
         @Override
         protected void execute() {
             // wait while thread is running
-            while (closing.compareAndSet(false, false) && isRunning(requestor));
+            while (closing.compareAndSet(false, false) && !isWaiting(owner)) {
+                Thread.yield();
+            }
             
             // and now do the dispatch
             dataLoader.run();
@@ -264,7 +264,7 @@ public class Dispatcher implements AutoCloseable {
         public int hashCode() {
             int hash = 7;
             hash = 59 * hash + Objects.hashCode(this.dataLoader);
-            hash = 59 * hash + Objects.hashCode(this.requestor);
+            hash = 59 * hash + Objects.hashCode(this.owner);
             return hash;
         }
 
@@ -283,7 +283,7 @@ public class Dispatcher implements AutoCloseable {
             if (!Objects.equals(this.dataLoader, other.dataLoader)) {
                 return false;
             }
-            if (!Objects.equals(this.requestor, other.requestor)) {
+            if (!Objects.equals(this.owner, other.owner)) {
                 return false;
             }
             return true;
@@ -291,7 +291,7 @@ public class Dispatcher implements AutoCloseable {
 
         @Override
         public String toString() {
-            return "DispatchCommand{" + "dataLoader=" + dataLoader + ", owner=" + requestor + '}';
+            return "DispatchCommand{" + "dataLoader=" + dataLoader + ", owner=" + owner + '}';
         }
     }
 }
