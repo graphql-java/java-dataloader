@@ -8,7 +8,7 @@ package org.dataloader.nextgen;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
@@ -62,7 +62,7 @@ import org.slf4j.LoggerFactory;
 public class Dispatcher implements AutoCloseable {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean closing = new AtomicBoolean(false);
-    private final Map<AutoDataLoader, Thread> dataLoaders = new ConcurrentHashMap<>();
+    private final Map<AutoDataLoader, Thread> dataLoaders = new WeakHashMap<>();
     private final Queue<Command> commands = new ConcurrentLinkedQueue<>();
     private volatile Executor executor;
     private final BiFunction<Command, Executor, Command> invoker;
@@ -124,7 +124,9 @@ public class Dispatcher implements AutoCloseable {
     public Dispatcher register (AutoDataLoader dataLoader) {
         Objects.requireNonNull(dataLoader);
         
-        dataLoaders.put(dataLoader, Thread.currentThread());
+        synchronized (dataLoaders) {
+            dataLoaders.put(dataLoader, Thread.currentThread());
+        }
         return this;
     }
     
@@ -137,7 +139,9 @@ public class Dispatcher implements AutoCloseable {
     public Dispatcher unregister (AutoDataLoader dataLoader) {
         Objects.requireNonNull(dataLoader);
         
-        dataLoaders.remove(dataLoader);
+        synchronized (dataLoaders) {
+            dataLoaders.remove(dataLoader);
+        }
         return this;
     }
     
@@ -235,12 +239,14 @@ public class Dispatcher implements AutoCloseable {
         DispatchCommand (AutoDataLoader dataLoader) {
             Objects.requireNonNull(dataLoader);
             
-            Thread thread = dataLoaders.get(dataLoader);
-            if (thread == null)
-                throw new IllegalArgumentException("Unknown DataLoader " + dataLoader);
-            
-            this.dataLoader = dataLoader;
-            this.requestor = thread;
+            synchronized (dataLoaders) {
+                Thread thread = dataLoaders.get(dataLoader);
+                if (thread == null)
+                    throw new IllegalArgumentException("Unknown DataLoader " + dataLoader);
+
+                this.dataLoader = dataLoader;
+                this.requestor = thread;
+            }
         }
         
         @Override
