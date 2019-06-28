@@ -88,7 +88,7 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
         if (loaderOptions.batchingEnabled()) {
             LOGGER.trace("requesting dispatch for batched loader");
             resultCreator.accept(this);
-            dispatcher.addToBatch(this);
+            dispatcher.scheduleBatch(this);
         }
         
         return load;

@@ -145,7 +145,7 @@ public class Dispatcher implements AutoCloseable {
      * Requests to schedule batching for the specified data loader
      * @param dataLoader data loader to schedule dispatch
      */
-    public void addToBatch (AutoDataLoader dataLoader) {
+    public void scheduleBatch (AutoDataLoader dataLoader) {
         LOGGER.trace("dispatch requested for {}", dataLoader);
         request(new DispatchCommand(dataLoader));
     }
