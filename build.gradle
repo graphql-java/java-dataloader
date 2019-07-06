@@ -57,6 +57,7 @@ task myJavadocs(type: Javadoc) {
 dependencies {
     testCompile "junit:junit:$junitVersion"
     testCompile 'org.awaitility:awaitility:2.0.0'
+    testCompile 'com.github.ben-manes.caffeine:caffeine:2.7.0'
 }
 
 task wrapper(type: Wrapper) {

@@ -74,24 +74,24 @@ publishing {
     }
 }
 
-bintray {
-    user = System.getenv('BINTRAY_USER')
-    key = System.getenv('BINTRAY_KEY')
-    publications = ['maven']
-    publish = true
-    pkg {
-        userOrg = 'graphql-java'
-        repo = 'graphql-java'
-        name = "java-dataloader"
-        desc = projectDescription
-        licenses = ['Apache-2.0']
-        vcsUrl = 'https://github.com/graphql-java/java-dataloader.git'
-        version {
-            released = new Date()
-            vcsTag = project.version
-            gpg {
-                sign = true
+    bintray {
+        user = System.getenv('BINTRAY_USER')
+        key = System.getenv('BINTRAY_KEY')
+        publications = ['maven']
+        publish = true
+        pkg {
+            userOrg = 'graphql-java'
+            repo = 'graphql-java'
+            name = "java-dataloader"
+            desc = projectDescription
+            licenses = ['Apache-2.0']
+            vcsUrl = 'https://github.com/graphql-java/java-dataloader.git'
+            version {
+                released = new Date()
+                vcsTag = project.version
+                gpg {
+                    sign = true
+                }
             }
         }
     }
-}
