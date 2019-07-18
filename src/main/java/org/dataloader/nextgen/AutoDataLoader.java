@@ -5,14 +5,12 @@
  */
 package org.dataloader.nextgen;
 
+import java.util.ArrayList;
 import static java.util.Collections.emptyList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 import org.dataloader.BatchLoader;
 import org.dataloader.DataLoader;
 import org.slf4j.Logger;
@@ -27,9 +25,7 @@ import org.slf4j.LoggerFactory;
 public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, AutoCloseable {
     private final Dispatcher dispatcher;
     private volatile int requested;
-    private volatile List<V> received = emptyList();
     private volatile CompletableFuture<List<V>> result = completedFuture(emptyList());
-    private volatile Consumer<AutoDataLoader<K, V>> resultCreator = AutoDataLoader::newResult;
     
     private static final Logger LOGGER = LoggerFactory.getLogger(AutoDataLoader.class);
     
@@ -63,64 +59,41 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
     }
 
     private void newResult () {
-        requested = 0;
-        received = new CopyOnWriteArrayList<>();
-        result = new CompletableFuture<List<V>>();
-        resultCreator = o -> {};
+        result = new Result();
         LOGGER.debug("created new result future");
     }
-    
-    @Override
-    public CompletableFuture<List<V>> loadMany(List<K> keys, List<Object> keyContexts) {
-        LOGGER.debug("loadMany requested, keys={}", keys);
-        return dispatchIfNecessary(() -> super.loadMany(keys, keyContexts));
-    }
 
     @Override
-    public CompletableFuture<V> load(K key, Object keyContext) {
+    public synchronized CompletableFuture<V> load(K key, Object keyContext) {
         LOGGER.debug("load requested, key={}", key);
-        return dispatchIfNecessary(() -> super.load(key, keyContext));
-    }
+        CompletableFuture<V> load = super.load(key, keyContext);
 
-    private synchronized <E> CompletableFuture<E> dispatchIfNecessary (Supplier<CompletableFuture<E>> loader) {
-        CompletableFuture<E> load = loader.get();
-        
         if (loaderOptions.batchingEnabled()) {
             LOGGER.debug("requesting dispatch for batched loader");
-            resultCreator.accept(this);
+            // set read/modify/update fence here to ensure correct order of operations
+            if (++requested == 1) {
+                newResult();
+            }
+
             dispatcher.scheduleBatch(this);
         }
-        
+
         return load;
     }
-    
+
     @Override
     public void run() {        
         dispatchFully()
             .thenAccept(value -> {
-                received.addAll(value);
-                int receivedSize = received.size();
-                LOGGER.debug("completing...requested={}, received={}", requested, receivedSize);
-                if (requested == receivedSize) {
-                    if (!result.complete(received)) {
-                        LOGGER.debug("attempt to complete already completed result");
-                    }
-
-                    resultCreator = AutoDataLoader::newResult;
+                if (result.complete(value)) {
+                    requested = 0;
                     LOGGER.debug("run completed!");
                 }
             });
     }
 
     private CompletableFuture<List<V>> dispatchFully () {
-        int dispatchDepth;
-        synchronized (this) {
-            dispatchDepth = dispatchDepth();
-            requested += dispatchDepth;
-        }
-        LOGGER.debug("dispatchFully...dispatchDept={}, requested={}", dispatchDepth, requested);
-        
-        return (dispatchDepth > 0)
+        return (dispatchDepth() > 0)
             ? super.dispatch()
                 .thenCombine(dispatchFully(), (value, temp) -> {
                     value.addAll(temp);
@@ -128,15 +101,38 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
                 })
             : completedFuture(emptyList());
     }
+
+    @Override
+    public int dispatchDepth() {
+        int dispatchDepth = super.dispatchDepth();
+        LOGGER.debug("dispatchDept={}, requested={}", dispatchDepth, requested);
+        return dispatchDepth;
+    }
     
     
     @Override
-    public CompletableFuture<List<V>> dispatch() {
+    public synchronized CompletableFuture<List<V>> dispatch() {
         return result;
     }
     
     @Override
     public List<V> dispatchAndJoin() {
         return result.join();
+    }
+    
+    private class Result extends CompletableFuture<List<V>> {
+        @Override
+        public boolean complete(List<V> value) {
+            // set read fence here to ensure correct order of operations
+            int requestedCount = requested;
+            result.addAll(value);
+            int resultSize = result.size();
+            LOGGER.debug("completing...requested={}, received={}", requestedCount, resultSize);
+            
+            return requestedCount == resultSize &&
+                    super.complete(result);
+        }
+        
+        private final List<V> result = new ArrayList<>();
     }
 }

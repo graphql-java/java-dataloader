@@ -7,21 +7,20 @@ package org.dataloader.nextgen;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
-import java.util.concurrent.RecursiveAction;
-import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * "Magic" class to run AutoDataLoader batched dispatch mechanizm when
+ * "Magic" class to run AutoDataLoader batched dispatch mechanism when
  * the data loader client thread becomes awaiting for results. 
  * Upon the requestor starts waiting, the temporary dispatcher thread
  * kicks off and triggers AutoDataLoader.run method. Inferred load requests
@@ -141,8 +140,8 @@ public class Dispatcher implements AutoCloseable {
         return this;
     }
     
-    private synchronized Thread ownerOf (AutoDataLoader dataLoader) {
-        return dataLoaders.get(dataLoader);
+    private synchronized Optional<Thread> ownerOf (AutoDataLoader dataLoader) {
+        return Optional.ofNullable(dataLoaders.get(dataLoader));
     }
     
     /**
@@ -178,53 +177,58 @@ public class Dispatcher implements AutoCloseable {
 
     @Override
     public void close() {
-        LOGGER.debug("close requested...");
-        // close executor
-        executor = CLOSED_EXECUTOR;
-        closing.set(true);
-        // what for all dispatched tasks to stop
-        while (running.compareAndSet(true, true)) {
-            Thread.yield();
+        if (closing.compareAndSet(false, true)) {
+            LOGGER.debug("close requested...");
+            // close executor
+            executor = CLOSED_EXECUTOR;
+            
+            // what for all dispatched tasks to stop
+            while (running.compareAndSet(true, true)) {
+//                Thread.yield();
+            }
+            LOGGER.debug("closed!");
         }
-        LOGGER.debug("closed!");
     }
     
-    protected abstract class Command extends RecursiveAction implements RunnableFuture<Void> {
+    protected abstract class Command implements Runnable {
         protected abstract void execute ();
                 
         @Override
-        protected void compute() {
-            try {
+        public void run() {
+            try {                
                 LOGGER.debug("executing command {}", this);
+                
                 execute();
             } finally {
                 Command next = next();
+//                Command next = commands.poll();
                 if (next != null) {
                     LOGGER.debug("scheduling next command {}", next);
                     invoker.apply(next, executor);
                 } else {
                     LOGGER.debug("no more commands");
-                    running.lazySet(false);
+                    running.set(false);
                 }
+                
                 LOGGER.debug("finished command {}", this);
             }            
         }
-
+        
         protected Command next () {
             Command next;
-            while ((next = commands.poll()) != null && equals(next));
+            while ((next = commands.poll()) != null && skip(next));
             
             return next;
         }
         
-        @Override
-        public void run() {
-            invoke();
+        protected boolean skip (Command next) {
+            return equals(next);
         }
         
         public Command forkWith (Executor executor) {
             if (ForkJoinTask.inForkJoinPool()) {
-                return (Command)fork();
+                ForkJoinTask.adapt(this).fork();
+                return this;
             } else {
                 return executeWith(executor);
             }
@@ -244,20 +248,24 @@ public class Dispatcher implements AutoCloseable {
             Objects.requireNonNull(dataLoader);
             
             this.dataLoader = dataLoader;
-            this.owner = ownerOf(dataLoader);
-            if (owner == null)
-                throw new IllegalArgumentException("Unknown DataLoader " + dataLoader);
+            this.owner = ownerOf(dataLoader)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown DataLoader " + dataLoader));
         }
         
         @Override
         protected void execute() {
             // wait while thread is running
             while (closing.compareAndSet(false, false) && !isWaiting(owner)) {
-                Thread.yield();
+//                Thread.yield();
             }
             
             // and now do the dispatch
             dataLoader.run();
+        }
+
+        @Override
+        protected boolean skip(Command next) {
+            return dataLoader.dispatchDepth() == 0 && super.skip(next);
         }
 
         @Override
