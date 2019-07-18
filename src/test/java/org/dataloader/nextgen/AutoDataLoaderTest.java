@@ -975,9 +975,9 @@ public class AutoDataLoaderTest {
 
 //        identityLoader.dispatchAndJoin();
 
-        assertThat(loadCalls, equalTo(
-                singletonList(asList("a", "b", "c", "d"))));
-//        assertThat(flatList(loadCalls), equalTo(asList("a", "b", "c", "d")));
+//        assertThat(loadCalls, equalTo(
+//                singletonList(asList("a", "b", "c", "d"))));
+        assertThat(flatList(loadCalls), equalTo(asList("a", "b", "c", "d")));
     }
     
     @Test
