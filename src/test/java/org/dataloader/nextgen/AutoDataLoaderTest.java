@@ -971,14 +971,13 @@ public class AutoDataLoaderTest {
 
         LOGGER.debug("awaiting for v4Called == true ...");
         await().untilTrue(v4Called);
-//        await().until(d::isDone);
         LOGGER.debug("woke up!");
 
 //        identityLoader.dispatchAndJoin();
 
-//        assertThat(loadCalls, equalTo(
-//                singletonList(asList("a", "b", "c", "d"))));
-        assertThat(flatList(loadCalls), equalTo(asList("a", "b", "c", "d")));
+        assertThat(loadCalls, equalTo(
+                singletonList(asList("a", "b", "c", "d"))));
+//        assertThat(flatList(loadCalls), equalTo(asList("a", "b", "c", "d")));
     }
     
     @Test

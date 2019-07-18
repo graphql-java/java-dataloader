@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,20 +59,20 @@ import org.slf4j.LoggerFactory;
  * @author <a href="https://github.com/gkesler/">Greg Kesler</a>
  */
 public class Dispatcher implements AutoCloseable {
-    private final AtomicBoolean running = new AtomicBoolean(false);
-    private final AtomicBoolean closing = new AtomicBoolean(false);
+    private final AtomicReference<State> state = new AtomicReference<>(State.Idle);
     private final Map<AutoDataLoader, Thread> dataLoaders = new WeakHashMap<>();
     private final Queue<Command> commands = new ConcurrentLinkedQueue<>();
-    private volatile Executor executor;
+    private final Executor executor;
     private final BiFunction<Command, Executor, Command> invoker;
 
-    private static final Executor CLOSED_EXECUTOR = new Executor() {
-        @Override
-        public void execute(Runnable command) {
-            throw new IllegalStateException("Can't execute new command, Dispatcher is closed");
-        }
-    };
     private static final Logger LOGGER = LoggerFactory.getLogger(Dispatcher.class);
+    
+    private enum State {
+        Idle,
+        Running,
+        Closing,
+        Closed
+    }
     
     /**
      * Creates a new instance with specified Executor.
@@ -156,12 +156,14 @@ public class Dispatcher implements AutoCloseable {
     protected void request (Command command) {
         Objects.requireNonNull(command);
         
-        if (running.compareAndSet(false, true)) {
+        if (state.compareAndSet(State.Idle, State.Running)) {
             LOGGER.debug("scheduling execution for {}", command);
             invoker.apply(command, executor);
-        } else {
+        } else if (state.get() == State.Running) {
             LOGGER.debug("enqued command {}", command);
             commands.offer(command);
+        } else {
+            throw new IllegalStateException("Dispatcher is closed");
         }
     } 
             
@@ -177,17 +179,15 @@ public class Dispatcher implements AutoCloseable {
 
     @Override
     public void close() {
-        if (closing.compareAndSet(false, true)) {
+        if (state.compareAndSet(State.Running, State.Closing)) {
             LOGGER.debug("close requested...");
-            // close executor
-            executor = CLOSED_EXECUTOR;
-            
-            // what for all dispatched tasks to stop
-            while (running.compareAndSet(true, true)) {
-//                Thread.yield();
-            }
-            LOGGER.debug("closed!");
+
+            while (state.get() == State.Closing);
         }
+        
+        state.set(State.Closed);
+
+        LOGGER.debug("closed!");
     }
     
     protected abstract class Command implements Runnable {
@@ -201,13 +201,12 @@ public class Dispatcher implements AutoCloseable {
                 execute();
             } finally {
                 Command next = next();
-//                Command next = commands.poll();
                 if (next != null) {
                     LOGGER.debug("scheduling next command {}", next);
                     invoker.apply(next, executor);
                 } else {
                     LOGGER.debug("no more commands");
-                    running.set(false);
+                    state.set(State.Idle);
                 }
                 
                 LOGGER.debug("finished command {}", this);
@@ -255,12 +254,13 @@ public class Dispatcher implements AutoCloseable {
         @Override
         protected void execute() {
             // wait while thread is running
-            while (closing.compareAndSet(false, false) && !isWaiting(owner)) {
-//                Thread.yield();
-            }
+            State s;
+            while ((s = state.get()) == State.Running && !isWaiting(owner));
             
-            // and now do the dispatch
-            dataLoader.run();
+            if (s == State.Running) {
+                // and now do the dispatch
+                dataLoader.run();
+            }
         }
 
         @Override
