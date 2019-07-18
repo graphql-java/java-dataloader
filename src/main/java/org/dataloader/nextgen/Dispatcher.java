@@ -13,9 +13,7 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.function.BiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,11 +56,10 @@ import org.slf4j.LoggerFactory;
  * 
  * @author <a href="https://github.com/gkesler/">Greg Kesler</a>
  */
-public class Dispatcher implements AutoCloseable {
+public class Dispatcher implements Runnable, AutoCloseable {
     private final Map<AutoDataLoader, Thread> dataLoaders = new WeakHashMap<>();
     private final Queue<Command> commands = new ConcurrentLinkedQueue<>();
     private final Executor executor;
-    private final BiFunction<Command, Executor, Command> invoker;
     private volatile int state = IDLE;
     
     private static final int IDLE = 0;
@@ -75,36 +72,21 @@ public class Dispatcher implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(Dispatcher.class);
     
     /**
-     * Creates a new instance with specified Executor.
-     * 
-     * @param executor executor to run Dispatcher tasks
-     */
-    public Dispatcher (Executor executor) {
-        this(executor, Command::executeWith);
-    }
-    
-    /**
-     * Creates a new instance with specified ForkJoinPool.
-     * 
-     * @param executor executor to run Dispatcher tasks
-     */
-    public Dispatcher (ForkJoinPool executor) {
-        this(executor, Command::forkWith);
-    }
-
-    /**
      * Creates a new instance that uses ForkJoinPool.commonPool()
      */
     public Dispatcher () {
         this(ForkJoinPool.commonPool());
     }
     
-    private Dispatcher (Executor executor, BiFunction<Command, Executor, Command> invoker) {
+    /**
+     * Creates a new instance with specified Executor.
+     * 
+     * @param executor executor to run Dispatcher tasks
+     */
+    public Dispatcher (Executor executor) {
         Objects.requireNonNull(executor);
-        Objects.requireNonNull(invoker);
         
         this.executor = executor;
-        this.invoker = invoker;
     }
 
     @Override
@@ -156,14 +138,11 @@ public class Dispatcher implements AutoCloseable {
     protected void request (Command command) {
         Objects.requireNonNull(command);
         
+        commands.offer(command);
         if (STATE.compareAndSet(this, IDLE, RUNNING)) {
-            LOGGER.debug("scheduling execution for {}", command);
-            invoker.apply(command, executor);
-        } else if (state == RUNNING) {
-            LOGGER.debug("enqued command {}", command);
-            commands.offer(command);
-        } else {
-            throw new IllegalStateException("Dispatcher is closed");
+            LOGGER.debug("scheduling execution for pended commands");
+            executor.execute(this);
+            // FIXME: should I allow multithreaded dispatch for different dataloaders?
         }
     } 
             
@@ -180,63 +159,48 @@ public class Dispatcher implements AutoCloseable {
     @Override
     public void close() {
         if (STATE.compareAndSet(this, RUNNING, CLOSING)) {
+            request(new CloseCommand());
             LOGGER.debug("close requested...");
 
             int s;
-            while ((s = state) == CLOSING);
+            while ((s = state) != CLOSED);
+        } else {
+            state = CLOSED;
         }
-        
-        state = CLOSED;
 
         LOGGER.debug("closed!");
+    }
+
+    @Override
+    public void run() {
+        try {
+            int s;
+            Command command;            
+            while ((s = state) == RUNNING && (command = commands.poll()) != null) {
+                command.run();                
+            }
+        } finally {
+            LOGGER.debug("no more commands");
+            STATE.compareAndSet(this, RUNNING, IDLE);
+        }
     }
     
     protected abstract class Command implements Runnable {
         protected abstract void execute ();
+        protected void handle (Throwable e) {
+            LOGGER.warn("{}", e);
+        }
                 
         @Override
         public void run() {
             try {                
-                LOGGER.debug("executing command {}", this);
-                
+                LOGGER.debug("executing command {}", this);                
                 execute();
+            } catch (Throwable e) {
+                handle(e);
             } finally {
-                Command next = next();
-                if (next != null) {
-                    LOGGER.debug("scheduling next command {}", next);
-                    invoker.apply(next, executor);
-                } else {
-                    LOGGER.debug("no more commands");
-                    state = IDLE;
-                }
-                
                 LOGGER.debug("finished command {}", this);
             }            
-        }
-        
-        protected Command next () {
-            Command next;
-            while ((next = commands.poll()) != null && skip(next));
-            
-            return next;
-        }
-        
-        protected boolean skip (Command next) {
-            return equals(next);
-        }
-        
-        public Command forkWith (Executor executor) {
-            if (ForkJoinTask.inForkJoinPool()) {
-                ForkJoinTask.adapt(this).fork();
-                return this;
-            } else {
-                return executeWith(executor);
-            }
-        }
-        
-        public Command executeWith (Executor executor) {
-            executor.execute(this);
-            return this;
         }
     }
     
@@ -254,53 +218,31 @@ public class Dispatcher implements AutoCloseable {
         
         @Override
         protected void execute() {
-            // wait while thread is running
-            int s;
-            while ((s = state) == RUNNING && !isWaiting(owner));
-            
-            if (s == RUNNING) {
+            if (!isWaiting(owner)) {
+                // wait while thread is running
+                commands.offer(this);
+            } else {
                 // and now do the dispatch
                 dataLoader.run();
             }
         }
 
         @Override
-        protected boolean skip(Command next) {
-            return dataLoader.dispatchDepth() == 0 && super.skip(next);
+        public String toString() {
+            return "DispatchCommand{" + "dataLoader=" + dataLoader + ", owner=" + owner + '}';
         }
-
+    }
+    
+    private class CloseCommand extends Command {
         @Override
-        public int hashCode() {
-            int hash = 7;
-            hash = 59 * hash + Objects.hashCode(this.dataLoader);
-            hash = 59 * hash + Objects.hashCode(this.owner);
-            return hash;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final DispatchCommand other = (DispatchCommand) obj;
-            if (!Objects.equals(this.dataLoader, other.dataLoader)) {
-                return false;
-            }
-            if (!Objects.equals(this.owner, other.owner)) {
-                return false;
-            }
-            return true;
+        protected void execute() {
+            commands.clear();
+            STATE.lazySet(Dispatcher.this, CLOSED);
         }
 
         @Override
         public String toString() {
-            return "DispatchCommand{" + "dataLoader=" + dataLoader + ", owner=" + owner + '}';
+            return "CloseCommand{" + '}';
         }
     }
 }
