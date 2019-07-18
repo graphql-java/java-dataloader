@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,20 +59,20 @@ import org.slf4j.LoggerFactory;
  * @author <a href="https://github.com/gkesler/">Greg Kesler</a>
  */
 public class Dispatcher implements AutoCloseable {
-    private final AtomicReference<State> state = new AtomicReference<>(State.Idle);
     private final Map<AutoDataLoader, Thread> dataLoaders = new WeakHashMap<>();
     private final Queue<Command> commands = new ConcurrentLinkedQueue<>();
     private final Executor executor;
     private final BiFunction<Command, Executor, Command> invoker;
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(Dispatcher.class);
+    private volatile int state = IDLE;
     
-    private enum State {
-        Idle,
-        Running,
-        Closing,
-        Closed
-    }
+    private static final int IDLE = 0;
+    private static final int RUNNING = 1;
+    private static final int CLOSING = 2;
+    private static final int CLOSED = 3;
+    private static final AtomicIntegerFieldUpdater<Dispatcher> STATE = AtomicIntegerFieldUpdater
+        .newUpdater(Dispatcher.class, "state");
+    
+    private static final Logger LOGGER = LoggerFactory.getLogger(Dispatcher.class);
     
     /**
      * Creates a new instance with specified Executor.
@@ -156,10 +156,10 @@ public class Dispatcher implements AutoCloseable {
     protected void request (Command command) {
         Objects.requireNonNull(command);
         
-        if (state.compareAndSet(State.Idle, State.Running)) {
+        if (STATE.compareAndSet(this, IDLE, RUNNING)) {
             LOGGER.debug("scheduling execution for {}", command);
             invoker.apply(command, executor);
-        } else if (state.get() == State.Running) {
+        } else if (state == RUNNING) {
             LOGGER.debug("enqued command {}", command);
             commands.offer(command);
         } else {
@@ -179,13 +179,14 @@ public class Dispatcher implements AutoCloseable {
 
     @Override
     public void close() {
-        if (state.compareAndSet(State.Running, State.Closing)) {
+        if (STATE.compareAndSet(this, RUNNING, CLOSING)) {
             LOGGER.debug("close requested...");
 
-            while (state.get() == State.Closing);
+            int s;
+            while ((s = state) == CLOSING);
         }
         
-        state.set(State.Closed);
+        state = CLOSED;
 
         LOGGER.debug("closed!");
     }
@@ -206,7 +207,7 @@ public class Dispatcher implements AutoCloseable {
                     invoker.apply(next, executor);
                 } else {
                     LOGGER.debug("no more commands");
-                    state.set(State.Idle);
+                    state = IDLE;
                 }
                 
                 LOGGER.debug("finished command {}", this);
@@ -254,10 +255,10 @@ public class Dispatcher implements AutoCloseable {
         @Override
         protected void execute() {
             // wait while thread is running
-            State s;
-            while ((s = state.get()) == State.Running && !isWaiting(owner));
+            int s;
+            while ((s = state) == RUNNING && !isWaiting(owner));
             
-            if (s == State.Running) {
+            if (s == RUNNING) {
                 // and now do the dispatch
                 dataLoader.run();
             }
