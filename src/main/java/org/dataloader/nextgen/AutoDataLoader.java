@@ -58,7 +58,7 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
         dispatcher.unregister(this);
     }
 
-    private void newResult () {
+    private synchronized void newResult () {
         result = new Result();
         LOGGER.debug("created new result future");
     }
@@ -85,9 +85,11 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
     public void run() {        
         dispatchFully()
             .thenAccept(value -> {
-                if (result.complete(value)) {
-                    requested = 0;
-                    LOGGER.debug("run completed!");
+                synchronized (this) {
+                    if (result.complete(value)) {
+                        requested = 0;
+                        LOGGER.debug("run completed!");
+                    }
                 }
             });
     }
@@ -117,7 +119,7 @@ public class AutoDataLoader<K, V> extends DataLoader<K, V> implements Runnable, 
     
     @Override
     public List<V> dispatchAndJoin() {
-        return result.join();
+        return dispatch().join();
     }
     
     private class Result extends CompletableFuture<List<V>> {

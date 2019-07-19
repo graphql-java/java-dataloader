@@ -60,12 +60,13 @@ public class Dispatcher implements Runnable, AutoCloseable {
     private final Map<AutoDataLoader, Thread> dataLoaders = new WeakHashMap<>();
     private final Queue<Command> commands = new ConcurrentLinkedQueue<>();
     private final Executor executor;
-    private volatile int state = IDLE;
     
     private static final int IDLE = 0;
     private static final int RUNNING = 1;
     private static final int CLOSING = 2;
     private static final int CLOSED = 3;
+    
+    private volatile int state = IDLE;    
     private static final AtomicIntegerFieldUpdater<Dispatcher> STATE = AtomicIntegerFieldUpdater
         .newUpdater(Dispatcher.class, "state");
     
