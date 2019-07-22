@@ -164,11 +164,10 @@ public class Dispatcher implements Runnable, AutoCloseable {
             LOGGER.debug("close requested...");
 
             int s;
-            while ((s = state) != CLOSED);
-        } else {
-            state = CLOSED;
+            while ((s = state) == CLOSING);
         }
 
+        state = CLOSED;
         LOGGER.debug("closed!");
     }
 
