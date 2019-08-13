@@ -1,9 +1,8 @@
 package org.dataloader;
 
+import java.util.concurrent.CompletableFuture;
 import org.dataloader.stats.Statistics;
 import org.junit.Test;
-
-import java.util.concurrent.CompletableFuture;
 
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.equalTo;
@@ -101,4 +100,35 @@ public class DataLoaderRegistryTest {
         assertThat(statistics.getLoadErrorCount(), equalTo(0L));
         assertThat(statistics.getBatchLoadExceptionCount(), equalTo(0L));
     }
+
+    @Test
+    public void computeIfAbsent_creates_a_data_loader_if_there_was_no_value_at_key() {
+
+        DataLoaderRegistry registry = new DataLoaderRegistry();
+
+        DataLoader<Object, Object> dlA = new DataLoader<>(identityBatchLoader);
+        DataLoader<Object, Object> registered = registry.computeIfAbsent("a", (key) -> dlA);
+
+        assertThat(registered, equalTo(dlA));
+        assertThat(registry.getKeys(), hasItems("a"));
+        assertThat(registry.getDataLoaders(), hasItems(dlA));
+    }
+
+    @Test
+    public void computeIfAbsent_returns_an_existing_data_loader_if_there_was_a_value_at_key() {
+
+        DataLoaderRegistry registry = new DataLoaderRegistry();
+
+        DataLoader<Object, Object> dlA = new DataLoader<>(identityBatchLoader);
+        registry.computeIfAbsent("a", (key) -> dlA);
+
+        // register again at same key
+        DataLoader<Object, Object> dlA2 = new DataLoader<>(identityBatchLoader);
+        DataLoader<Object, Object> registered = registry.computeIfAbsent("a", (key) -> dlA2);
+
+        assertThat(registered, equalTo(dlA));
+        assertThat(registry.getKeys(), hasItems("a"));
+        assertThat(registry.getDataLoaders(), hasItems(dlA));
+    }
+
 }

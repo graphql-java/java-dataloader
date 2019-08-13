@@ -1,13 +1,13 @@
 package org.dataloader;
 
-import org.dataloader.stats.Statistics;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import org.dataloader.stats.Statistics;
 
 /**
  * This allows data loaders to be registered together into a single place so
@@ -28,6 +28,26 @@ public class DataLoaderRegistry {
     public DataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader) {
         dataLoaders.put(key, dataLoader);
         return this;
+    }
+
+    /**
+     * Computes a data loader if absent or return it if it was
+     * already registered at that key.
+     *
+     * Note: The entire method invocation is performed atomically,
+     * so the function is applied at most once per key.
+     *
+     * @param key the key of the data loader
+     * @param mappingFunction the function to compute a data loader
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     *
+     * @return a data loader
+     */
+    @SuppressWarnings("unchecked")
+    public <K, V> DataLoader<K, V> computeIfAbsent(final String key,
+                                                   final Function<String, DataLoader<?, ?>> mappingFunction) {
+        return (DataLoader<K, V>) dataLoaders.computeIfAbsent(key, mappingFunction);
     }
 
     /**
