@@ -44,7 +44,7 @@ public class CompletableFutureKit {
     }
 
     public static <T> CompletableFuture<List<T>> allOf(List<CompletableFuture<T>> cfs) {
-        return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[cfs.size()]))
+        return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0]))
                 .thenApply(v -> cfs.stream()
                         .map(CompletableFuture::join)
                         .collect(toList())
