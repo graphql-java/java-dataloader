@@ -23,6 +23,7 @@ import org.dataloader.stats.StatisticsCollector;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static org.dataloader.impl.Assertions.nonNull;
@@ -381,21 +382,30 @@ public class DataLoader<K, V> {
         return load(key, null);
     }
 
-    /**
-     * Requests to load the data with the specified key asynchronously, and returns a future of the resulting value.
-     * <p>
-     * If batching is enabled (the default), you'll have to call {@link DataLoader#dispatch()} at a later stage to
-     * start batch execution. If you forget this call the future will never be completed (unless already completed,
-     * and returned from cache).
-     * <p>
-     * The key context object may be useful in the batch loader interfaces such as {@link org.dataloader.BatchLoaderWithContext} or
-     * {@link org.dataloader.MappedBatchLoaderWithContext} to help retrieve data.
-     *
-     * @param key        the key to load
-     * @param keyContext a context object that is specific to this key
-     *
-     * @return the future of the value
-     */
+    public Optional<CompletableFuture<V>> getIfPresent(K key) {
+        return helper.getIfPresent(key);
+    }
+
+    public Optional<CompletableFuture<V>> getIfCompleted(K key) {
+        return helper.getIfCompleted(key);
+    }
+
+
+        /**
+         * Requests to load the data with the specified key asynchronously, and returns a future of the resulting value.
+         * <p>
+         * If batching is enabled (the default), you'll have to call {@link DataLoader#dispatch()} at a later stage to
+         * start batch execution. If you forget this call the future will never be completed (unless already completed,
+         * and returned from cache).
+         * <p>
+         * The key context object may be useful in the batch loader interfaces such as {@link org.dataloader.BatchLoaderWithContext} or
+         * {@link org.dataloader.MappedBatchLoaderWithContext} to help retrieve data.
+         *
+         * @param key        the key to load
+         * @param keyContext a context object that is specific to this key
+         *
+         * @return the future of the value
+         */
     public CompletableFuture<V> load(K key, Object keyContext) {
         return helper.load(key, keyContext);
     }

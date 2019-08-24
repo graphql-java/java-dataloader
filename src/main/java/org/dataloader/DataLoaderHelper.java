@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -26,6 +27,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  * @param <V> the type of values
  */
 class DataLoaderHelper<K, V> {
+
 
     class LoaderQueueEntry<K, V> {
 
@@ -67,6 +69,34 @@ class DataLoaderHelper<K, V> {
         this.loaderQueue = new ArrayList<>();
         this.stats = stats;
     }
+
+    Optional<CompletableFuture<V>> getIfPresent(K key) {
+        synchronized (dataLoader) {
+            Object cacheKey = getCacheKey(nonNull(key));
+            boolean cachingEnabled = loaderOptions.cachingEnabled();
+            if (cachingEnabled) {
+                if (futureCache.containsKey(cacheKey)) {
+                    stats.incrementCacheHitCount();
+                    return Optional.of(futureCache.get(cacheKey));
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    Optional<CompletableFuture<V>> getIfCompleted(K key) {
+        synchronized (dataLoader) {
+            Optional<CompletableFuture<V>> cachedPromise = getIfPresent(key);
+            if (cachedPromise.isPresent()) {
+                CompletableFuture<V> promise = cachedPromise.get();
+                if (promise.isDone()) {
+                    return cachedPromise;
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
 
     CompletableFuture<V> load(K key, Object loadContext) {
         synchronized (dataLoader) {
