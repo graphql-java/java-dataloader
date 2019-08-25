@@ -461,7 +461,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.graphql-java:java-dataloader: 2.1.1'
+    compile 'com.graphql-java:java-dataloader: 2.2.3'
 }
 ```
 
