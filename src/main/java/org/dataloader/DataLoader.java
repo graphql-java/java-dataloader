@@ -361,12 +361,14 @@ public class DataLoader<K, V> {
     }
 
     /**
-     * This will return an optional promise to a value previously loaded via {@link #load(Object)} call or empty if not call has been made for that key.
+     * This will return an optional promise to a value previously loaded via a {@link #load(Object)} call or empty if not call has been made for that key.
      * <p>
      * If you do get a present CompletableFuture it does not mean it has been dispatched and completed yet.  It just means
-     * its at least pending and in cache.  Of course if caching is disabled there will never be a present Optional returned.
+     * its at least pending and in cache.
      * <p>
-     * NOTE : This will NOT cause a data load to happen.  You must called {@link #load(Object)} for that.
+     * If caching is disabled there will never be a present Optional returned.
+     * <p>
+     * NOTE : This will NOT cause a data load to happen.  You must called {@link #load(Object)} for that to happen.
      *
      * @param key the key to check
      * @return an Optional to the future of the value
@@ -376,12 +378,15 @@ public class DataLoader<K, V> {
     }
 
     /**
-     * This will return an optional promise to a value previously loaded via {@link #load(Object)} call that has in fact been completed or empty
+     * This will return an optional promise to a value previously loaded via a {@link #load(Object)} call that has in fact been completed or empty
      * if no call has been made for that key or the promise has not completed yet.
      * <p>
-     * If you do get a present CompletableFuture it means it has been dispatched and completed.
+     * If you do get a present CompletableFuture it means it has been dispatched and completed.  Completed is defined as
+     * {@link java.util.concurrent.CompletableFuture#isDone()} returning true.
      * <p>
-     * NOTE : This will NOT cause a data load to happen.  You must called {@link #load(Object)} for that.
+     * If caching is disabled there will never be a present Optional returned.
+     * <p>
+     * NOTE : This will NOT cause a data load to happen.  You must called {@link #load(Object)} for that to happen.
      *
      * @param key the key to check
      * @return an Optional to the future of the value
