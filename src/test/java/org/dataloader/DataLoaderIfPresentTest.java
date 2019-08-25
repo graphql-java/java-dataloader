@@ -47,10 +47,9 @@ public class DataLoaderIfPresentTest {
     public void should_not_be_present_if_cleared() {
         DataLoader<Integer, Integer> dataLoader = new DataLoader<>(keysAsValues());
 
-        Optional<CompletableFuture<Integer>> cachedPromise = dataLoader.getIfPresent(1);
         dataLoader.load(1);
 
-        cachedPromise = dataLoader.getIfPresent(1);
+        Optional<CompletableFuture<Integer>> cachedPromise = dataLoader.getIfPresent(1);
         assertThat(cachedPromise.isPresent(), equalTo(true));
 
         dataLoader.clear(1);
@@ -67,10 +66,9 @@ public class DataLoaderIfPresentTest {
     public void should_allow_completed_cfs_to_be_found() {
         DataLoader<Integer, Integer> dataLoader = new DataLoader<>(keysAsValues());
 
-        Optional<CompletableFuture<Integer>> cachedPromise = dataLoader.getIfPresent(1);
         dataLoader.load(1);
 
-        cachedPromise = dataLoader.getIfPresent(1);
+        Optional<CompletableFuture<Integer>> cachedPromise = dataLoader.getIfPresent(1);
         assertThat(cachedPromise.isPresent(), equalTo(true));
 
         cachedPromise = dataLoader.getIfCompleted(1);
@@ -89,7 +87,7 @@ public class DataLoaderIfPresentTest {
     @Test
     public void should_work_with_primed_caches() {
         DataLoader<Integer, Integer> dataLoader = new DataLoader<>(keysAsValues());
-        dataLoader.prime(1, 666);
+        dataLoader.prime(1, 666).prime(2, 999);
 
         Optional<CompletableFuture<Integer>> cachedPromise = dataLoader.getIfPresent(1);
         assertThat(cachedPromise.isPresent(), equalTo(true));

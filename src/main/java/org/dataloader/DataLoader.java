@@ -51,7 +51,6 @@ import static org.dataloader.impl.Assertions.nonNull;
  *
  * @param <K> type parameter indicating the type of the data load keys
  * @param <V> type parameter indicating the type of the data that is returned
- *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
@@ -69,7 +68,6 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newDataLoader(BatchLoader<K, V> batchLoadFunction) {
@@ -83,7 +81,6 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newDataLoader(BatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
@@ -104,7 +101,6 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoader<K, Try<V>> batchLoadFunction) {
@@ -120,9 +116,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @see #newDataLoaderWithTry(BatchLoader)
      */
     @SuppressWarnings("unchecked")
@@ -137,7 +131,6 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newDataLoader(BatchLoaderWithContext<K, V> batchLoadFunction) {
@@ -151,7 +144,6 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newDataLoader(BatchLoaderWithContext<K, V> batchLoadFunction, DataLoaderOptions options) {
@@ -172,7 +164,6 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoaderWithContext<K, Try<V>> batchLoadFunction) {
@@ -188,9 +179,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @see #newDataLoaderWithTry(BatchLoader)
      */
     public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoaderWithContext<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
@@ -204,7 +193,6 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoader<K, V> batchLoadFunction) {
@@ -218,7 +206,6 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
@@ -232,7 +219,7 @@ public class DataLoader<K, V> {
      * <p>
      * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
-     *
+     * <p>
      * Using Try objects allows you to capture a value returned or an exception that might
      * have occurred trying to get a value. .
      * <p>
@@ -240,7 +227,6 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoader<K, Try<V>> batchLoadFunction) {
@@ -256,9 +242,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @see #newDataLoaderWithTry(BatchLoader)
      */
     @SuppressWarnings("unchecked")
@@ -273,7 +257,6 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoaderWithContext<K, V> batchLoadFunction) {
@@ -287,7 +270,6 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoaderWithContext<K, V> batchLoadFunction, DataLoaderOptions options) {
@@ -308,7 +290,6 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoaderWithContext<K, Try<V>> batchLoadFunction) {
@@ -324,9 +305,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @see #newDataLoaderWithTry(BatchLoader)
      */
     @SuppressWarnings("unchecked")
@@ -375,37 +354,57 @@ public class DataLoader<K, V> {
      * and returned from cache).
      *
      * @param key the key to load
-     *
      * @return the future of the value
      */
     public CompletableFuture<V> load(K key) {
         return load(key, null);
     }
 
+    /**
+     * This will return an optional promise to a value previously loaded via {@link #load(Object)} call or empty if not call has been made for that key.
+     * <p>
+     * If you do get a present CompletableFuture it does not mean it has been dispatched and completed yet.  It just means
+     * its at least pending and in cache.  Of course if caching is disabled there will never be a present Optional returned.
+     * <p>
+     * NOTE : This will NOT cause a data load to happen.  You must called {@link #load(Object)} for that.
+     *
+     * @param key the key to check
+     * @return an Optional to the future of the value
+     */
     public Optional<CompletableFuture<V>> getIfPresent(K key) {
         return helper.getIfPresent(key);
     }
 
+    /**
+     * This will return an optional promise to a value previously loaded via {@link #load(Object)} call that has in fact been completed or empty
+     * if no call has been made for that key or the promise has not completed yet.
+     * <p>
+     * If you do get a present CompletableFuture it means it has been dispatched and completed.
+     * <p>
+     * NOTE : This will NOT cause a data load to happen.  You must called {@link #load(Object)} for that.
+     *
+     * @param key the key to check
+     * @return an Optional to the future of the value
+     */
     public Optional<CompletableFuture<V>> getIfCompleted(K key) {
         return helper.getIfCompleted(key);
     }
 
 
-        /**
-         * Requests to load the data with the specified key asynchronously, and returns a future of the resulting value.
-         * <p>
-         * If batching is enabled (the default), you'll have to call {@link DataLoader#dispatch()} at a later stage to
-         * start batch execution. If you forget this call the future will never be completed (unless already completed,
-         * and returned from cache).
-         * <p>
-         * The key context object may be useful in the batch loader interfaces such as {@link org.dataloader.BatchLoaderWithContext} or
-         * {@link org.dataloader.MappedBatchLoaderWithContext} to help retrieve data.
-         *
-         * @param key        the key to load
-         * @param keyContext a context object that is specific to this key
-         *
-         * @return the future of the value
-         */
+    /**
+     * Requests to load the data with the specified key asynchronously, and returns a future of the resulting value.
+     * <p>
+     * If batching is enabled (the default), you'll have to call {@link DataLoader#dispatch()} at a later stage to
+     * start batch execution. If you forget this call the future will never be completed (unless already completed,
+     * and returned from cache).
+     * <p>
+     * The key context object may be useful in the batch loader interfaces such as {@link org.dataloader.BatchLoaderWithContext} or
+     * {@link org.dataloader.MappedBatchLoaderWithContext} to help retrieve data.
+     *
+     * @param key        the key to load
+     * @param keyContext a context object that is specific to this key
+     * @return the future of the value
+     */
     public CompletableFuture<V> load(K key, Object keyContext) {
         return helper.load(key, keyContext);
     }
@@ -419,7 +418,6 @@ public class DataLoader<K, V> {
      * and returned from cache).
      *
      * @param keys the list of keys to load
-     *
      * @return the composite future of the list of values
      */
     public CompletableFuture<List<V>> loadMany(List<K> keys) {
@@ -439,7 +437,6 @@ public class DataLoader<K, V> {
      *
      * @param keys        the list of keys to load
      * @param keyContexts the list of key calling context objects
-     *
      * @return the composite future of the list of values
      */
     public CompletableFuture<List<V>> loadMany(List<K> keys, List<Object> keyContexts) {
@@ -505,7 +502,6 @@ public class DataLoader<K, V> {
      * on the next load request.
      *
      * @param key the key to remove
-     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clear(K key) {
@@ -533,7 +529,6 @@ public class DataLoader<K, V> {
      *
      * @param key   the key
      * @param value the value
-     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, V value) {
@@ -551,7 +546,6 @@ public class DataLoader<K, V> {
      *
      * @param key   the key
      * @param error the exception to prime instead of a value
-     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, Exception error) {
@@ -569,7 +563,6 @@ public class DataLoader<K, V> {
      * If no cache key function is present in {@link DataLoaderOptions}, then the returned value equals the input key.
      *
      * @param key the input key
-     *
      * @return the cache key after the input is transformed with the cache key function
      */
     public Object getCacheKey(K key) {
