@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+
 import org.dataloader.stats.Statistics;
 
 /**
@@ -22,7 +23,6 @@ public class DataLoaderRegistry {
      *
      * @param key        the key to put the data loader under
      * @param dataLoader the data loader to register
-     *
      * @return this registry
      */
     public DataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader) {
@@ -33,15 +33,14 @@ public class DataLoaderRegistry {
     /**
      * Computes a data loader if absent or return it if it was
      * already registered at that key.
-     *
+     * <p>
      * Note: The entire method invocation is performed atomically,
      * so the function is applied at most once per key.
      *
-     * @param key the key of the data loader
+     * @param key             the key of the data loader
      * @param mappingFunction the function to compute a data loader
-     * @param <K> the type of keys
-     * @param <V> the type of values
-     *
+     * @param <K>             the type of keys
+     * @param <V>             the type of values
      * @return a data loader
      */
     @SuppressWarnings("unchecked")
@@ -55,7 +54,6 @@ public class DataLoaderRegistry {
      * and return a new combined registry
      *
      * @param registry the registry to combine into this registry
-     *
      * @return a new combined registry
      */
     public DataLoaderRegistry combine(DataLoaderRegistry registry) {
@@ -77,7 +75,6 @@ public class DataLoaderRegistry {
      * This will unregister a new dataloader
      *
      * @param key the key of the data loader to unregister
-     *
      * @return this registry
      */
     public DataLoaderRegistry unregister(String key) {
@@ -91,7 +88,6 @@ public class DataLoaderRegistry {
      * @param key the key of the data loader
      * @param <K> the type of keys
      * @param <V> the type of values
-     *
      * @return a data loader or null if its not present
      */
     @SuppressWarnings("unchecked")
@@ -112,6 +108,32 @@ public class DataLoaderRegistry {
      */
     public void dispatchAll() {
         getDataLoaders().forEach(DataLoader::dispatch);
+    }
+
+    /**
+     * Similar to {@link DataLoaderRegistry#dispatchAll()}, this calls {@link org.dataloader.DataLoader#dispatch()} on
+     * each of the registered {@link org.dataloader.DataLoader}s, but returns the number of dispatches.
+     *
+     * @return total number of entries that were dispatched from registered {@link org.dataloader.DataLoader}s.
+     */
+    public int dispatchAllWithCount() {
+        int sum = 0;
+        for (DataLoader dataLoader : getDataLoaders()) {
+            sum += dataLoader.dispatchWithCounts().totalEntriesHandled;
+        }
+        return sum;
+    }
+
+    /**
+     * @return The sum of all batched key loads that need to be dispatched from all registered
+     * {@link org.dataloader.DataLoader}s
+     */
+    public int dispatchDepth() {
+        int totalDispatchDepth = 0;
+        for (DataLoader dataLoader : getDataLoaders()) {
+            totalDispatchDepth += dataLoader.dispatchDepth();
+        }
+        return totalDispatchDepth;
     }
 
     /**

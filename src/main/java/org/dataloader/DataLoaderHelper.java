@@ -134,7 +134,16 @@ class DataLoaderHelper<K, V> {
                 loaderOptions.cacheKeyFunction().get().getKey(key) : key;
     }
 
-    CompletableFuture<List<V>> dispatch() {
+    public static class DispatchResult<X> {
+        public final CompletableFuture<List<X>> futureList;
+        public final int totalEntriesHandled;
+        public DispatchResult(CompletableFuture<List<X>> futureList, int totalEntriesHandled) {
+            this.futureList = futureList;
+            this.totalEntriesHandled = totalEntriesHandled;
+        }
+    }
+
+    DispatchResult<V> dispatch() {
         boolean batchingEnabled = loaderOptions.batchingEnabled();
         //
         // we copy the pre-loaded set of futures ready for dispatch
@@ -149,9 +158,10 @@ class DataLoaderHelper<K, V> {
             });
             loaderQueue.clear();
         }
-        if (!batchingEnabled || keys.size() == 0) {
-            return CompletableFuture.completedFuture(emptyList());
+        if (!batchingEnabled || keys.isEmpty()) {
+            return new DispatchResult<V>(CompletableFuture.completedFuture(emptyList()), 0);
         }
+        final int totalEntriesHandled = keys.size();
         //
         // order of keys -> values matter in data loader hence the use of linked hash map
         //
@@ -164,11 +174,13 @@ class DataLoaderHelper<K, V> {
         // via calls to load("foo") and loadMany(["foo","bar"])
         //
         int maxBatchSize = loaderOptions.maxBatchSize();
+        CompletableFuture<List<V>> futureList;
         if (maxBatchSize > 0 && maxBatchSize < keys.size()) {
-            return sliceIntoBatchesOfBatches(keys, queuedFutures, callContexts, maxBatchSize);
+            futureList = sliceIntoBatchesOfBatches(keys, queuedFutures, callContexts, maxBatchSize);
         } else {
-            return dispatchQueueBatch(keys, callContexts, queuedFutures);
+            futureList = dispatchQueueBatch(keys, callContexts, queuedFutures);
         }
+        return new DispatchResult<V>(futureList, totalEntriesHandled);
     }
 
     private CompletableFuture<List<V>> sliceIntoBatchesOfBatches(List<K> keys, List<CompletableFuture<V>> queuedFutures, List<Object> callContexts, int maxBatchSize) {
