@@ -15,7 +15,7 @@ are resolved in a independent manner and with a true graph of objects, you may b
 A naive implementation of graphql data fetchers can easily lead to the dreaded  "n+1" fetch problem. 
 
 Most of the code is ported directly from Facebook's reference implementation, with one IMPORTANT adaptation to make
-it work for Java 8. ([more on this below](manual-dispatching)).
+it work for Java 8. ([more on this below](#manual-dispatching)).
 
 But before reading on, be sure to take a short dive into the
 [original documentation](https://github.com/facebook/dataloader/blob/master/README.md) provided by Lee Byron (@leebyron)
