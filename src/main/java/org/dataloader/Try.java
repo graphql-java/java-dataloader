@@ -22,6 +22,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  * {@link org.dataloader.DataLoader} understands the use of Try and will take the exceptional path and complete
  * the value promise with that exception value.
  */
+@PublicApi
 public class Try<V> {
     private static Throwable NIL = new Throwable() {
         @Override

@@ -26,6 +26,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  * @param <K> the type of keys
  * @param <V> the type of values
  */
+@Internal
 class DataLoaderHelper<K, V> {
 
 
@@ -132,15 +133,6 @@ class DataLoaderHelper<K, V> {
     Object getCacheKey(K key) {
         return loaderOptions.cacheKeyFunction().isPresent() ?
                 loaderOptions.cacheKeyFunction().get().getKey(key) : key;
-    }
-
-    public static class DispatchResult<X> {
-        public final CompletableFuture<List<X>> futureList;
-        public final int totalEntriesHandled;
-        public DispatchResult(CompletableFuture<List<X>> futureList, int totalEntriesHandled) {
-            this.futureList = futureList;
-            this.totalEntriesHandled = totalEntriesHandled;
-        }
     }
 
     DispatchResult<V> dispatch() {

@@ -15,6 +15,7 @@ import org.dataloader.stats.Statistics;
  * they can be dispatched as one.  It also allows you to retrieve data loaders by
  * name from a central place
  */
+@PublicApi
 public class DataLoaderRegistry {
     private final Map<String, DataLoader<?, ?>> dataLoaders = new ConcurrentHashMap<>();
 
@@ -118,8 +119,8 @@ public class DataLoaderRegistry {
      */
     public int dispatchAllWithCount() {
         int sum = 0;
-        for (DataLoader dataLoader : getDataLoaders()) {
-            sum += dataLoader.dispatchWithCounts().totalEntriesHandled;
+        for (DataLoader<?,?> dataLoader : getDataLoaders()) {
+            sum += dataLoader.dispatchWithCounts().getKeysCount();
         }
         return sum;
     }

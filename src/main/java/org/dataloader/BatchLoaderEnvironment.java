@@ -12,6 +12,7 @@ import static java.util.Objects.nonNull;
  * This object is passed to a batch loader as calling context.  It could contain security credentials
  * of the calling users for example or database parameters that allow the data layer call to succeed.
  */
+@PublicApi
 public class BatchLoaderEnvironment {
 
     private final Object context;

@@ -4,7 +4,7 @@ apply plugin: 'com.jfrog.bintray'
 publishing {
     repositories {
         maven {
-            url 'http://dl.bintray.com/bbakerman/java-dataloader'
+            url 'https://dl.bintray.com/bbakerman/java-dataloader'
         }
     }
 }
@@ -52,7 +52,7 @@ publishing {
                     licenses {
                         license {
                             name 'The Apache Software License, Version 2.0'
-                            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                            url 'https://www.apache.org/licenses/LICENSE-2.0.txt'
                             distribution 'repo'
                         }
                     }

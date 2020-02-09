@@ -5,6 +5,7 @@ package org.dataloader;
  * provide overall calling context to the {@link org.dataloader.BatchLoader} call.  A common use
  * case is for propagating user security credentials or database connection parameters for example.
  */
+@PublicSpi
 public interface BatchLoaderContextProvider {
     /**
      * @return a context object that may be needed in batch load calls

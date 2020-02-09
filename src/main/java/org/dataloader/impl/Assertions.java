@@ -1,7 +1,10 @@
 package org.dataloader.impl;
 
+import org.dataloader.Internal;
+
 import java.util.Objects;
 
+@Internal
 public class Assertions {
 
     public static void assertState(boolean state, String message) {

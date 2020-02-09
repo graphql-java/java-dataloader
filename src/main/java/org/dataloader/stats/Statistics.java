@@ -1,11 +1,14 @@
 package org.dataloader.stats;
 
+import org.dataloader.PublicApi;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * This holds statistics on how a {@link org.dataloader.DataLoader} has performed
  */
+@PublicApi
 public class Statistics {
 
     private final long loadCount;

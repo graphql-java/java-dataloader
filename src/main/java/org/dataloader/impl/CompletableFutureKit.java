@@ -1,5 +1,7 @@
 package org.dataloader.impl;
 
+import org.dataloader.Internal;
+
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -9,6 +11,7 @@ import static java.util.stream.Collectors.toList;
 /**
  * Some really basic helpers when working with CompletableFutures
  */
+@Internal
 public class CompletableFutureKit {
 
     public static <V> CompletableFuture<V> failedFuture(Exception e) {
