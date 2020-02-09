@@ -9,7 +9,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * @param <T> for two
  */
-
+@PublicApi
 public class DispatchResult<T> {
     private final CompletableFuture<List<T>> futureList;
     private final int keysCount;

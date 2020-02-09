@@ -26,6 +26,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  * @param <K> the type of keys
  * @param <V> the type of values
  */
+@Internal
 class DataLoaderHelper<K, V> {
 
 

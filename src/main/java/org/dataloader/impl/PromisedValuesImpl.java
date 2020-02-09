@@ -1,5 +1,7 @@
 package org.dataloader.impl;
 
+import org.dataloader.Internal;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -13,6 +15,7 @@ import java.util.stream.Collectors;
 import static org.dataloader.impl.Assertions.assertState;
 import static org.dataloader.impl.Assertions.nonNull;
 
+@Internal
 public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
     private final List<? extends CompletionStage<T>> futures;

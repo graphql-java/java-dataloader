@@ -35,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
+@PublicSpi
 public interface CacheMap<U, V> {
 
     /**

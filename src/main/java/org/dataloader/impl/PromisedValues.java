@@ -1,5 +1,7 @@
 package org.dataloader.impl;
 
+import org.dataloader.Internal;
+
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -22,6 +24,7 @@ import static java.util.Arrays.asList;
  *
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
+@Internal
 public interface PromisedValues<T> {
 
     /**

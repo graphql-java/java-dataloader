@@ -11,6 +11,7 @@ import java.util.concurrent.CompletionStage;
  * See {@link org.dataloader.BatchLoader} for more details on the design invariants that you must implement in order to
  * use this interface.
  */
+@PublicSpi
 public interface BatchLoaderWithContext<K, V> {
     /**
      * Called to batch load the provided keys and return a promise to a list of values.  This default

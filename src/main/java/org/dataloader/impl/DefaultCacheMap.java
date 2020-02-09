@@ -17,6 +17,7 @@
 package org.dataloader.impl;
 
 import org.dataloader.CacheMap;
+import org.dataloader.Internal;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +30,7 @@ import java.util.Map;
  *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  */
+@Internal
 public class DefaultCacheMap<U, V> implements CacheMap<U, V> {
 
     private Map<U, V> cache;

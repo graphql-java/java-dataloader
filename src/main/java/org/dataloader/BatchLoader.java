@@ -71,6 +71,7 @@ import java.util.concurrent.CompletionStage;
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
 @FunctionalInterface
+@PublicSpi
 public interface BatchLoader<K, V> {
 
     /**

@@ -15,6 +15,7 @@ import org.dataloader.stats.Statistics;
  * they can be dispatched as one.  It also allows you to retrieve data loaders by
  * name from a central place
  */
+@PublicApi
 public class DataLoaderRegistry {
     private final Map<String, DataLoader<?, ?>> dataLoaders = new ConcurrentHashMap<>();
 

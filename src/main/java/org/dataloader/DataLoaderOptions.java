@@ -29,6 +29,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  */
+@PublicApi
 public class DataLoaderOptions {
 
     private static final BatchLoaderContextProvider NULL_PROVIDER = () -> null;

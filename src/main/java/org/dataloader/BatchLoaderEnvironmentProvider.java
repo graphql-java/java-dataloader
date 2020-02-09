@@ -6,6 +6,7 @@ package org.dataloader;
  * the {@link org.dataloader.BatchLoader} call.  A common use
  * case is for propagating user security credentials or database connection parameters.
  */
+@PublicSpi
 public interface BatchLoaderEnvironmentProvider {
     /**
      * @return a {@link org.dataloader.BatchLoaderEnvironment} that may be needed in batch calls
