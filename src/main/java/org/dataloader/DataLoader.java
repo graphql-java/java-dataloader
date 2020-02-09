@@ -470,7 +470,7 @@ public class DataLoader<K, V> {
      * @return the promise of the queued load requests
      */
     public CompletableFuture<List<V>> dispatch() {
-        return helper.dispatch().futureList;
+        return helper.dispatch().getPromisedResults();
     }
 
     /**
@@ -480,9 +480,9 @@ public class DataLoader<K, V> {
      * If batching is disabled, or there are no queued requests, then a succeeded promise with no entries dispatched is
      * returned.
      *
-     * @return the promise of the queued load requests and the number of entries dispatched.
+     * @return the promise of the queued load requests and the number of keys dispatched.
      */
-    public DataLoaderHelper.DispatchResult<V> dispatchWithCounts() {
+    public DispatchResult<V> dispatchWithCounts() {
         return helper.dispatch();
     }
 

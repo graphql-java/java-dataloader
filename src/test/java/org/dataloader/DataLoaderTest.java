@@ -110,10 +110,11 @@ public class DataLoaderTest {
             assertThat(promisedValues.size(), is(0));
             success.set(true);
         });
-        DataLoaderHelper.DispatchResult dispatchResult = identityLoader.dispatchWithCounts();
+        DispatchResult dispatchResult = identityLoader.dispatchWithCounts();
         await().untilAtomic(success, is(true));
-        assertThat(dispatchResult.totalEntriesHandled, equalTo(0));
+        assertThat(dispatchResult.getKeysCount(), equalTo(0));
     }
+
     @Test
     public void should_Batch_multiple_requests() throws ExecutionException, InterruptedException {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
@@ -126,7 +127,8 @@ public class DataLoaderTest {
         await().until(() -> future1.isDone() && future2.isDone());
         assertThat(future1.get(), equalTo(1));
         assertThat(future2.get(), equalTo(2));
-        assertThat(loadCalls, equalTo(singletonList(asList(1, 2))));    }
+        assertThat(loadCalls, equalTo(singletonList(asList(1, 2))));
+    }
 
     @Test
     public void should_Return_number_of_batched_entries() throws ExecutionException, InterruptedException {
@@ -134,11 +136,13 @@ public class DataLoaderTest {
         DataLoader<Integer, Integer> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<Integer> future1 = identityLoader.load(1);
+        CompletableFuture<Integer> future1a = identityLoader.load(1);
         CompletableFuture<Integer> future2 = identityLoader.load(2);
-        DataLoaderHelper.DispatchResult dispatchResult = identityLoader.dispatchWithCounts();
+        DispatchResult<?> dispatchResult = identityLoader.dispatchWithCounts();
 
         await().until(() -> future1.isDone() && future2.isDone());
-        assertThat(dispatchResult.totalEntriesHandled, equalTo(2));
+        assertThat(dispatchResult.getKeysCount(), equalTo(2)); // its two because its the number dispatched (by key) not the load calls
+        assertThat(dispatchResult.getPromisedResults().isDone(), equalTo(true));
     }
 
     @Test

@@ -118,8 +118,8 @@ public class DataLoaderRegistry {
      */
     public int dispatchAllWithCount() {
         int sum = 0;
-        for (DataLoader dataLoader : getDataLoaders()) {
-            sum += dataLoader.dispatchWithCounts().totalEntriesHandled;
+        for (DataLoader<?,?> dataLoader : getDataLoaders()) {
+            sum += dataLoader.dispatchWithCounts().getKeysCount();
         }
         return sum;
     }

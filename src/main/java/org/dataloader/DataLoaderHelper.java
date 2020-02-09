@@ -134,15 +134,6 @@ class DataLoaderHelper<K, V> {
                 loaderOptions.cacheKeyFunction().get().getKey(key) : key;
     }
 
-    public static class DispatchResult<X> {
-        public final CompletableFuture<List<X>> futureList;
-        public final int totalEntriesHandled;
-        public DispatchResult(CompletableFuture<List<X>> futureList, int totalEntriesHandled) {
-            this.futureList = futureList;
-            this.totalEntriesHandled = totalEntriesHandled;
-        }
-    }
-
     DispatchResult<V> dispatch() {
         boolean batchingEnabled = loaderOptions.batchingEnabled();
         //

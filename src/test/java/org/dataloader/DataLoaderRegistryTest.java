@@ -1,8 +1,9 @@
 package org.dataloader;
 
-import java.util.concurrent.CompletableFuture;
 import org.dataloader.stats.Statistics;
 import org.junit.Test;
+
+import java.util.concurrent.CompletableFuture;
 
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.equalTo;
@@ -131,4 +132,28 @@ public class DataLoaderRegistryTest {
         assertThat(registry.getDataLoaders(), hasItems(dlA));
     }
 
+    @Test
+    public void dispatch_counts_are_maintained() {
+
+        DataLoaderRegistry registry = new DataLoaderRegistry();
+
+        DataLoader<Object, Object> dlA = new DataLoader<>(identityBatchLoader);
+        DataLoader<Object, Object> dlB = new DataLoader<>(identityBatchLoader);
+
+        registry.register("a", dlA);
+        registry.register("b", dlB);
+
+        dlA.load("av1");
+        dlA.load("av2");
+        dlB.load("bv1");
+        dlB.load("bv2");
+
+        int dispatchDepth = registry.dispatchDepth();
+        assertThat(dispatchDepth, equalTo(4));
+
+        int dispatchedCount = registry.dispatchAllWithCount();
+        dispatchDepth = registry.dispatchDepth();
+        assertThat(dispatchedCount, equalTo(4));
+        assertThat(dispatchDepth, equalTo(0));
+    }
 }
