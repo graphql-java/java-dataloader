@@ -4,11 +4,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
-class JsonObject {
+public class JsonObject {
 
     private final Map<String, Object> values;
 
-    JsonObject() {
+    public JsonObject() {
         values = new LinkedHashMap<>();
     }
 
