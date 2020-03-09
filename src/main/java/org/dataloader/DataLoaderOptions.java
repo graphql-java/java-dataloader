@@ -37,8 +37,8 @@ public class DataLoaderOptions {
     private boolean batchingEnabled;
     private boolean cachingEnabled;
     private boolean cachingExceptionsEnabled;
-    private CacheKey cacheKeyFunction;
-    private CacheMap cacheMap;
+    private CacheKey<?> cacheKeyFunction;
+    private CacheMap<?, ?> cacheMap;
     private int maxBatchSize;
     private Supplier<StatisticsCollector> statisticsCollector;
     private BatchLoaderContextProvider environmentProvider;
@@ -92,7 +92,6 @@ public class DataLoaderOptions {
      * Sets the option that determines whether batch loading is enabled.
      *
      * @param batchingEnabled {@code true} to enable batch loading, {@code false} otherwise
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setBatchingEnabled(boolean batchingEnabled) {
@@ -113,7 +112,6 @@ public class DataLoaderOptions {
      * Sets the option that determines whether caching is enabled.
      *
      * @param cachingEnabled {@code true} to enable caching, {@code false} otherwise
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setCachingEnabled(boolean cachingEnabled) {
@@ -123,7 +121,7 @@ public class DataLoaderOptions {
 
     /**
      * Option that determines whether to cache exceptional values (the default), or not.
-     *
+     * <p>
      * For short lived caches (that is request caches) it makes sense to cache exceptions since
      * its likely the key is still poisoned.  However if you have long lived caches, then it may make
      * sense to set this to false since the downstream system may have recovered from its failure
@@ -136,10 +134,9 @@ public class DataLoaderOptions {
     }
 
     /**
-     * Sets the option that determines whether exceptional values are cachedis enabled.
+     * Sets the option that determines whether exceptional values are cached.
      *
      * @param cachingExceptionsEnabled {@code true} to enable caching exceptional values, {@code false} otherwise
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setCachingExceptionsEnabled(boolean cachingExceptionsEnabled) {
@@ -162,10 +159,9 @@ public class DataLoaderOptions {
      * Sets the function to use for creating the cache key, if caching is enabled.
      *
      * @param cacheKeyFunction the cache key function to use
-     *
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setCacheKeyFunction(CacheKey cacheKeyFunction) {
+    public DataLoaderOptions setCacheKeyFunction(CacheKey<?> cacheKeyFunction) {
         this.cacheKeyFunction = cacheKeyFunction;
         return this;
     }
@@ -177,7 +173,7 @@ public class DataLoaderOptions {
      *
      * @return an optional with the cache map instance, or empty
      */
-    public Optional<CacheMap> cacheMap() {
+    public Optional<CacheMap<?, ?>> cacheMap() {
         return Optional.ofNullable(cacheMap);
     }
 
@@ -185,10 +181,9 @@ public class DataLoaderOptions {
      * Sets the cache map implementation to use for caching, if caching is enabled.
      *
      * @param cacheMap the cache map instance
-     *
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setCacheMap(CacheMap cacheMap) {
+    public DataLoaderOptions setCacheMap(CacheMap<?,?> cacheMap) {
         this.cacheMap = cacheMap;
         return this;
     }
@@ -208,7 +203,6 @@ public class DataLoaderOptions {
      * before they are split into multiple class
      *
      * @param maxBatchSize the maximum batch size
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setMaxBatchSize(int maxBatchSize) {
@@ -229,7 +223,6 @@ public class DataLoaderOptions {
      * a common value
      *
      * @param statisticsCollector the statistics collector to use
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setStatisticsCollector(Supplier<StatisticsCollector> statisticsCollector) {
@@ -248,7 +241,6 @@ public class DataLoaderOptions {
      * Sets the batch loader environment provider that will be used to give context to batch load functions
      *
      * @param contextProvider the batch loader context provider
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setBatchLoaderContextProvider(BatchLoaderContextProvider contextProvider) {

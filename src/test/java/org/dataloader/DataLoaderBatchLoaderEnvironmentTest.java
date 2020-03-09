@@ -36,14 +36,14 @@ public class DataLoaderBatchLoaderEnvironmentTest {
 
 
     @Test
-    public void context_is_passed_to_batch_loader_function() throws Exception {
+    public void context_is_passed_to_batch_loader_function() {
         BatchLoaderWithContext<String, String> batchLoader = (keys, environment) -> {
             List<String> list = keys.stream().map(k -> k + "-" + environment.getContext()).collect(Collectors.toList());
             return CompletableFuture.completedFuture(list);
         };
         DataLoaderOptions options = DataLoaderOptions.newOptions()
                 .setBatchLoaderContextProvider(() -> "ctx");
-        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoader(batchLoader, options);
 
         loader.load("A");
         loader.load("B");
@@ -55,11 +55,11 @@ public class DataLoaderBatchLoaderEnvironmentTest {
     }
 
     @Test
-    public void key_contexts_are_passed_to_batch_loader_function() throws Exception {
+    public void key_contexts_are_passed_to_batch_loader_function() {
         BatchLoaderWithContext<String, String> batchLoader = contextBatchLoader();
         DataLoaderOptions options = DataLoaderOptions.newOptions()
                 .setBatchLoaderContextProvider(() -> "ctx");
-        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoader(batchLoader, options);
 
         loader.load("A", "aCtx");
         loader.load("B", "bCtx");
@@ -71,12 +71,12 @@ public class DataLoaderBatchLoaderEnvironmentTest {
     }
 
     @Test
-    public void key_contexts_are_passed_to_batch_loader_function_when_batching_disabled() throws Exception {
+    public void key_contexts_are_passed_to_batch_loader_function_when_batching_disabled() {
         BatchLoaderWithContext<String, String> batchLoader = contextBatchLoader();
         DataLoaderOptions options = DataLoaderOptions.newOptions()
                 .setBatchingEnabled(false)
                 .setBatchLoaderContextProvider(() -> "ctx");
-        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoader(batchLoader, options);
 
         CompletableFuture<String> aLoad = loader.load("A", "aCtx");
         CompletableFuture<String> bLoad = loader.load("B", "bCtx");
@@ -89,11 +89,11 @@ public class DataLoaderBatchLoaderEnvironmentTest {
     }
 
     @Test
-    public void missing_key_contexts_are_passed_to_batch_loader_function() throws Exception {
+    public void missing_key_contexts_are_passed_to_batch_loader_function() {
         BatchLoaderWithContext<String, String> batchLoader = contextBatchLoader();
         DataLoaderOptions options = DataLoaderOptions.newOptions()
                 .setBatchLoaderContextProvider(() -> "ctx");
-        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoader(batchLoader, options);
 
         loader.load("A", "aCtx");
         loader.load("B");
@@ -105,7 +105,7 @@ public class DataLoaderBatchLoaderEnvironmentTest {
     }
 
     @Test
-    public void context_is_passed_to_map_batch_loader_function() throws Exception {
+    public void context_is_passed_to_map_batch_loader_function() {
         MappedBatchLoaderWithContext<String, String> mapBatchLoader = (keys, environment) -> {
             Map<String, String> map = new HashMap<>();
             keys.forEach(k -> {
@@ -117,7 +117,7 @@ public class DataLoaderBatchLoaderEnvironmentTest {
         };
         DataLoaderOptions options = DataLoaderOptions.newOptions()
                 .setBatchLoaderContextProvider(() -> "ctx");
-        DataLoader<String, String> loader = DataLoader.newMappedDataLoader(mapBatchLoader, options);
+        DataLoader<String, String> loader = DataLoaderFactory.newMappedDataLoader(mapBatchLoader, options);
 
         loader.load("A", "aCtx");
         loader.load("B");
@@ -129,12 +129,12 @@ public class DataLoaderBatchLoaderEnvironmentTest {
     }
 
     @Test
-    public void null_is_passed_as_context_if_you_do_nothing() throws Exception {
+    public void null_is_passed_as_context_if_you_do_nothing() {
         BatchLoaderWithContext<String, String> batchLoader = (keys, environment) -> {
             List<String> list = keys.stream().map(k -> k + "-" + environment.getContext()).collect(Collectors.toList());
             return CompletableFuture.completedFuture(list);
         };
-        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader);
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoader(batchLoader);
 
         loader.load("A");
         loader.load("B");
@@ -146,13 +146,13 @@ public class DataLoaderBatchLoaderEnvironmentTest {
     }
 
     @Test
-    public void null_is_passed_as_context_to_map_loader_if_you_do_nothing() throws Exception {
+    public void null_is_passed_as_context_to_map_loader_if_you_do_nothing() {
         MappedBatchLoaderWithContext<String, String> mapBatchLoader = (keys, environment) -> {
             Map<String, String> map = new HashMap<>();
             keys.forEach(k -> map.put(k, k + "-" + environment.getContext()));
             return CompletableFuture.completedFuture(map);
         };
-        DataLoader<String, String> loader = DataLoader.newMappedDataLoader(mapBatchLoader);
+        DataLoader<String, String> loader = DataLoaderFactory.newMappedDataLoader(mapBatchLoader);
 
         loader.load("A");
         loader.load("B");
@@ -164,12 +164,12 @@ public class DataLoaderBatchLoaderEnvironmentTest {
     }
 
     @Test
-    public void mmap_semantics_apply_to_batch_loader_context() throws Exception {
+    public void mmap_semantics_apply_to_batch_loader_context() {
         BatchLoaderWithContext<String, String> batchLoader = contextBatchLoader();
         DataLoaderOptions options = DataLoaderOptions.newOptions()
                 .setBatchLoaderContextProvider(() -> "ctx")
                 .setCachingEnabled(false);
-        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoader(batchLoader, options);
 
         loader.load("A", "aCtx");
         loader.load("B", "bCtx");

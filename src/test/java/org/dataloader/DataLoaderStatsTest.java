@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static java.util.Arrays.asList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 
@@ -21,9 +22,9 @@ import static org.junit.Assert.assertThat;
 public class DataLoaderStatsTest {
 
     @Test
-    public void stats_are_collected_by_default() throws Exception {
+    public void stats_are_collected_by_default() {
         BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
-        DataLoader<String, String> loader = new DataLoader<>(batchLoader);
+        DataLoader<String, String> loader = newDataLoader(batchLoader);
 
         loader.load("A");
         loader.load("B");
@@ -57,7 +58,7 @@ public class DataLoaderStatsTest {
 
 
     @Test
-    public void stats_are_collected_with_specified_collector() throws Exception {
+    public void stats_are_collected_with_specified_collector() {
         // lets prime it with some numbers so we know its ours
         StatisticsCollector collector = new SimpleStatisticsCollector();
         collector.incrementLoadCount();
@@ -65,7 +66,7 @@ public class DataLoaderStatsTest {
 
         BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
         DataLoaderOptions loaderOptions = DataLoaderOptions.newOptions().setStatisticsCollector(() -> collector);
-        DataLoader<String, String> loader = new DataLoader<>(batchLoader, loaderOptions);
+        DataLoader<String, String> loader = newDataLoader(batchLoader, loaderOptions);
 
         loader.load("A");
         loader.load("B");
@@ -98,12 +99,12 @@ public class DataLoaderStatsTest {
     }
 
     @Test
-    public void stats_are_collected_with_caching_disabled() throws Exception {
+    public void stats_are_collected_with_caching_disabled() {
         StatisticsCollector collector = new SimpleStatisticsCollector();
 
         BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
         DataLoaderOptions loaderOptions = DataLoaderOptions.newOptions().setStatisticsCollector(() -> collector).setCachingEnabled(false);
-        DataLoader<String, String> loader = new DataLoader<>(batchLoader, loaderOptions);
+        DataLoader<String, String> loader = newDataLoader(batchLoader, loaderOptions);
 
         loader.load("A");
         loader.load("B");
@@ -152,8 +153,8 @@ public class DataLoaderStatsTest {
     };
 
     @Test
-    public void stats_are_collected_on_exceptions() throws Exception {
-        DataLoader<String, String> loader = DataLoader.newDataLoaderWithTry(batchLoaderThatBlows);
+    public void stats_are_collected_on_exceptions() {
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoaderWithTry(batchLoaderThatBlows);
 
         loader.load("A");
         loader.load("exception");

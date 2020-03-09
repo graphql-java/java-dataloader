@@ -20,7 +20,7 @@ public class CompletableFutureKit {
         return future;
     }
 
-    public static Throwable cause(CompletableFuture completableFuture) {
+    public static Throwable cause(CompletableFuture<?> completableFuture) {
         if (!completableFuture.isCompletedExceptionally()) {
             return null;
         }
@@ -38,11 +38,11 @@ public class CompletableFutureKit {
         }
     }
 
-    public static boolean succeeded(CompletableFuture future) {
+    public static boolean succeeded(CompletableFuture<?> future) {
         return future.isDone() && !future.isCompletedExceptionally();
     }
 
-    public static boolean failed(CompletableFuture future) {
+    public static boolean failed(CompletableFuture<?> future) {
         return future.isDone() && future.isCompletedExceptionally();
     }
 

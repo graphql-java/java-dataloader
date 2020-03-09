@@ -53,12 +53,12 @@ public class DataLoaderMapBatchLoaderTest {
             keys.forEach(k -> map.put(k, (V) k));
             return CompletableFuture.completedFuture(map);
         };
-        return DataLoader.newMappedDataLoader(kvBatchLoader, options);
+        return DataLoaderFactory.newMappedDataLoader(kvBatchLoader, options);
     }
 
     private static <K, V> DataLoader<K, V> idMapLoaderBlowsUps(
             DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return new DataLoader<>((keys) -> {
+        return DataLoaderFactory.newDataLoader((keys) -> {
             loadCalls.add(new ArrayList<>(keys));
             return futureError();
         }, options);
@@ -66,8 +66,8 @@ public class DataLoaderMapBatchLoaderTest {
 
 
     @Test
-    public void basic_map_batch_loading() throws Exception {
-        DataLoader<String, String> loader = DataLoader.newMappedDataLoader(evensOnlyMappedBatchLoader);
+    public void basic_map_batch_loading() {
+        DataLoader<String, String> loader = DataLoaderFactory.newMappedDataLoader(evensOnlyMappedBatchLoader);
 
         loader.load("A");
         loader.load("B");
@@ -96,7 +96,7 @@ public class DataLoaderMapBatchLoaderTest {
     }
 
     @Test
-    public void can_split_max_batch_sizes_correctly() throws Exception {
+    public void can_split_max_batch_sizes_correctly() {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> identityLoader = idMapLoader(newOptions().setMaxBatchSize(5), loadCalls);
 

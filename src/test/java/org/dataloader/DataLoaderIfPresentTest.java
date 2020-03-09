@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertThat;
@@ -23,7 +24,7 @@ public class DataLoaderIfPresentTest {
 
     @Test
     public void should_detect_if_present_cf() {
-        DataLoader<Integer, Integer> dataLoader = new DataLoader<>(keysAsValues());
+        DataLoader<Integer, Integer> dataLoader = DataLoaderFactory.newDataLoader(keysAsValues());
 
         Optional<CompletableFuture<Integer>> cachedPromise = dataLoader.getIfPresent(1);
         assertThat(cachedPromise.isPresent(), equalTo(false));
@@ -45,7 +46,7 @@ public class DataLoaderIfPresentTest {
 
     @Test
     public void should_not_be_present_if_cleared() {
-        DataLoader<Integer, Integer> dataLoader = new DataLoader<>(keysAsValues());
+        DataLoader<Integer, Integer> dataLoader = newDataLoader(keysAsValues());
 
         dataLoader.load(1);
 
@@ -64,7 +65,7 @@ public class DataLoaderIfPresentTest {
 
     @Test
     public void should_allow_completed_cfs_to_be_found() {
-        DataLoader<Integer, Integer> dataLoader = new DataLoader<>(keysAsValues());
+        DataLoader<Integer, Integer> dataLoader = newDataLoader(keysAsValues());
 
         dataLoader.load(1);
 
@@ -86,7 +87,7 @@ public class DataLoaderIfPresentTest {
 
     @Test
     public void should_work_with_primed_caches() {
-        DataLoader<Integer, Integer> dataLoader = new DataLoader<>(keysAsValues());
+        DataLoader<Integer, Integer> dataLoader = newDataLoader(keysAsValues());
         dataLoader.prime(1, 666).prime(2, 999);
 
         Optional<CompletableFuture<Integer>> cachedPromise = dataLoader.getIfPresent(1);

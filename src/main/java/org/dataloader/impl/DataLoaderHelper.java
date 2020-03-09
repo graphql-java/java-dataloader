@@ -1,5 +1,16 @@
-package org.dataloader;
+package org.dataloader.impl;
 
+import org.dataloader.BatchLoader;
+import org.dataloader.BatchLoaderEnvironment;
+import org.dataloader.BatchLoaderWithContext;
+import org.dataloader.CacheMap;
+import org.dataloader.DataLoader;
+import org.dataloader.DataLoaderOptions;
+import org.dataloader.DispatchResult;
+import org.dataloader.Internal;
+import org.dataloader.MappedBatchLoader;
+import org.dataloader.MappedBatchLoaderWithContext;
+import org.dataloader.Try;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.StatisticsCollector;
 
@@ -151,7 +162,7 @@ class DataLoaderHelper<K, V> {
             loaderQueue.clear();
         }
         if (!batchingEnabled || keys.isEmpty()) {
-            return new DispatchResult<V>(CompletableFuture.completedFuture(emptyList()), 0);
+            return new DispatchResult<>(CompletableFuture.completedFuture(emptyList()), 0);
         }
         final int totalEntriesHandled = keys.size();
         //
@@ -172,7 +183,7 @@ class DataLoaderHelper<K, V> {
         } else {
             futureList = dispatchQueueBatch(keys, callContexts, queuedFutures);
         }
-        return new DispatchResult<V>(futureList, totalEntriesHandled);
+        return new DispatchResult<>(futureList, totalEntriesHandled);
     }
 
     private CompletableFuture<List<V>> sliceIntoBatchesOfBatches(List<K> keys, List<CompletableFuture<V>> queuedFutures, List<Object> callContexts, int maxBatchSize) {
@@ -194,7 +205,7 @@ class DataLoaderHelper<K, V> {
         }
         //
         // now reassemble all the futures into one that is the complete set of results
-        return CompletableFuture.allOf(allBatches.toArray(new CompletableFuture[allBatches.size()]))
+        return CompletableFuture.allOf(allBatches.toArray(new CompletableFuture[0]))
                 .thenApply(v -> allBatches.stream()
                         .map(CompletableFuture::join)
                         .flatMap(Collection::stream)
@@ -212,7 +223,7 @@ class DataLoaderHelper<K, V> {
 
                     List<K> clearCacheKeys = new ArrayList<>();
                     for (int idx = 0; idx < queuedFutures.size(); idx++) {
-                        Object value = values.get(idx);
+                        V value = values.get(idx);
                         CompletableFuture<V> future = queuedFutures.get(idx);
                         if (value instanceof Throwable) {
                             stats.incrementLoadErrorCount();
@@ -230,8 +241,7 @@ class DataLoaderHelper<K, V> {
                                 clearCacheKeys.add(keys.get(idx));
                             }
                         } else {
-                            V val = (V) value;
-                            future.complete(val);
+                            future.complete(value);
                         }
                     }
                     possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
