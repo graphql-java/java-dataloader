@@ -17,7 +17,7 @@
 package org.dataloader.impl;
 
 import org.dataloader.CacheMap;
-import org.dataloader.Internal;
+import org.dataloader.annotations.Internal;
 
 import java.util.HashMap;
 import java.util.Map;

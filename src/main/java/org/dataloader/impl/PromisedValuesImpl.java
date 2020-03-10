@@ -1,6 +1,6 @@
 package org.dataloader.impl;
 
-import org.dataloader.Internal;
+import org.dataloader.annotations.Internal;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,8 +25,7 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
     private PromisedValuesImpl(List<? extends CompletionStage<T>> cs) {
         this.futures = nonNull(cs);
         this.cause = new AtomicReference<>();
-        List<CompletableFuture> cfs = cs.stream().map(CompletionStage::toCompletableFuture).collect(Collectors.toList());
-        CompletableFuture[] futuresArray = cfs.toArray(new CompletableFuture[cfs.size()]);
+        CompletableFuture<?>[] futuresArray = cs.stream().map(CompletionStage::toCompletableFuture).toArray(CompletableFuture<?>[]::new);
         this.controller = CompletableFuture.allOf(futuresArray).handle((result, throwable) -> {
             setCause(throwable);
             return null;
@@ -104,7 +103,6 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public T get(int index) {
         assertState(isDone(), "The PromisedValues MUST be complete before calling the get() method");
         try {

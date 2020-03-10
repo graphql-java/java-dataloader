@@ -402,7 +402,9 @@ then you will not want to cache data meant for user A to then later give it user
 The scope of your `DataLoader` instances is important.  You might want to create them per web request to ensure data is only cached within that
 web request and no more.
 
-If your data can be shared across web requests then you might want to scope your data loaders so they survive longer than the web request say.
+If your data can be shared across web requests then use a custom cache to keep values in a common place.  You should however aim
+to keep the data loader instances per web request because they are stateful components that contain promises (with context)
+that are likely share the same affinity as the web request.
 
 ## Custom caches
 
@@ -461,7 +463,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.graphql-java:java-dataloader: 2.2.3'
+    compile 'com.graphql-java:java-dataloader: 3.0.0'
 }
 ```
 

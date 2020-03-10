@@ -3,6 +3,9 @@ package org.dataloader;
 
 import org.dataloader.impl.DataLoaderImpl;
 
+/**
+ * This factory creates instances of {@link org.dataloader.DataLoader}s.
+ */
 public class DataLoaderFactory {
 
     /**
@@ -63,7 +66,6 @@ public class DataLoaderFactory {
      * @return a new DataLoader
      * @see #newDataLoaderWithTry(BatchLoader)
      */
-    @SuppressWarnings("unchecked")
     public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoader<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
         return new DataLoaderImpl<>(batchLoadFunction, options);
     }

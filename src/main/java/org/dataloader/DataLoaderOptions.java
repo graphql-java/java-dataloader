@@ -16,6 +16,7 @@
 
 package org.dataloader;
 
+import org.dataloader.annotations.PublicApi;
 import org.dataloader.stats.SimpleStatisticsCollector;
 import org.dataloader.stats.StatisticsCollector;
 
@@ -29,6 +30,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  */
+@SuppressWarnings("rawtypes")
 @PublicApi
 public class DataLoaderOptions {
 
@@ -37,8 +39,9 @@ public class DataLoaderOptions {
     private boolean batchingEnabled;
     private boolean cachingEnabled;
     private boolean cachingExceptionsEnabled;
-    private CacheKey<?> cacheKeyFunction;
+    private CacheKey cacheKeyFunction;
     private CacheMap<?, ?> cacheMap;
+    private CacheMap<?, ?> promiseCacheMap;
     private int maxBatchSize;
     private Supplier<StatisticsCollector> statisticsCollector;
     private BatchLoaderContextProvider environmentProvider;
@@ -67,6 +70,7 @@ public class DataLoaderOptions {
         this.cachingExceptionsEnabled = other.cachingExceptionsEnabled;
         this.cacheKeyFunction = other.cacheKeyFunction;
         this.cacheMap = other.cacheMap;
+        this.promiseCacheMap = other.promiseCacheMap;
         this.maxBatchSize = other.maxBatchSize;
         this.statisticsCollector = other.statisticsCollector;
         this.environmentProvider = other.environmentProvider;
@@ -167,24 +171,58 @@ public class DataLoaderOptions {
     }
 
     /**
-     * Gets the (optional) cache map implementation that is used for caching, if caching is enabled.
+     * Gets the (optional) cache map implementation that is used for caching values, if caching is enabled.
      * <p>
-     * If missing a standard {@link java.util.LinkedHashMap} will be used as the cache implementation.
+     * If missing no value caching will be applied.
+     * <p>
+     * The value cache is intended for a broader cache of values that can be serialised, perhaps a network
+     * distributed cache system like REDIS or MemCacheD.  Contrast this to the {@link #promiseCacheMap} which holds JVM local
+     * {@link java.util.concurrent.CompletableFuture}s and hence cannot be serialised over the wire.
      *
-     * @return an optional with the cache map instance, or empty
+     * @return an optional with the value cache map instance, or empty
      */
     public Optional<CacheMap<?, ?>> cacheMap() {
         return Optional.ofNullable(cacheMap);
     }
 
     /**
-     * Sets the cache map implementation to use for caching, if caching is enabled.
+     * Gets the (optional) cache map implementation that is used for promise caching, if caching is enabled.
+     * <p>
+     * If missing a standard {@link java.util.LinkedHashMap} will be used as the cache implementation.
+     * <p>
+     * The promise cache is intended for a JVM local cache of {@link java.util.concurrent.CompletableFuture}s and hence cannot be serialised
+     * over the wire.  Contrast this to the {@link #cacheMap()} which holds a broader values cache that could be serialised
+     * into a distributed cache system like REDIS or MemCacheD.
+     *
+     * @return an optional with the promise cache map instance, or empty
+     */
+    public Optional<CacheMap<?, ?>> promiseCacheMap() {
+        return Optional.ofNullable(promiseCacheMap);
+    }
+
+    /**
+     * Sets the cache map implementation to use for value caching, if caching is enabled.
      *
      * @param cacheMap the cache map instance
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setCacheMap(CacheMap<?,?> cacheMap) {
+    public DataLoaderOptions setCacheMap(CacheMap<?, ?> cacheMap) {
         this.cacheMap = cacheMap;
+        return this;
+    }
+
+    /**
+     * Sets the cache map implementation to use for promise caching, if caching is enabled.
+     * <p>
+     * Generally you are not expected to set this, as a JVM local default cache map
+     * will be used and is good enough for most situations however for completeness
+     * this method is offered.
+     *
+     * @param cacheMap the cache map instance
+     * @return the data loader options for fluent coding
+     */
+    public DataLoaderOptions setPromiseCacheMap(CacheMap<?, ?> cacheMap) {
+        this.promiseCacheMap = cacheMap;
         return this;
     }
 

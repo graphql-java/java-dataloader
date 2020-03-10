@@ -1,6 +1,6 @@
 package org.dataloader.impl;
 
-import org.dataloader.Internal;
+import org.dataloader.annotations.Internal;
 
 import java.util.List;
 import java.util.concurrent.CancellationException;
@@ -35,7 +35,6 @@ public interface PromisedValues<T> {
      *
      * @param cfs the {@link CompletionStage}s to combine
      * @param <T> the type of values
-     *
      * @return a new PromisedValues
      */
     static <T> PromisedValues<T> allOf(List<? extends CompletionStage<T>> cfs) {
@@ -51,7 +50,6 @@ public interface PromisedValues<T> {
      * @param f1  the 1st completable future
      * @param f2  the 2nd completable future
      * @param <T> the type of values
-     *
      * @return a new PromisedValues
      */
     static <T> PromisedValues<T> allOf(CompletionStage<T> f1, CompletionStage<T> f2) {
@@ -68,7 +66,6 @@ public interface PromisedValues<T> {
      * @param f2  the 2nd completable future
      * @param f3  the 3rd completable future
      * @param <T> the type of values
-     *
      * @return a new PromisedValues
      */
     static <T> PromisedValues<T> allOf(CompletionStage<T> f1, CompletionStage<T> f2, CompletionStage<T> f3) {
@@ -87,7 +84,6 @@ public interface PromisedValues<T> {
      * @param f3  the 3rd completable future
      * @param f4  the 4th completable future
      * @param <T> the type of values
-     *
      * @return a new PromisedValues
      */
     static <T> PromisedValues<T> allOf(CompletionStage<T> f1, CompletionStage<T> f2, CompletionStage<T> f3, CompletionStage<T> f4) {
@@ -103,7 +99,6 @@ public interface PromisedValues<T> {
      *
      * @param cfs the list to combine
      * @param <T> the type of values
-     *
      * @return a new PromisedValues
      */
     static <T> PromisedValues<T> allPromisedValues(List<PromisedValues<T>> cfs) {
@@ -119,7 +114,6 @@ public interface PromisedValues<T> {
      * @param pv1 the 1st promised value
      * @param pv2 the 2nd promised value
      * @param <T> the type of values
-     *
      * @return a new PromisedValues
      */
     static <T> PromisedValues<T> allPromisedValues(PromisedValues<T> pv1, PromisedValues<T> pv2) {
@@ -136,7 +130,6 @@ public interface PromisedValues<T> {
      * @param pv2 the 2nd promised value
      * @param pv3 the 3rd promised value
      * @param <T> the type of values
-     *
      * @return a new PromisedValues
      */
     static <T> PromisedValues<T> allPromisedValues(PromisedValues<T> pv1, PromisedValues<T> pv2, PromisedValues<T> pv3) {
@@ -154,7 +147,6 @@ public interface PromisedValues<T> {
      * @param pv3 the 3rd promised value
      * @param pv4 the 4th promised value
      * @param <T> the type of values
-     *
      * @return a new PromisedValues
      */
     static <T> PromisedValues<T> allPromisedValues(PromisedValues<T> pv1, PromisedValues<T> pv2, PromisedValues<T> pv3, PromisedValues<T> pv4) {
@@ -166,7 +158,6 @@ public interface PromisedValues<T> {
      * When the all the futures complete, this call back will be invoked with this {@link PromisedValues} as a parameter
      *
      * @param handler the call back which will be given this object
-     *
      * @return a new {@link PromisedValues} which you can compose more computations with
      */
     PromisedValues<T> thenAccept(Consumer<PromisedValues<T>> handler);
@@ -199,7 +190,6 @@ public interface PromisedValues<T> {
      * The true if the {@link CompletionStage} at the specified index succeeded
      *
      * @param index the index of the {@link CompletionStage}
-     *
      * @return true if the future at the specified index succeeded
      */
     boolean succeeded(int index);
@@ -208,7 +198,6 @@ public interface PromisedValues<T> {
      * The exception cause at the specified index or null if it didn't fail
      *
      * @param index the index of the {@link CompletionStage}
-     *
      * @return an exception or null if the future did not fail
      */
     Throwable cause(int index);
@@ -217,10 +206,8 @@ public interface PromisedValues<T> {
      * The value at index or null if it failed
      *
      * @param index the index of the future
-     *
      * @return the value of the future
      */
-    @SuppressWarnings("unchecked")
     T get(int index);
 
     /**
@@ -244,7 +231,6 @@ public interface PromisedValues<T> {
      * exception as its cause.
      *
      * @return the list of completed values similar to {@link #toList()}
-     *
      * @throws CancellationException if the computation was cancelled
      * @throws CompletionException   if this future completed
      *                               exceptionally or a completion computation threw an exception
