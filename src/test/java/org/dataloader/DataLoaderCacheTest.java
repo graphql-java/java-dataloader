@@ -71,7 +71,7 @@ public class DataLoaderCacheTest {
 
         CompletableFuture<?> future1 = identityLoader.load("a");
         CompletableFuture<?> future2 = identityLoader.load("b");
-        CompletableFuture<List<String>> composite = identityLoader.dispatch();
+        CompletableFuture<List<String>> composite = identityLoader.dispatch().getPromisedResults();
 
         await().until(composite::isDone);
         assertThat(future1.get(), equalTo("a"));
@@ -82,7 +82,7 @@ public class DataLoaderCacheTest {
 
         CompletableFuture<?> future3 = identityLoader.load("c");
         CompletableFuture<?> future2a = identityLoader.load("b");
-        composite = identityLoader.dispatch();
+        composite = identityLoader.dispatch().getPromisedResults();
 
         await().until(composite::isDone);
         assertThat(future3.get(), equalTo("c"));
@@ -97,7 +97,7 @@ public class DataLoaderCacheTest {
         assertArrayEquals(customMap.stash.keySet().toArray(), asList("a", "c").toArray());
 
         CompletableFuture<?> future2b = identityLoader.load("b");
-        composite = identityLoader.dispatch();
+        composite = identityLoader.dispatch().getPromisedResults();
 
         await().until(composite::isDone);
         assertThat(future2b.get(), equalTo("b"));
@@ -122,7 +122,7 @@ public class DataLoaderCacheTest {
 
         CompletableFuture<?> future1 = identityLoader.load("a");
         CompletableFuture<?> future2 = identityLoader.load("b");
-        CompletableFuture<List<String>> composite = identityLoader.dispatch();
+        CompletableFuture<List<String>> composite = identityLoader.dispatch().getPromisedResults();
 
         await().until(composite::isDone);
         assertThat(future1.join(), equalTo("cachedVal"));
@@ -143,7 +143,7 @@ public class DataLoaderCacheTest {
 
         CompletableFuture<?> future1 = identityLoader.load("a");
         CompletableFuture<?> future2 = identityLoader.load("b");
-        CompletableFuture<List<String>> composite = identityLoader.dispatch();
+        CompletableFuture<List<String>> composite = identityLoader.dispatch().getPromisedResults();
 
         await().until(composite::isDone);
         assertThat(future1.join(), equalTo("customValue"));
@@ -248,7 +248,7 @@ public class DataLoaderCacheTest {
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
-        CompletableFuture<List<String>> composite = identityLoader.dispatch();
+        CompletableFuture<List<String>> composite = identityLoader.dispatch().getPromisedResults();
 
         await().until(composite::isDone);
         assertThat(future1.get(), equalTo("X"));
@@ -259,7 +259,7 @@ public class DataLoaderCacheTest {
 
         CompletableFuture<String> future1a = identityLoader.load("A");
         CompletableFuture<String> future2a = identityLoader.load("B");
-        CompletableFuture<List<String>> composite2 = identityLoader.dispatch();
+        CompletableFuture<List<String>> composite2 = identityLoader.dispatch().getPromisedResults();
 
         await().until(composite2::isDone);
         assertThat(future1a.get(), equalTo("X"));
@@ -276,7 +276,7 @@ public class DataLoaderCacheTest {
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
-        CompletableFuture<List<String>> composite = identityLoader.dispatch();
+        CompletableFuture<List<String>> composite = identityLoader.dispatch().getPromisedResults();
 
         await().until(composite::isDone);
         assertThat(future1.get(), equalTo("X"));
@@ -287,7 +287,7 @@ public class DataLoaderCacheTest {
 
         CompletableFuture<String> future1a = identityLoader.load("A");
         CompletableFuture<String> future2a = identityLoader.load("B");
-        CompletableFuture<List<String>> composite2 = identityLoader.dispatch();
+        CompletableFuture<List<String>> composite2 = identityLoader.dispatch().getPromisedResults();
 
         await().until(composite2::isDone);
         assertThat(future1a.get(), equalTo("Y"));

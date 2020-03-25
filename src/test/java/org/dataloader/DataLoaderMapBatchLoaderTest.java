@@ -110,7 +110,7 @@ public class DataLoaderMapBatchLoaderTest {
         expectedCalls.add(listFrom(15, 20));
         expectedCalls.add(listFrom(20, 21));
 
-        List<Integer> result = identityLoader.dispatch().join();
+        List<Integer> result = identityLoader.dispatchAndJoin();
 
         assertThat(result, equalTo(listFrom(0, 21)));
         assertThat(loadCalls, equalTo(expectedCalls));

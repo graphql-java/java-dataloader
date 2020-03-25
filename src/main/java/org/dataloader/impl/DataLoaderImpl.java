@@ -113,22 +113,17 @@ public class DataLoaderImpl<K, V> implements DataLoader<K, V> {
     }
 
     @Override
-    public CompletableFuture<List<V>> dispatch() {
-        return dispatchImpl().getPromisedResults();
-    }
-
-    @Override
-    public DispatchResult<V> dispatchWithCounts() {
+    public DispatchResult<V> dispatch() {
         return dispatchImpl();
     }
 
     @Override
     public List<V> dispatchAndJoin() {
 
-        List<V> joinedResults = dispatch().join();
+        List<V> joinedResults = dispatch().getPromisedResults().join();
         List<V> results = new ArrayList<>(joinedResults);
         while (this.dispatchDepth() > 0) {
-            joinedResults = dispatch().join();
+            joinedResults = dispatch().getPromisedResults().join();
             results.addAll(joinedResults);
         }
         return results;

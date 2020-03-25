@@ -1,5 +1,8 @@
 package org.dataloader;
 
+import org.dataloader.annotations.PublicApi;
+import org.dataloader.stats.Statistics;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -7,9 +10,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-
-import org.dataloader.annotations.PublicApi;
-import org.dataloader.stats.Statistics;
 
 /**
  * This allows data loaders to be registered together into a single place so
@@ -105,23 +105,15 @@ public class DataLoaderRegistry {
     }
 
     /**
-     * This will called {@link org.dataloader.DataLoader#dispatch()} on each of the registered
-     * {@link org.dataloader.DataLoader}s
-     */
-    public void dispatchAll() {
-        getDataLoaders().forEach(DataLoader::dispatch);
-    }
-
-    /**
-     * Similar to {@link DataLoaderRegistry#dispatchAll()}, this calls {@link org.dataloader.DataLoader#dispatch()} on
-     * each of the registered {@link org.dataloader.DataLoader}s, but returns the number of dispatches.
+     * SThis calls {@link org.dataloader.DataLoader#dispatch()} on
+     * each of the registered {@link org.dataloader.DataLoader}s, and returns the number of dispatches.
      *
      * @return total number of entries that were dispatched from registered {@link org.dataloader.DataLoader}s.
      */
-    public int dispatchAllWithCount() {
+    public int dispatchAll() {
         int sum = 0;
-        for (DataLoader<?,?> dataLoader : getDataLoaders()) {
-            sum += dataLoader.dispatchWithCounts().getKeysCount();
+        for (DataLoader<?, ?> dataLoader : getDataLoaders()) {
+            sum += dataLoader.dispatch().getKeysCount();
         }
         return sum;
     }
@@ -132,7 +124,7 @@ public class DataLoaderRegistry {
      */
     public int dispatchDepth() {
         int totalDispatchDepth = 0;
-        for (DataLoader<?,?> dataLoader : getDataLoaders()) {
+        for (DataLoader<?, ?> dataLoader : getDataLoaders()) {
             totalDispatchDepth += dataLoader.dispatchDepth();
         }
         return totalDispatchDepth;

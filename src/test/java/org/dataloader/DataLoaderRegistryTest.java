@@ -152,7 +152,7 @@ public class DataLoaderRegistryTest {
         int dispatchDepth = registry.dispatchDepth();
         assertThat(dispatchDepth, equalTo(4));
 
-        int dispatchedCount = registry.dispatchAllWithCount();
+        int dispatchedCount = registry.dispatchAll();
         dispatchDepth = registry.dispatchDepth();
         assertThat(dispatchedCount, equalTo(4));
         assertThat(dispatchDepth, equalTo(0));

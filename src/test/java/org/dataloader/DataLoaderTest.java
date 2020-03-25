@@ -113,7 +113,7 @@ public class DataLoaderTest {
             assertThat(promisedValues.size(), is(0));
             success.set(true);
         });
-        DispatchResult<?> dispatchResult = identityLoader.dispatchWithCounts();
+        DispatchResult<?> dispatchResult = identityLoader.dispatch();
         await().untilAtomic(success, is(true));
         assertThat(dispatchResult.getKeysCount(), equalTo(0));
     }
@@ -141,7 +141,7 @@ public class DataLoaderTest {
         CompletableFuture<Integer> future1 = identityLoader.load(1);
         CompletableFuture<Integer> future1a = identityLoader.load(1);
         CompletableFuture<Integer> future2 = identityLoader.load(2);
-        DispatchResult<?> dispatchResult = identityLoader.dispatchWithCounts();
+        DispatchResult<?> dispatchResult = identityLoader.dispatch();
 
         await().until(() -> future1.isDone() && future2.isDone());
         assertThat(dispatchResult.getKeysCount(), equalTo(2)); // its two because its the number dispatched (by key) not the load calls
@@ -215,7 +215,7 @@ public class DataLoaderTest {
         CompletableFuture<Object> future2 = evenLoader.load(2);
         CompletableFuture<Object> future3 = evenLoader.load(3);
         CompletableFuture<Object> future4 = evenLoader.load(4);
-        CompletableFuture<List<Object>> result = evenLoader.dispatch();
+        CompletableFuture<List<Object>> result = evenLoader.dispatch().getPromisedResults();
         result.thenAccept(promisedValues -> success.set(true));
 
         await().untilAtomic(success, is(true));
@@ -316,7 +316,7 @@ public class DataLoaderTest {
         identityLoader.load(keyA);
         identityLoader.load(keyB);
 
-        identityLoader.dispatch().thenAccept(promisedValues -> {
+        identityLoader.dispatch().getPromisedResults().thenAccept(promisedValues -> {
             assertThat(promisedValues.get(0), equalTo(keyA));
             assertThat(promisedValues.get(1), equalTo(keyB));
         });
@@ -334,7 +334,7 @@ public class DataLoaderTest {
         identityLoader.load(keyA);
         identityLoader.load(keyB);
 
-        identityLoader.dispatch().thenAccept(promisedValues -> {
+        identityLoader.dispatch().getPromisedResults().thenAccept(promisedValues -> {
             assertThat(promisedValues.get(0), equalTo(keyA));
             assertThat(identityLoader.getCacheKey(keyB), equalTo(keyB));
         });
@@ -582,7 +582,7 @@ public class DataLoaderTest {
         expectedCalls.add(listFrom(15, 20));
         expectedCalls.add(listFrom(20, 21));
 
-        List<Integer> result = identityLoader.dispatch().join();
+        List<Integer> result = identityLoader.dispatch().getPromisedResults().join();
 
         assertThat(result, equalTo(listFrom(0, 21)));
         assertThat(loadCalls, equalTo(expectedCalls));
@@ -647,10 +647,10 @@ public class DataLoaderTest {
         CompletableFuture<String> b2 = bLoader.load("B2");
 
         CompletableFuture.allOf(
-                aLoader.dispatch(),
-                deepLoader.dispatch(),
-                bLoader.dispatch(),
-                deepLoader.dispatch()
+                aLoader.dispatch().getPromisedResults(),
+                deepLoader.dispatch().getPromisedResults(),
+                bLoader.dispatch().getPromisedResults(),
+                deepLoader.dispatch().getPromisedResults()
         ).join();
 
         assertThat(a1.get(), equalTo("A1"));

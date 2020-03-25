@@ -127,16 +127,7 @@ public interface DataLoader<K, V> {
 
 
     /**
-     * Dispatches the queued load requests to the batch execution function and returns a promise of the result.
-     * <p>
-     * If batching is disabled, or there are no queued requests, then a succeeded promise is returned.
-     *
-     * @return the promise of the queued load requests
-     */
-    CompletableFuture<List<V>> dispatch();
-
-    /**
-     * Dispatches the queued load requests to the batch execution function and returns both the promise of the result
+     * Dispatches the queued load requests to the batch execution function and returns both the promise of the results
      * and the number of entries that were dispatched.
      * <p>
      * If batching is disabled, or there are no queued requests, then a succeeded promise with no entries dispatched is
@@ -144,7 +135,7 @@ public interface DataLoader<K, V> {
      *
      * @return the promise of the queued load requests and the number of keys dispatched.
      */
-    DispatchResult<V> dispatchWithCounts();
+    DispatchResult<V> dispatch();
 
     /**
      * Normally {@link #dispatch()} is an asynchronous operation but this version will 'join' on the
