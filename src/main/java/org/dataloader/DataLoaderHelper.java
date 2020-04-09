@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
+import java.util.concurrent.ExecutionException;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -98,34 +99,74 @@ class DataLoaderHelper<K, V> {
         return Optional.empty();
     }
 
+    /**
+     * Try to get a value from the cache.
+     * Returns empty if cache doesn't contain key, or get completes with null or exception.
+     *
+     * @param key - key to fetch
+     * @return optional value
+     */
+    CompletableFuture<Optional<V>> loadFromCache(K key) {
+        boolean cachingEnabled = loaderOptions.cachingEnabled();
+
+        if (!cachingEnabled) {
+            return CompletableFuture.completedFuture(Optional.empty());
+        }
+
+        if (!futureCache.containsKey(key)) {
+            return CompletableFuture.completedFuture(Optional.empty());
+        }
+
+        return futureCache.get(key).handleAsync((v, exception) -> {
+            if (v != null) {
+                stats.incrementCacheHitCount();
+                return Optional.of(v);
+            }
+
+            return Optional.empty();
+        });
+    }
+
+    CompletableFuture<V> loadFromSource(K key, Object loadContext) {
+        boolean batchingEnabled = loaderOptions.batchingEnabled();
+
+        CompletableFuture<V> future = new CompletableFuture<>();
+        if (batchingEnabled) {
+            loaderQueue.add(new LoaderQueueEntry<>(key, future, loadContext));
+        } else {
+            stats.incrementBatchLoadCountBy(1);
+            // immediate execution of batch function
+            future = invokeLoaderImmediately(key, loadContext);
+        }
+
+        return future;
+    }
 
     CompletableFuture<V> load(K key, Object loadContext) {
         synchronized (dataLoader) {
             Object cacheKey = getCacheKey(nonNull(key));
             stats.incrementLoadCount();
 
-            boolean batchingEnabled = loaderOptions.batchingEnabled();
             boolean cachingEnabled = loaderOptions.cachingEnabled();
 
-            if (cachingEnabled) {
-                if (futureCache.containsKey(cacheKey)) {
-                    stats.incrementCacheHitCount();
-                    return futureCache.get(cacheKey);
+            return loadFromCache(key).thenApplyAsync((cachedValue) -> {
+                if (cachedValue.isPresent()) {
+                    return cachedValue.get();
                 }
-            }
 
-            CompletableFuture<V> future = new CompletableFuture<>();
-            if (batchingEnabled) {
-                loaderQueue.add(new LoaderQueueEntry<>(key, future, loadContext));
-            } else {
-                stats.incrementBatchLoadCountBy(1);
-                // immediate execution of batch function
-                future = invokeLoaderImmediately(key, loadContext);
-            }
-            if (cachingEnabled) {
-                futureCache.set(cacheKey, future);
-            }
-            return future;
+                var sourceResult = loadFromSource(key, loadContext);
+                sourceResult.thenAcceptAsync((sourceValue) -> {
+                    if (cachingEnabled) {
+                        futureCache.set(cacheKey, java.util.concurrent.CompletableFuture.supplyAsync(() -> sourceValue));
+                    }
+                });
+
+                try {
+                    return sourceResult.get();
+                } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
+                    return null;
+                }
+            });
         }
     }
 
