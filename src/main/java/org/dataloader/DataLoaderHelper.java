@@ -348,4 +348,16 @@ class DataLoaderHelper<K, V> {
             return loaderQueue.size();
         }
     }
+    
+	void addQueuedEntries() {
+		synchronized (dataLoader) {
+			if (! loaderOptions.cachingEnabled()) {
+				return;
+			}
+			
+			this.loaderQueue.forEach(action -> {
+				futureCache.set(action.getKey(), action.getValue());
+			});
+		}
+	}
 }

@@ -527,6 +527,7 @@ public class DataLoader<K, V> {
         Object cacheKey = getCacheKey(key);
         synchronized (this) {
             futureCache.delete(cacheKey);
+            helper.addQueuedEntries();
         }
         return this;
     }
@@ -539,6 +540,7 @@ public class DataLoader<K, V> {
     public DataLoader<K, V> clearAll() {
         synchronized (this) {
             futureCache.clear();
+            helper.addQueuedEntries();
         }
         return this;
     }
