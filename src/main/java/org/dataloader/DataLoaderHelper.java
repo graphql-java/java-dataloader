@@ -73,9 +73,9 @@ class DataLoaderHelper<K, V> {
 
     Optional<CompletableFuture<V>> getIfPresent(K key) {
         synchronized (dataLoader) {
-            Object cacheKey = getCacheKey(nonNull(key));
             boolean cachingEnabled = loaderOptions.cachingEnabled();
             if (cachingEnabled) {
+                Object cacheKey = getCacheKey(nonNull(key));
                 if (futureCache.containsKey(cacheKey)) {
                     stats.incrementCacheHitCount();
                     return Optional.of(futureCache.get(cacheKey));
@@ -101,11 +101,11 @@ class DataLoaderHelper<K, V> {
 
     CompletableFuture<V> load(K key, Object loadContext) {
         synchronized (dataLoader) {
-            Object cacheKey = getCacheKey(nonNull(key));
-            stats.incrementLoadCount();
-
             boolean batchingEnabled = loaderOptions.batchingEnabled();
             boolean cachingEnabled = loaderOptions.cachingEnabled();
+
+            Object cacheKey = cachingEnabled ? getCacheKey(nonNull(key)) : null;
+            stats.incrementLoadCount();
 
             if (cachingEnabled) {
                 if (futureCache.containsKey(cacheKey)) {
