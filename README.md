@@ -121,7 +121,7 @@ maintain minimal outgoing data requests.
 
 In the example above, the first call to dispatch will cause the batched user keys (1 and 2) to be fired at the BatchLoader function to load 2 users.
   
-Since each `thenAccept` callback made more calls to `userLoader` to get the "user they they invited", another 2 user keys are given at the `BatchLoader` 
+Since each `thenAccept` callback made more calls to `userLoader` to get the "user they have invited", another 2 user keys are given at the `BatchLoader` 
 function for them.    
 
 In this case the `userLoader.dispatchAndJoin()` is used to make a dispatch call, wait for it (aka join it), see if the data loader has more batched entries, (which is does)
