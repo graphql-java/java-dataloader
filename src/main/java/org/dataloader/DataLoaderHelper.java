@@ -30,7 +30,7 @@ import static org.dataloader.impl.Assertions.nonNull;
 class DataLoaderHelper<K, V> {
 
 
-    class LoaderQueueEntry<K, V> {
+    static class LoaderQueueEntry<K, V> {
 
         final K key;
         final V value;
@@ -151,7 +151,7 @@ class DataLoaderHelper<K, V> {
             loaderQueue.clear();
         }
         if (!batchingEnabled || keys.isEmpty()) {
-            return new DispatchResult<V>(CompletableFuture.completedFuture(emptyList()), 0);
+            return new DispatchResult<>(CompletableFuture.completedFuture(emptyList()), 0);
         }
         final int totalEntriesHandled = keys.size();
         //
@@ -172,7 +172,7 @@ class DataLoaderHelper<K, V> {
         } else {
             futureList = dispatchQueueBatch(keys, callContexts, queuedFutures);
         }
-        return new DispatchResult<V>(futureList, totalEntriesHandled);
+        return new DispatchResult<>(futureList, totalEntriesHandled);
     }
 
     private CompletableFuture<List<V>> sliceIntoBatchesOfBatches(List<K> keys, List<CompletableFuture<V>> queuedFutures, List<Object> callContexts, int maxBatchSize) {
@@ -194,7 +194,7 @@ class DataLoaderHelper<K, V> {
         }
         //
         // now reassemble all the futures into one that is the complete set of results
-        return CompletableFuture.allOf(allBatches.toArray(new CompletableFuture[allBatches.size()]))
+        return CompletableFuture.allOf(allBatches.toArray(new CompletableFuture[0]))
                 .thenApply(v -> allBatches.stream()
                         .map(CompletableFuture::join)
                         .flatMap(Collection::stream)

@@ -20,13 +20,12 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
     private final List<? extends CompletionStage<T>> futures;
     private final CompletionStage<Void> controller;
-    private AtomicReference<Throwable> cause;
+    private final AtomicReference<Throwable> cause;
 
     private PromisedValuesImpl(List<? extends CompletionStage<T>> cs) {
         this.futures = nonNull(cs);
         this.cause = new AtomicReference<>();
-        List<CompletableFuture> cfs = cs.stream().map(CompletionStage::toCompletableFuture).collect(Collectors.toList());
-        CompletableFuture[] futuresArray = cfs.toArray(new CompletableFuture[cfs.size()]);
+        CompletableFuture[] futuresArray = cs.stream().map(CompletionStage::toCompletableFuture).toArray(CompletableFuture[]::new);
         this.controller = CompletableFuture.allOf(futuresArray).handle((result, throwable) -> {
             setCause(throwable);
             return null;
@@ -104,7 +103,6 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public T get(int index) {
         assertState(isDone(), "The PromisedValues MUST be complete before calling the get() method");
         try {

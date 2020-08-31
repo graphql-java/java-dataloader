@@ -20,7 +20,7 @@ public class CompletableFutureKit {
         return future;
     }
 
-    public static Throwable cause(CompletableFuture completableFuture) {
+    public static <V> Throwable cause(CompletableFuture<V> completableFuture) {
         if (!completableFuture.isCompletedExceptionally()) {
             return null;
         }
@@ -28,6 +28,7 @@ public class CompletableFutureKit {
             completableFuture.get();
             return null;
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             return e;
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();
@@ -38,11 +39,11 @@ public class CompletableFutureKit {
         }
     }
 
-    public static boolean succeeded(CompletableFuture future) {
+    public static <V> boolean succeeded(CompletableFuture<V> future) {
         return future.isDone() && !future.isCompletedExceptionally();
     }
 
-    public static boolean failed(CompletableFuture future) {
+    public static <V> boolean failed(CompletableFuture<V> future) {
         return future.isDone() && future.isCompletedExceptionally();
     }
 
