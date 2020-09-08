@@ -58,7 +58,6 @@ import static org.dataloader.impl.Assertions.nonNull;
 public class DataLoader<K, V> {
 
     private final DataLoaderHelper<K, V> helper;
-    private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
     private final StatisticsCollector stats;
 
@@ -246,7 +245,6 @@ public class DataLoader<K, V> {
      * @return a new DataLoader
      * @see #newDataLoaderWithTry(BatchLoader)
      */
-    @SuppressWarnings("unchecked")
     public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoader<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
         return new DataLoader<>(batchLoadFunction, options);
     }
@@ -309,7 +307,6 @@ public class DataLoader<K, V> {
      * @return a new DataLoader
      * @see #newDataLoaderWithTry(BatchLoader)
      */
-    @SuppressWarnings("unchecked")
     public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoaderWithContext<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
         return new DataLoader<>(batchLoadFunction, options);
     }
@@ -334,12 +331,12 @@ public class DataLoader<K, V> {
     }
 
     private DataLoader(Object batchLoadFunction, DataLoaderOptions options) {
-        this.loaderOptions = options == null ? new DataLoaderOptions() : options;
+        DataLoaderOptions loaderOptions = options == null ? new DataLoaderOptions() : options;
         this.futureCache = determineCacheMap(loaderOptions);
         // order of keys matter in data loader
-        this.stats = nonNull(this.loaderOptions.getStatisticsCollector());
+        this.stats = nonNull(loaderOptions.getStatisticsCollector());
 
-        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, this.loaderOptions, this.futureCache, this.stats);
+        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.stats);
     }
 
     @SuppressWarnings("unchecked")
@@ -496,10 +493,8 @@ public class DataLoader<K, V> {
      * @return the list of all results when the {@link #dispatchDepth()} reached 0
      */
     public List<V> dispatchAndJoin() {
-        List<V> results = new ArrayList<>();
-
         List<V> joinedResults = dispatch().join();
-        results.addAll(joinedResults);
+        List<V> results = new ArrayList<>(joinedResults);
         while (this.dispatchDepth() > 0) {
             joinedResults = dispatch().join();
             results.addAll(joinedResults);

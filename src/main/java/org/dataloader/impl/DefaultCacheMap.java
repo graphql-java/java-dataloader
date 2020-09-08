@@ -33,7 +33,7 @@ import java.util.Map;
 @Internal
 public class DefaultCacheMap<U, V> implements CacheMap<U, V> {
 
-    private Map<U, V> cache;
+    private final Map<U, V> cache;
 
     /**
      * Default constructor
