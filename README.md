@@ -124,7 +124,7 @@ In the example above, the first call to dispatch will cause the batched user key
 Since each `thenAccept` callback made more calls to `userLoader` to get the "user they have invited", another 2 user keys are given at the `BatchLoader` 
 function for them.    
 
-In this case the `userLoader.dispatchAndJoin()` is used to make a dispatch call, wait for it (aka join it), see if the data loader has more batched entries, (which is does)
+In this case the `userLoader.dispatchAndJoin()` is used to make a dispatch call, wait for it (aka join it), see if the data loader has more batched entries, (which it does)
 and then it repeats this until the data loader internal queue of keys is empty.  At this point we have made 2 batched calls instead of the naive 4 calls we might have made if
 we did not "batch" the calls to load data.
 
@@ -156,7 +156,7 @@ a list of user ids in one call.
                     //
                     return userIds.stream()
                             .map(id -> userManager.loadUserById(id))
-                            .collect(Collectors.toList());
+                            .collect(Collectors.toList
                 });
             }
         };
