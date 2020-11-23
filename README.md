@@ -156,7 +156,7 @@ a list of user ids in one call.
                     //
                     return userIds.stream()
                             .map(id -> userManager.loadUserById(id))
-                            .collect(Collectors.toList
+                            .collect(Collectors.toList());
                 });
             }
         };
