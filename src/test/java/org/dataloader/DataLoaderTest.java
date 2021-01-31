@@ -861,6 +861,37 @@ public class DataLoaderTest {
     }
 
     @Test
+    public void min_batch_size_with_batching_disabled_and_caching_disabled_should_dispatch_immediately_and_forget() throws Exception {
+        List<Collection<String>> loadCalls = new ArrayList<>();
+        DataLoaderOptions options = newOptions().setMinBatchSize(5).setMaxWaitInMillis(10).setBatchingEnabled(false).setCachingEnabled(false);
+        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+
+        CompletableFuture<String> fa = identityLoader.load("A");
+        CompletableFuture<String> fb = identityLoader.load("B");
+
+        // caching is off
+        CompletableFuture<String> fa1 = identityLoader.load("A");
+        CompletableFuture<String> fb1 = identityLoader.load("B");
+
+        List<String> values = CompletableFutureKit.allOf(asList(fa, fb, fa1, fb1)).join();
+
+        assertThat(fa.join(), equalTo("A"));
+        assertThat(fb.join(), equalTo("B"));
+        assertThat(fa1.join(), equalTo("A"));
+        assertThat(fb1.join(), equalTo("B"));
+
+        assertThat(values, equalTo(asList("A", "B", "A", "B")));
+
+        assertThat(loadCalls, equalTo(asList(
+                singletonList("A"),
+                singletonList("B"),
+                singletonList("A"),
+                singletonList("B")
+        )));
+
+    }
+
+    @Test
     public void batches_multiple_requests_with_max_batch_size() throws Exception {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> identityLoader = idLoader(newOptions().setMaxBatchSize(2), loadCalls);
@@ -879,6 +910,70 @@ public class DataLoaderTest {
 
         assertThat(loadCalls, equalTo(asList(asList(1, 2), singletonList(3))));
 
+    }
+
+    @Test
+    public void batches_multiple_requests_with_min_batch_size() throws Exception {
+        List<Collection<Integer>> loadCalls = new ArrayList<>();
+        DataLoader<Integer, Integer> identityLoader = idLoader(newOptions().setMinBatchSize(3).setMaxWaitInMillis(10), loadCalls);
+
+        CompletableFuture<Integer> f1 = identityLoader.load(1);
+        identityLoader.dispatch();
+        CompletableFuture<Integer> f2 = identityLoader.load(2);
+        identityLoader.dispatch();
+        CompletableFuture<Integer> f3 = identityLoader.load(3);
+        identityLoader.dispatch();
+
+        CompletableFuture.allOf(f1, f2, f3).join();
+
+        assertThat(f1.join(), equalTo(1));
+        assertThat(f2.join(), equalTo(2));
+        assertThat(f3.join(), equalTo(3));
+
+        assertThat(loadCalls, equalTo(singletonList(asList(1, 2, 3))));
+
+    }
+
+    @Test
+    public void min_batch_size_with_no_wait_time_should_not_batch_requests() throws Exception {
+        List<Collection<Integer>> loadCalls = new ArrayList<>();
+        DataLoader<Integer, Integer> identityLoader = idLoader(newOptions().setMinBatchSize(3), loadCalls);
+
+        CompletableFuture<Integer> f1 = identityLoader.load(1);
+        identityLoader.dispatch();
+        CompletableFuture<Integer> f2 = identityLoader.load(2);
+        identityLoader.dispatch();
+        CompletableFuture<Integer> f3 = identityLoader.load(3);
+        identityLoader.dispatch();
+
+        CompletableFuture.allOf(f1, f2, f3).join();
+
+        assertThat(f1.join(), equalTo(1));
+        assertThat(f2.join(), equalTo(2));
+        assertThat(f3.join(), equalTo(3));
+
+        assertThat(loadCalls, equalTo(asList(singletonList(1), singletonList(2), singletonList(3))));
+    }
+
+    @Test
+    public void max_wait_time_with_no_min_batch_size_should_not_batch_requests() throws Exception {
+        List<Collection<Integer>> loadCalls = new ArrayList<>();
+        DataLoader<Integer, Integer> identityLoader = idLoader(newOptions().setMaxWaitInMillis(100), loadCalls);
+
+        CompletableFuture<Integer> f1 = identityLoader.load(1);
+        identityLoader.dispatch();
+        CompletableFuture<Integer> f2 = identityLoader.load(2);
+        identityLoader.dispatch();
+        CompletableFuture<Integer> f3 = identityLoader.load(3);
+        identityLoader.dispatch();
+
+        CompletableFuture.allOf(f1, f2, f3).join();
+
+        assertThat(f1.join(), equalTo(1));
+        assertThat(f2.join(), equalTo(2));
+        assertThat(f3.join(), equalTo(3));
+
+        assertThat(loadCalls, equalTo(asList(singletonList(1), singletonList(2), singletonList(3))));
     }
 
     @Test
@@ -901,6 +996,28 @@ public class DataLoaderTest {
         assertThat(result, equalTo(listFrom(0, 21)));
         assertThat(loadCalls, equalTo(expectedCalls));
 
+    }
+
+    @Test
+    public void can_combine_min_batch_size_and_split_max_batch_sizes_correctly() throws Exception {
+        List<Collection<Integer>> loadCalls = new ArrayList<>();
+        DataLoader<Integer, Integer> identityLoader = idLoader(newOptions().setMinBatchSize(5).setMaxWaitInMillis(20).setMaxBatchSize(5), loadCalls);
+
+        List<CompletableFuture<Integer>> results = new ArrayList<>();
+        for (int i = 0; i < 21; i++) {
+            results.add(identityLoader.load(i));
+            identityLoader.dispatch();
+        }
+        List<Collection<Integer>> expectedCalls = new ArrayList<>();
+        expectedCalls.add(listFrom(0, 5));
+        expectedCalls.add(listFrom(5, 10));
+        expectedCalls.add(listFrom(10, 15));
+        expectedCalls.add(listFrom(15, 20));
+        expectedCalls.add(listFrom(20, 21));
+
+        results.forEach(CompletableFuture::join);
+
+        assertThat(loadCalls, equalTo(expectedCalls));
     }
 
     @Test

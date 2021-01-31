@@ -3,6 +3,8 @@ package org.dataloader;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.StatisticsCollector;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -12,6 +14,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyList;
@@ -61,6 +69,8 @@ class DataLoaderHelper<K, V> {
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
     private final List<LoaderQueueEntry<K, CompletableFuture<V>>> loaderQueue;
     private final StatisticsCollector stats;
+    private Instant lastDispatchTime;
+    private final ScheduledExecutorService executorService;
 
     DataLoaderHelper(DataLoader<K, V> dataLoader, Object batchLoadFunction, DataLoaderOptions loaderOptions, CacheMap<Object, CompletableFuture<V>> futureCache, StatisticsCollector stats) {
         this.dataLoader = dataLoader;
@@ -69,6 +79,8 @@ class DataLoaderHelper<K, V> {
         this.futureCache = futureCache;
         this.loaderQueue = new ArrayList<>();
         this.stats = stats;
+        this.lastDispatchTime = Instant.now();
+        this.executorService = Executors.newSingleThreadScheduledExecutor();
     }
 
     Optional<CompletableFuture<V>> getIfPresent(K key) {
@@ -136,6 +148,10 @@ class DataLoaderHelper<K, V> {
     }
 
     DispatchResult<V> dispatch() {
+        return dispatch(false);
+    }
+
+    DispatchResult<V> dispatch(boolean forced) {
         boolean batchingEnabled = loaderOptions.batchingEnabled();
         //
         // we copy the pre-loaded set of futures ready for dispatch
@@ -143,11 +159,21 @@ class DataLoaderHelper<K, V> {
         final List<Object> callContexts = new ArrayList<>();
         final List<CompletableFuture<V>> queuedFutures = new ArrayList<>();
         synchronized (dataLoader) {
+            final long timeSinceLastDispatch = Duration.between(lastDispatchTime, Instant.now()).toMillis();
+
+            if (batchingEnabled && !forced && loaderQueue.size() < loaderOptions.minBatchSize() && timeSinceLastDispatch < loaderOptions.maxWaitInMillis()) {
+                executorService.schedule(() -> { dispatch(true); },
+                                         loaderOptions.maxWaitInMillis() - timeSinceLastDispatch,
+                                         TimeUnit.MILLISECONDS);
+                return new DispatchResult<>(CompletableFuture.completedFuture(emptyList()), 0);
+            }
+
             loaderQueue.forEach(entry -> {
                 keys.add(entry.getKey());
                 queuedFutures.add(entry.getValue());
                 callContexts.add(entry.getCallContext());
             });
+            lastDispatchTime = Instant.now();
             loaderQueue.clear();
         }
         if (!batchingEnabled || keys.isEmpty()) {

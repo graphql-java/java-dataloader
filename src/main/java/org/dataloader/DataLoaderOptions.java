@@ -40,6 +40,8 @@ public class DataLoaderOptions {
     private CacheKey cacheKeyFunction;
     private CacheMap cacheMap;
     private int maxBatchSize;
+    private int minBatchSize;
+    private int maxWaitInMillis;
     private Supplier<StatisticsCollector> statisticsCollector;
     private BatchLoaderContextProvider environmentProvider;
 
@@ -51,6 +53,8 @@ public class DataLoaderOptions {
         cachingEnabled = true;
         cachingExceptionsEnabled = true;
         maxBatchSize = -1;
+        minBatchSize = 0;
+        maxWaitInMillis = 0;
         statisticsCollector = SimpleStatisticsCollector::new;
         environmentProvider = NULL_PROVIDER;
     }
@@ -68,6 +72,8 @@ public class DataLoaderOptions {
         this.cacheKeyFunction = other.cacheKeyFunction;
         this.cacheMap = other.cacheMap;
         this.maxBatchSize = other.maxBatchSize;
+        this.minBatchSize = other.minBatchSize;
+        this.maxWaitInMillis = other.maxWaitInMillis;
         this.statisticsCollector = other.statisticsCollector;
         this.environmentProvider = other.environmentProvider;
     }
@@ -212,7 +218,59 @@ public class DataLoaderOptions {
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setMaxBatchSize(int maxBatchSize) {
+        if(maxBatchSize != -1 && (minBatchSize > maxBatchSize)) {
+            throw new IllegalArgumentException("minBatchSize should not be greater than maxBatchSize");
+        }
         this.maxBatchSize = maxBatchSize;
+        return this;
+    }
+
+    /**
+     * Gets the minimum number of keys that will be presented to the {@link BatchLoader} function.
+     * minimum number of keys in a batch are also controlled by another option, maxWaitInMillis.
+     *
+     * @return the minimum batch size or 0 if there is no limit
+     */
+    public int minBatchSize() {
+        return minBatchSize;
+    }
+
+    /**
+     * Sets the minimum number of keys that will be presented to the {@link BatchLoader} function.
+     * minimum number of keys in a batch are also controlled by another option, maxWaitInMillis.
+     *
+     * @param minBatchSize the minimum batch size
+     *
+     * @return the data loader options for fluent coding
+     */
+    public DataLoaderOptions setMinBatchSize(int minBatchSize) {
+        if(maxBatchSize != -1 && (minBatchSize > maxBatchSize)) {
+            throw new IllegalArgumentException("minBatchSize should not be greater than maxBatchSize");
+        }
+        this.minBatchSize = minBatchSize;
+        return this;
+    }
+
+    /**
+     * Gets the max milliseconds to wait before presenting a batch of keys to the {@link BatchLoader} function.
+     * minimum number of keys in a batch are also controlled by another option, minBatchSize.
+     *
+     * @return the max wait time in milliseconds or 0 if there is no limit
+     */
+    public int maxWaitInMillis() {
+        return maxWaitInMillis;
+    }
+
+    /**
+     * Sets the max milliseconds to wait before presenting a batch of keys to the {@link BatchLoader} function.
+     * minimum number of keys in a batch are also controlled by another option, minBatchSize.
+     *
+     * @param maxWaitInMillis the max wait time in milliseconds
+     *
+     * @return the data loader options for fluent coding
+     */
+    public DataLoaderOptions setMaxWaitInMillis(int maxWaitInMillis) {
+        this.maxWaitInMillis = maxWaitInMillis;
         return this;
     }
 
