@@ -104,7 +104,14 @@ class DataLoaderHelper<K, V> {
             boolean batchingEnabled = loaderOptions.batchingEnabled();
             boolean cachingEnabled = loaderOptions.cachingEnabled();
 
-            Object cacheKey = cachingEnabled ? getCacheKey(nonNull(key)) : null;
+            Object cacheKey = null;
+            if (cachingEnabled) {
+                if (loadContext == null) {
+                    cacheKey = getCacheKey(key);
+                } else {
+                    cacheKey = getCacheKeyWithContext(key, loadContext);
+                }
+            }
             stats.incrementLoadCount();
 
             if (cachingEnabled) {
@@ -133,6 +140,12 @@ class DataLoaderHelper<K, V> {
     Object getCacheKey(K key) {
         return loaderOptions.cacheKeyFunction().isPresent() ?
                 loaderOptions.cacheKeyFunction().get().getKey(key) : key;
+    }
+
+    @SuppressWarnings("unchecked")
+    Object getCacheKeyWithContext(K key, Object context) {
+        return loaderOptions.cacheKeyFunction().isPresent() ?
+                loaderOptions.cacheKeyFunction().get().getKeyWithContext(key, context): key;
     }
 
     DispatchResult<V> dispatch() {
