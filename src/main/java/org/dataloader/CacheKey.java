@@ -35,4 +35,17 @@ public interface CacheKey<K> {
      * @return the cache key
      */
     Object getKey(K input);
+
+    /**
+     * Returns the cache key that is created from the provided input key and context.
+     *
+     * @param input the input key
+     *
+     * @param context the context
+     *
+     * @return the cache key
+     */
+    default Object getKeyWithContext(K input, Object context) {
+        return getKey(input);
+    }
 }
