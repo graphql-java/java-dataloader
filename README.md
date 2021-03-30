@@ -1,8 +1,8 @@
 # java-dataloader
 
-[![Build Status](https://travis-ci.org/graphql-java/java-dataloader.svg?branch=master)](https://travis-ci.org/graphql-java/java-dataloader.svg?branch=master)&nbsp;&nbsp;
-[![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/graphql-java/java-dataloader/blob/master/LICENSE)&nbsp;&nbsp;
-[![Download](https://api.bintray.com/packages/graphql-java/graphql-java/java-dataloader/images/download.svg)](https://bintray.com/graphql-java/graphql-java/java-dataloader/_latestVersion)
+[![Build](https://github.com/graphql-java/java-dataloader/actions/workflows/master.yml/badge.svg)](https://github.com/graphql-java/java-dataloader/actions/workflows/master.yml)
+[![Latest Release](https://maven-badges.herokuapp.com/maven-central/com.graphql-java/java-dataloader/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.graphql-java/java-dataloader/) 
+[![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/graphql-java/java-dataloader/blob/master/LICENSE)
 
 This small and simple utility library is a pure Java 8 port of [Facebook DataLoader](https://github.com/facebook/dataloader). 
 
