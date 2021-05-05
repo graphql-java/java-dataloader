@@ -58,7 +58,7 @@ import static org.dataloader.impl.Assertions.nonNull;
 public class DataLoader<K, V> {
 
     private final DataLoaderHelper<K, V> helper;
-    private final CacheMap<Object, CompletableFuture<V>> futureCache;
+    private final CacheMap<Object, V> valueCache;
     private final StatisticsCollector stats;
 
     /**
@@ -332,16 +332,16 @@ public class DataLoader<K, V> {
 
     private DataLoader(Object batchLoadFunction, DataLoaderOptions options) {
         DataLoaderOptions loaderOptions = options == null ? new DataLoaderOptions() : options;
-        this.futureCache = determineCacheMap(loaderOptions);
+        this.valueCache = determineCacheMap(loaderOptions);
         // order of keys matter in data loader
         this.stats = nonNull(loaderOptions.getStatisticsCollector());
 
-        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.stats);
+        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.valueCache, this.stats);
     }
 
     @SuppressWarnings("unchecked")
-    private CacheMap<Object, CompletableFuture<V>> determineCacheMap(DataLoaderOptions loaderOptions) {
-        return loaderOptions.cacheMap().isPresent() ? (CacheMap<Object, CompletableFuture<V>>) loaderOptions.cacheMap().get() : CacheMap.simpleMap();
+    private CacheMap<Object, V> determineCacheMap(DataLoaderOptions loaderOptions) {
+        return loaderOptions.cacheMap().isPresent() ? (CacheMap<Object, V>) loaderOptions.cacheMap().get() : CacheMap.simpleMap();
     }
 
     /**
@@ -521,7 +521,7 @@ public class DataLoader<K, V> {
     public DataLoader<K, V> clear(K key) {
         Object cacheKey = getCacheKey(key);
         synchronized (this) {
-            futureCache.delete(cacheKey);
+            valueCache.delete(cacheKey);
         }
         return this;
     }
@@ -533,7 +533,7 @@ public class DataLoader<K, V> {
      */
     public DataLoader<K, V> clearAll() {
         synchronized (this) {
-            futureCache.clear();
+            valueCache.clear();
         }
         return this;
     }
@@ -548,9 +548,7 @@ public class DataLoader<K, V> {
     public DataLoader<K, V> prime(K key, V value) {
         Object cacheKey = getCacheKey(key);
         synchronized (this) {
-            if (!futureCache.containsKey(cacheKey)) {
-                futureCache.set(cacheKey, CompletableFuture.completedFuture(value));
-            }
+            valueCache.setIfAbsent(cacheKey, value);
         }
         return this;
     }
@@ -562,10 +560,10 @@ public class DataLoader<K, V> {
      * @param error the exception to prime instead of a value
      * @return the data loader for fluent coding
      */
-    public DataLoader<K, V> prime(K key, Exception error) {
+    public DataLoader<K, V> prime(K key, Throwable error) {
         Object cacheKey = getCacheKey(key);
-        if (!futureCache.containsKey(cacheKey)) {
-            futureCache.set(cacheKey, CompletableFutureKit.failedFuture(error));
+        synchronized (this) {
+            valueCache.setIfAbsent(cacheKey, error);
         }
         return this;
     }

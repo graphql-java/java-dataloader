@@ -213,12 +213,27 @@ public class ReadmeExamples {
         }
 
         @Override
-        public Object get(Object key) {
+        public Try get(Object key) {
             return null;
         }
 
         @Override
         public CacheMap set(Object key, Object value) {
+            return null;
+        }
+
+        @Override
+        public CacheMap set(Object key, Throwable error) {
+            return null;
+        }
+
+        @Override
+        public CacheMap setIfAbsent(Object key, Object value) {
+            return null;
+        }
+
+        @Override
+        public CacheMap setIfAbsent(Object key, Throwable error) {
             return null;
         }
 

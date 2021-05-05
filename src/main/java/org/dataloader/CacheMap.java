@@ -18,12 +18,10 @@ package org.dataloader;
 
 import org.dataloader.impl.DefaultCacheMap;
 
-import java.util.concurrent.CompletableFuture;
-
 /**
  * Cache map interface for data loaders that use caching.
  * <p>
- * The default implementation used by the data loader is based on a {@link java.util.LinkedHashMap}. Note that the
+ * The default implementation used by the data loader is based on a {@link java.util.concurrent.ConcurrentHashMap}. Note that the
  * implementation could also have used a regular {@link java.util.Map} instead of this {@link CacheMap}, but
  * this aligns better to the reference data loader implementation provided by Facebook
  * <p>
@@ -39,19 +37,19 @@ import java.util.concurrent.CompletableFuture;
 public interface CacheMap<U, V> {
 
     /**
-     * Creates a new cache map, using the default implementation that is based on a {@link java.util.LinkedHashMap}.
+     * Creates a new cache map, using the default implementation that is based on a {@link java.util.concurrent.ConcurrentHashMap}.
      *
      * @param <U> type parameter indicating the type of the cache keys
      * @param <V> type parameter indicating the type of the data that is cached
      *
      * @return the cache map
      */
-    static <U, V> CacheMap<U, CompletableFuture<V>> simpleMap() {
+    static <U, V> CacheMap<U, V> simpleMap() {
         return new DefaultCacheMap<>();
     }
 
     /**
-     * Checks whether the specified key is contained in the cach map.
+     * Checks whether the specified key is contained in the cache map.
      *
      * @param key the key to check
      *
@@ -69,7 +67,7 @@ public interface CacheMap<U, V> {
      *
      * @return the cached value, or {@code null} if not found (depends on cache implementation)
      */
-    V get(U key);
+    Try<V> get(U key);
 
     /**
      * Creates a new cache map entry with the specified key and value, or updates the value if the key already exists.
@@ -80,6 +78,36 @@ public interface CacheMap<U, V> {
      * @return the cache map for fluent coding
      */
     CacheMap<U, V> set(U key, V value);
+
+    /**
+     * Creates a new cache entry with the specified key and error, or updates the error if the key already exists.
+     *
+     * @param key   the key to cache
+     * @param error the error to cache
+     *
+     * @return the cache map for fluent coding
+     */
+    CacheMap<U, V> set(U key, Throwable error);
+
+    /**
+     * Creates a new cache map entry with the specified key and value if it doesn't exist.
+     *
+     * @param key   the key to cache
+     * @param value the value to cache
+     *
+     * @return the cache map for fluent coding
+     */
+    CacheMap<U, V> setIfAbsent(U key, V value);
+
+    /**
+     * Creates a new cache map entry with the specified key and error if it doesn't exist.
+     *
+     * @param key   the key to cache
+     * @param error the value to cache
+     *
+     * @return the cache map for fluent coding
+     */
+    CacheMap<U, V> setIfAbsent(U key, Throwable error);
 
     /**
      * Deletes the entry with the specified key from the cache map, if it exists.

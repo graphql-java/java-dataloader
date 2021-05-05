@@ -17,13 +17,31 @@ public class CustomCacheMap implements CacheMap<String, Object> {
     }
 
     @Override
-    public Object get(String key) {
-        return stash.get(key);
+    public Try<Object> get(String key) {
+        return Try.succeeded(stash.get(key));
     }
 
     @Override
     public CacheMap<String, Object> set(String key, Object value) {
         stash.put(key, value);
+        return this;
+    }
+
+    @Override
+    public CacheMap<String, Object> set(String key, Throwable error) {
+        // Don't cache errors in this implementation
+        return this;
+    }
+
+    @Override
+    public CacheMap<String, Object> setIfAbsent(String key, Object value) {
+        stash.putIfAbsent(key, value);
+        return this;
+    }
+
+    @Override
+    public CacheMap<String, Object> setIfAbsent(String key, Throwable error) {
+        // Don't cache errors in this implementation
         return this;
     }
 

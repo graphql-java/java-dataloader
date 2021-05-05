@@ -1,5 +1,6 @@
 package org.dataloader;
 
+import java.util.concurrent.atomic.AtomicReference;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.StatisticsCollector;
 
@@ -58,15 +59,15 @@ class DataLoaderHelper<K, V> {
     private final DataLoader<K, V> dataLoader;
     private final Object batchLoadFunction;
     private final DataLoaderOptions loaderOptions;
-    private final CacheMap<Object, CompletableFuture<V>> futureCache;
+    private final CacheMap<Object, V> valueCache;
     private final List<LoaderQueueEntry<K, CompletableFuture<V>>> loaderQueue;
     private final StatisticsCollector stats;
 
-    DataLoaderHelper(DataLoader<K, V> dataLoader, Object batchLoadFunction, DataLoaderOptions loaderOptions, CacheMap<Object, CompletableFuture<V>> futureCache, StatisticsCollector stats) {
+    DataLoaderHelper(DataLoader<K, V> dataLoader, Object batchLoadFunction, DataLoaderOptions loaderOptions, CacheMap<Object, V> valueCache, StatisticsCollector stats) {
         this.dataLoader = dataLoader;
         this.batchLoadFunction = batchLoadFunction;
         this.loaderOptions = loaderOptions;
-        this.futureCache = futureCache;
+        this.valueCache = valueCache;
         this.loaderQueue = new ArrayList<>();
         this.stats = stats;
     }
@@ -76,9 +77,19 @@ class DataLoaderHelper<K, V> {
             boolean cachingEnabled = loaderOptions.cachingEnabled();
             if (cachingEnabled) {
                 Object cacheKey = getCacheKey(nonNull(key));
-                if (futureCache.containsKey(cacheKey)) {
+                if (valueCache.containsKey(cacheKey)) {
                     stats.incrementCacheHitCount();
-                    return Optional.of(futureCache.get(cacheKey));
+
+                    CompletableFuture<V> futureValue = new CompletableFuture<>();
+                    Try<V> cacheResult = valueCache.get(cacheKey);
+
+                    if (cacheResult.isFailure()) {
+                        futureValue.completeExceptionally(cacheResult.getThrowable());
+                    } else {
+                        futureValue.complete(cacheResult.get());
+                    }
+
+                    return Optional.of(futureValue);
                 }
             }
         }
@@ -104,20 +115,30 @@ class DataLoaderHelper<K, V> {
             boolean batchingEnabled = loaderOptions.batchingEnabled();
             boolean cachingEnabled = loaderOptions.cachingEnabled();
 
-            Object cacheKey = null;
+            final AtomicReference<Object> cacheKey = new AtomicReference<>(null);
             if (cachingEnabled) {
                 if (loadContext == null) {
-                    cacheKey = getCacheKey(key);
+                    cacheKey.set(getCacheKey(key));
                 } else {
-                    cacheKey = getCacheKeyWithContext(key, loadContext);
+                    cacheKey.set(getCacheKeyWithContext(key, loadContext));
                 }
             }
             stats.incrementLoadCount();
 
             if (cachingEnabled) {
-                if (futureCache.containsKey(cacheKey)) {
+                if (valueCache.containsKey(cacheKey.get())) {
                     stats.incrementCacheHitCount();
-                    return futureCache.get(cacheKey);
+
+                    CompletableFuture<V> futureValue = new CompletableFuture<>();
+                    Try<V> cacheResult = valueCache.get(cacheKey.get());
+
+                    if (cacheResult.isFailure()) {
+                        futureValue.completeExceptionally(cacheResult.getThrowable());
+                    } else {
+                        futureValue.complete(cacheResult.get());
+                    }
+
+                    return futureValue;
                 }
             }
 
@@ -130,7 +151,13 @@ class DataLoaderHelper<K, V> {
                 future = invokeLoaderImmediately(key, loadContext);
             }
             if (cachingEnabled) {
-                futureCache.set(cacheKey, future);
+                future.whenComplete((value, error) -> {
+                    if (error != null) {
+                        valueCache.set(cacheKey.get(), error);
+                    } else {
+                        valueCache.set(cacheKey.get(), value);
+                    }
+                });
             }
             return future;
         }
