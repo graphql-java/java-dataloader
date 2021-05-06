@@ -228,16 +228,6 @@ public class ReadmeExamples {
         }
 
         @Override
-        public CacheMap setIfAbsent(Object key, Object value) {
-            return null;
-        }
-
-        @Override
-        public CacheMap setIfAbsent(Object key, Throwable error) {
-            return null;
-        }
-
-        @Override
         public CacheMap delete(Object key) {
             return null;
         }

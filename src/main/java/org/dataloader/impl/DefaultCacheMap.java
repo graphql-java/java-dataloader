@@ -91,26 +91,6 @@ public class DefaultCacheMap<U, V> implements CacheMap<U, V> {
      * {@inheritDoc}
      */
     @Override
-    public CacheMap<U, V> setIfAbsent(U key, V value) {
-        cache.putIfAbsent(key, value);
-        errorCache.remove(key);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public CacheMap<U, V> setIfAbsent(U key, Throwable error) {
-        cache.remove(key);
-        errorCache.putIfAbsent(key, error);
-        return null;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public CacheMap<U, V> delete(U key) {
         cache.remove(key);
         errorCache.remove(key);

@@ -5,6 +5,7 @@ import org.dataloader.Internal;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import org.dataloader.Try;
 
 import static java.util.stream.Collectors.toList;
 
@@ -14,7 +15,7 @@ import static java.util.stream.Collectors.toList;
 @Internal
 public class CompletableFutureKit {
 
-    public static <V> CompletableFuture<V> failedFuture(Exception e) {
+    public static <V> CompletableFuture<V> failedFuture(Throwable e) {
         CompletableFuture<V> future = new CompletableFuture<>();
         future.completeExceptionally(e);
         return future;
@@ -53,5 +54,13 @@ public class CompletableFutureKit {
                         .map(CompletableFuture::join)
                         .collect(toList())
                 );
+    }
+
+    public static <T> CompletableFuture<T> fromTry(Try<T> tryResult) {
+        if (tryResult.isFailure()) {
+            return failedFuture(tryResult.getThrowable());
+        } else {
+            return CompletableFuture.completedFuture(tryResult.get());
+        }
     }
 }

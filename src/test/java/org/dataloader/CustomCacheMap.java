@@ -34,18 +34,6 @@ public class CustomCacheMap implements CacheMap<String, Object> {
     }
 
     @Override
-    public CacheMap<String, Object> setIfAbsent(String key, Object value) {
-        stash.putIfAbsent(key, value);
-        return this;
-    }
-
-    @Override
-    public CacheMap<String, Object> setIfAbsent(String key, Throwable error) {
-        // Don't cache errors in this implementation
-        return this;
-    }
-
-    @Override
     public CacheMap<String, Object> delete(String key) {
         stash.remove(key);
         return this;

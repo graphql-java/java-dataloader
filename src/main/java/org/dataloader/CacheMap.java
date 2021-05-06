@@ -23,7 +23,7 @@ import org.dataloader.impl.DefaultCacheMap;
  * <p>
  * The default implementation used by the data loader is based on a {@link java.util.concurrent.ConcurrentHashMap}. Note that the
  * implementation could also have used a regular {@link java.util.Map} instead of this {@link CacheMap}, but
- * this aligns better to the reference data loader implementation provided by Facebook
+ * this aligns better to the reference data loader implementation provided by Facebook.
  * <p>
  * Also it doesn't require you to implement the full set of map overloads, just the required methods.
  *
@@ -60,12 +60,14 @@ public interface CacheMap<U, V> {
     /**
      * Gets the specified key from the cache map.
      * <p>
+     * The result is wrapped in a {@link Try} to support caching both values and errors.
+     * <p>
      * May throw an exception if the key does not exists, depending on the cache map implementation that is used,
      * so be sure to check {@link CacheMap#containsKey(Object)} first.
      *
      * @param key the key to retrieve
      *
-     * @return the cached value, or {@code null} if not found (depends on cache implementation)
+     * @return the cached value, error, or {@code null} if not found (depends on cache implementation)
      */
     Try<V> get(U key);
 
@@ -88,26 +90,6 @@ public interface CacheMap<U, V> {
      * @return the cache map for fluent coding
      */
     CacheMap<U, V> set(U key, Throwable error);
-
-    /**
-     * Creates a new cache map entry with the specified key and value if it doesn't exist.
-     *
-     * @param key   the key to cache
-     * @param value the value to cache
-     *
-     * @return the cache map for fluent coding
-     */
-    CacheMap<U, V> setIfAbsent(U key, V value);
-
-    /**
-     * Creates a new cache map entry with the specified key and error if it doesn't exist.
-     *
-     * @param key   the key to cache
-     * @param error the value to cache
-     *
-     * @return the cache map for fluent coding
-     */
-    CacheMap<U, V> setIfAbsent(U key, Throwable error);
 
     /**
      * Deletes the entry with the specified key from the cache map, if it exists.

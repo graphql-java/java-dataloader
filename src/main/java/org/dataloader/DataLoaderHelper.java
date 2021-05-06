@@ -79,17 +79,7 @@ class DataLoaderHelper<K, V> {
                 Object cacheKey = getCacheKey(nonNull(key));
                 if (valueCache.containsKey(cacheKey)) {
                     stats.incrementCacheHitCount();
-
-                    CompletableFuture<V> futureValue = new CompletableFuture<>();
-                    Try<V> cacheResult = valueCache.get(cacheKey);
-
-                    if (cacheResult.isFailure()) {
-                        futureValue.completeExceptionally(cacheResult.getThrowable());
-                    } else {
-                        futureValue.complete(cacheResult.get());
-                    }
-
-                    return Optional.of(futureValue);
+                    return Optional.of(CompletableFutureKit.fromTry(valueCache.get(key)));
                 }
             }
         }
@@ -128,17 +118,7 @@ class DataLoaderHelper<K, V> {
             if (cachingEnabled) {
                 if (valueCache.containsKey(cacheKey.get())) {
                     stats.incrementCacheHitCount();
-
-                    CompletableFuture<V> futureValue = new CompletableFuture<>();
-                    Try<V> cacheResult = valueCache.get(cacheKey.get());
-
-                    if (cacheResult.isFailure()) {
-                        futureValue.completeExceptionally(cacheResult.getThrowable());
-                    } else {
-                        futureValue.complete(cacheResult.get());
-                    }
-
-                    return futureValue;
+                    return CompletableFutureKit.fromTry(valueCache.get(cacheKey.get()));
                 }
             }
 

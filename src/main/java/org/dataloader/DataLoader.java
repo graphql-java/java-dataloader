@@ -548,7 +548,9 @@ public class DataLoader<K, V> {
     public DataLoader<K, V> prime(K key, V value) {
         Object cacheKey = getCacheKey(key);
         synchronized (this) {
-            valueCache.setIfAbsent(cacheKey, value);
+            if (!valueCache.containsKey(cacheKey)) {
+                valueCache.set(cacheKey, value);
+            }
         }
         return this;
     }
@@ -563,7 +565,9 @@ public class DataLoader<K, V> {
     public DataLoader<K, V> prime(K key, Throwable error) {
         Object cacheKey = getCacheKey(key);
         synchronized (this) {
-            valueCache.setIfAbsent(cacheKey, error);
+            if (!valueCache.containsKey(cacheKey)) {
+                valueCache.set(cacheKey, error);
+            }
         }
         return this;
     }
