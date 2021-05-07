@@ -16,6 +16,7 @@
 
 package org.dataloader;
 
+import java.util.function.BiConsumer;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.Statistics;
 import org.dataloader.stats.StatisticsCollector;
@@ -60,7 +61,7 @@ public class DataLoader<K, V> {
     private final DataLoaderHelper<K, V> helper;
     private final StatisticsCollector stats;
     private final CacheMap<Object, V> futureCache;
-    private final CacheStore<Object, V> cacheStore;
+    private final CacheStore<Object, V> remoteValueStore;
 
     /**
      * Creates new DataLoader with the specified batch loader function and default options
@@ -334,11 +335,11 @@ public class DataLoader<K, V> {
     private DataLoader(Object batchLoadFunction, DataLoaderOptions options) {
         DataLoaderOptions loaderOptions = options == null ? new DataLoaderOptions() : options;
         this.futureCache = determineCacheMap(loaderOptions);
-        this.cacheStore = determineCacheStore(loaderOptions);
+        this.remoteValueStore = determineCacheStore(loaderOptions);
         // order of keys matter in data loader
         this.stats = nonNull(loaderOptions.getStatisticsCollector());
 
-        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.cacheStore, this.stats);
+        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.remoteValueStore, this.stats);
     }
 
     @SuppressWarnings("unchecked")
@@ -348,7 +349,7 @@ public class DataLoader<K, V> {
 
     @SuppressWarnings("unchecked")
     private CacheStore<Object, V> determineCacheStore(DataLoaderOptions loaderOptions) {
-        return loaderOptions.cacheStore().orElse(null);
+        return loaderOptions.remoteValueStore().orElseGet(CacheStore::defaultStore);
     }
 
     /**
@@ -526,9 +527,22 @@ public class DataLoader<K, V> {
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clear(K key) {
+        return clear(key, (a, b) -> {});
+    }
+
+    /**
+     * Clears the future with the specified key from the cache remote value store, if caching is enabled
+     * and a remote store is set, so it will be re-fetched and stored on the next load request.
+     *
+     * @param key     the key to remove
+     * @param handler a handler that will be called after the async remote clear completes
+     * @return the data loader for fluent coding
+     */
+    public DataLoader<K, V> clear(K key, BiConsumer<Void, Throwable> handler) {
         Object cacheKey = getCacheKey(key);
         synchronized (this) {
             futureCache.delete(cacheKey);
+            remoteValueStore.delete(key).whenComplete(handler);
         }
         return this;
     }
@@ -539,8 +553,19 @@ public class DataLoader<K, V> {
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clearAll() {
+        return clearAll((a, b) -> {});
+    }
+
+    /**
+     * Clears the entire cache map of the loader, and of the remote store.
+     *
+     * @param handler a handler that will be called after the async remote clear all completes
+     * @return the data loader for fluent coding
+     */
+    public DataLoader<K, V> clearAll(BiConsumer<Void, Throwable> handler) {
         synchronized (this) {
             futureCache.clear();
+            remoteValueStore.clear().whenComplete(handler);
         }
         return this;
     }

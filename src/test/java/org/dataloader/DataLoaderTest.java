@@ -802,6 +802,52 @@ public class DataLoaderTest {
     }
 
     @Test
+    public void should_Accept_a_remote_value_store_for_caching() throws ExecutionException, InterruptedException {
+        CustomCacheStore customStore = new CustomCacheStore();
+        List<Collection<String>> loadCalls = new ArrayList<>();
+        DataLoaderOptions options = newOptions().setRemoteValueStore(customStore);
+        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+
+        // Fetches as expected
+
+        CompletableFuture future1 = identityLoader.load("a");
+        CompletableFuture future2 = identityLoader.load("b");
+        CompletableFuture<List<String>> composite = identityLoader.dispatch();
+
+        await().until(composite::isDone);
+        assertThat(future1.get(), equalTo("a"));
+        assertThat(future2.get(), equalTo("b"));
+
+        assertThat(loadCalls, equalTo(singletonList(asList("a", "b"))));
+        assertArrayEquals(customStore.store.keySet().toArray(), asList("a", "b").toArray());
+
+        CompletableFuture future3 = identityLoader.load("c");
+        CompletableFuture future2a = identityLoader.load("b");
+        composite = identityLoader.dispatch();
+
+        await().until(composite::isDone);
+        assertThat(future3.get(), equalTo("c"));
+        assertThat(future2a.get(), equalTo("b"));
+
+        assertThat(loadCalls, equalTo(asList(asList("a", "b"), singletonList("c"))));
+        assertArrayEquals(customStore.store.keySet().toArray(), asList("a", "b", "c").toArray());
+
+        // Supports clear
+
+        CompletableFuture<Void> futureC = new CompletableFuture<>();
+        identityLoader.clear("b", (v, e) -> futureC.complete(v));
+        await().until(futureC::isDone);
+        assertArrayEquals(customStore.store.keySet().toArray(), asList("a", "c").toArray());
+
+        // Supports clear all
+
+        CompletableFuture<Void> futureCa = new CompletableFuture<>();
+        identityLoader.clearAll((v, e) -> futureCa.complete(v));
+        await().until(futureCa::isDone);
+        assertArrayEquals(customStore.store.keySet().toArray(), emptyList().toArray());
+    }
+
+    @Test
     public void batching_disabled_should_dispatch_immediately() throws Exception {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setBatchingEnabled(false);

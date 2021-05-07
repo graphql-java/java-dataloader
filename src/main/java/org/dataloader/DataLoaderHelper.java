@@ -1,7 +1,5 @@
 package org.dataloader;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiConsumer;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.StatisticsCollector;
 
@@ -179,13 +177,6 @@ class DataLoaderHelper<K, V> {
             return futureCache.get(cacheKey);
         }
 
-        // We don't want to store values twice in memory, so cacheStore is null by default
-        if (cacheStore == null) {
-            CompletableFuture<V> future = queueOrInvokeLoad(key, loadContext, batchingEnabled);
-            futureCache.set(cacheKey, future);
-            return future;
-        }
-
         /*
         We haven't been asked for this key yet. We want to do one of two things:
 
@@ -207,13 +198,23 @@ class DataLoaderHelper<K, V> {
                     if (e2 == null) {
                         future.complete(cachedValue);
                     } else {
-                        queueOrInvokeLoad(key, loadContext, batchingEnabled)
-                            .whenComplete((v, e) -> handleQueueOrInvokeResult(future, v, e));
+                        queueOrInvokeLoad(key, loadContext, batchingEnabled).whenComplete((result, error) -> {
+                            if (error == null) {
+                                future.complete(result);
+                            } else {
+                                future.completeExceptionally(error);
+                            }
+                        });
                     }
                 });
             } else {
-                queueOrInvokeLoad(key, loadContext, batchingEnabled)
-                    .whenComplete((v, e) -> handleQueueOrInvokeResult(future, v, e));
+                queueOrInvokeLoad(key, loadContext, batchingEnabled).whenComplete((result, error) -> {
+                    if (error == null) {
+                        cacheStore.set(cacheKey, result).whenComplete((v, e) -> future.complete(result));
+                    } else {
+                        future.completeExceptionally(error);
+                    }
+                });
             }
         });
 
@@ -231,14 +232,6 @@ class DataLoaderHelper<K, V> {
             stats.incrementBatchLoadCountBy(1);
             // immediate execution of batch function
             return invokeLoaderImmediately(key, loadContext);
-        }
-    }
-
-    private void handleQueueOrInvokeResult(CompletableFuture<V> future, V result, Throwable error) {
-        if (error == null) {
-            future.complete(result);
-        } else {
-            future.completeExceptionally(error);
         }
     }
 

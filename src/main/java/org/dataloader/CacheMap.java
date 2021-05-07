@@ -51,7 +51,7 @@ public interface CacheMap<U, V> {
     }
 
     /**
-     * Checks whether the specified key is contained in the cach map.
+     * Checks whether the specified key is contained in the cache map.
      *
      * @param key the key to check
      *
@@ -91,7 +91,7 @@ public interface CacheMap<U, V> {
     CacheMap<U, V> delete(U key);
 
     /**
-     * Clears all entries of the cache map
+     * Clears all entries of the cache map.
      *
      * @return the cache map for fluent coding
      */

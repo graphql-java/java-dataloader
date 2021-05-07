@@ -39,7 +39,7 @@ public class DataLoaderOptions {
     private boolean cachingExceptionsEnabled;
     private CacheKey cacheKeyFunction;
     private CacheMap cacheMap;
-    private CacheStore cacheStore;
+    private CacheStore remoteValueStore;
     private int maxBatchSize;
     private Supplier<StatisticsCollector> statisticsCollector;
     private BatchLoaderContextProvider environmentProvider;
@@ -68,7 +68,7 @@ public class DataLoaderOptions {
         this.cachingExceptionsEnabled = other.cachingExceptionsEnabled;
         this.cacheKeyFunction = other.cacheKeyFunction;
         this.cacheMap = other.cacheMap;
-        this.cacheStore = other.cacheStore;
+        this.remoteValueStore = other.remoteValueStore;
         this.maxBatchSize = other.maxBatchSize;
         this.statisticsCollector = other.statisticsCollector;
         this.environmentProvider = other.environmentProvider;
@@ -195,12 +195,26 @@ public class DataLoaderOptions {
         return this;
     }
 
-    public Optional<CacheStore> cacheStore() {
-        return Optional.ofNullable(cacheStore);
+    /**
+     * Gets the (optional) cache store implementation that is used for value storage, if caching is enabled.
+     * <p>
+     * If missing, a no-op implementation will be used.
+     *
+     * @return an optional with the cache store instance, or empty
+     */
+    public Optional<CacheStore> remoteValueStore() {
+        return Optional.ofNullable(remoteValueStore);
     }
 
-    public DataLoaderOptions setCacheStore(CacheStore cacheStore) {
-        this.cacheStore = cacheStore;
+    /**
+     * Sets the value store implementation to use for caching values, if caching is enabled.
+     *
+     * @param remoteValueStore the cache store instance
+     *
+     * @return the data loader options for fluent coding
+     */
+    public DataLoaderOptions setRemoteValueStore(CacheStore remoteValueStore) {
+        this.remoteValueStore = remoteValueStore;
         return this;
     }
 
