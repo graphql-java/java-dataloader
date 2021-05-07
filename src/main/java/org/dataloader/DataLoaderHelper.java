@@ -1,5 +1,7 @@
 package org.dataloader;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.StatisticsCollector;
 
@@ -58,15 +60,17 @@ class DataLoaderHelper<K, V> {
     private final DataLoader<K, V> dataLoader;
     private final Object batchLoadFunction;
     private final DataLoaderOptions loaderOptions;
-    private final CacheMap<Object, CompletableFuture<V>> futureCache;
+    private final CacheMap<Object, V> futureCache;
+    private final CacheStore<Object, V> cacheStore;
     private final List<LoaderQueueEntry<K, CompletableFuture<V>>> loaderQueue;
     private final StatisticsCollector stats;
 
-    DataLoaderHelper(DataLoader<K, V> dataLoader, Object batchLoadFunction, DataLoaderOptions loaderOptions, CacheMap<Object, CompletableFuture<V>> futureCache, StatisticsCollector stats) {
+    DataLoaderHelper(DataLoader<K, V> dataLoader, Object batchLoadFunction, DataLoaderOptions loaderOptions, CacheMap<Object, V> futureCache, CacheStore<Object, V> cacheStore, StatisticsCollector stats) {
         this.dataLoader = dataLoader;
         this.batchLoadFunction = batchLoadFunction;
         this.loaderOptions = loaderOptions;
         this.futureCache = futureCache;
+        this.cacheStore = cacheStore;
         this.loaderQueue = new ArrayList<>();
         this.stats = stats;
     }
@@ -104,35 +108,13 @@ class DataLoaderHelper<K, V> {
             boolean batchingEnabled = loaderOptions.batchingEnabled();
             boolean cachingEnabled = loaderOptions.cachingEnabled();
 
-            Object cacheKey = null;
-            if (cachingEnabled) {
-                if (loadContext == null) {
-                    cacheKey = getCacheKey(key);
-                } else {
-                    cacheKey = getCacheKeyWithContext(key, loadContext);
-                }
-            }
             stats.incrementLoadCount();
 
             if (cachingEnabled) {
-                if (futureCache.containsKey(cacheKey)) {
-                    stats.incrementCacheHitCount();
-                    return futureCache.get(cacheKey);
-                }
-            }
-
-            CompletableFuture<V> future = new CompletableFuture<>();
-            if (batchingEnabled) {
-                loaderQueue.add(new LoaderQueueEntry<>(key, future, loadContext));
+                return loadFromCache(key, loadContext, batchingEnabled);
             } else {
-                stats.incrementBatchLoadCountBy(1);
-                // immediate execution of batch function
-                future = invokeLoaderImmediately(key, loadContext);
+                return queueOrInvokeLoad(key, loadContext, batchingEnabled);
             }
-            if (cachingEnabled) {
-                futureCache.set(cacheKey, future);
-            }
-            return future;
         }
     }
 
@@ -186,6 +168,78 @@ class DataLoaderHelper<K, V> {
             futureList = dispatchQueueBatch(keys, callContexts, queuedFutures);
         }
         return new DispatchResult<>(futureList, totalEntriesHandled);
+    }
+
+    private CompletableFuture<V> loadFromCache(K key, Object loadContext, boolean batchingEnabled) {
+        final Object cacheKey = loadContext == null ? getCacheKey(key) : getCacheKeyWithContext(key, loadContext);
+
+        if (futureCache.containsKey(cacheKey)) {
+            // We already have a promise for this key, no need to check value cache or queue up load
+            stats.incrementCacheHitCount();
+            return futureCache.get(cacheKey);
+        }
+
+        // We don't want to store values twice in memory, so cacheStore is null by default
+        if (cacheStore == null) {
+            CompletableFuture<V> future = queueOrInvokeLoad(key, loadContext, batchingEnabled);
+            futureCache.set(cacheKey, future);
+            return future;
+        }
+
+        /*
+        We haven't been asked for this key yet. We want to do one of two things:
+
+        1. Check if our cache store has it. If so:
+            a. Get the value from the cache store
+            b. Add a recovery case so we queue the load if fetching from cache store fails
+            c. Put that future in our futureCache to hit the early return next time
+            d. Return the resilient future
+        2. If not in value cache:
+            a. queue or invoke the load
+            b. Add a success handler to store the result in the cache store
+            c. Return the result
+         */
+        final CompletableFuture<V> future = new CompletableFuture<>();
+
+        cacheStore.has(cacheKey).whenComplete((hasKey, e1) -> {
+            if (hasKey && e1 == null) {
+                cacheStore.get(cacheKey).whenComplete((cachedValue, e2) -> {
+                    if (e2 == null) {
+                        future.complete(cachedValue);
+                    } else {
+                        queueOrInvokeLoad(key, loadContext, batchingEnabled)
+                            .whenComplete((v, e) -> handleQueueOrInvokeResult(future, v, e));
+                    }
+                });
+            } else {
+                queueOrInvokeLoad(key, loadContext, batchingEnabled)
+                    .whenComplete((v, e) -> handleQueueOrInvokeResult(future, v, e));
+            }
+        });
+
+        futureCache.set(cacheKey, future);
+
+        return future;
+    }
+
+    private CompletableFuture<V> queueOrInvokeLoad(K key, Object loadContext, boolean batchingEnabled) {
+        if (batchingEnabled) {
+            CompletableFuture<V> future = new CompletableFuture<>();
+            loaderQueue.add(new LoaderQueueEntry<>(key, future, loadContext));
+            return future;
+        } else {
+            stats.incrementBatchLoadCountBy(1);
+            // immediate execution of batch function
+            return invokeLoaderImmediately(key, loadContext);
+        }
+    }
+
+    private void handleQueueOrInvokeResult(CompletableFuture<V> future, V result, Throwable error) {
+        if (error == null) {
+            future.complete(result);
+        } else {
+            future.completeExceptionally(error);
+        }
     }
 
     private CompletableFuture<List<V>> sliceIntoBatchesOfBatches(List<K> keys, List<CompletableFuture<V>> queuedFutures, List<Object> callContexts, int maxBatchSize) {

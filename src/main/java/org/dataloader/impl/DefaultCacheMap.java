@@ -16,6 +16,7 @@
 
 package org.dataloader.impl;
 
+import java.util.concurrent.CompletableFuture;
 import org.dataloader.CacheMap;
 import org.dataloader.Internal;
 
@@ -33,7 +34,7 @@ import java.util.Map;
 @Internal
 public class DefaultCacheMap<U, V> implements CacheMap<U, V> {
 
-    private final Map<U, V> cache;
+    private final Map<U, CompletableFuture<V>> cache;
 
     /**
      * Default constructor
@@ -54,7 +55,7 @@ public class DefaultCacheMap<U, V> implements CacheMap<U, V> {
      * {@inheritDoc}
      */
     @Override
-    public V get(U key) {
+    public CompletableFuture<V> get(U key) {
         return cache.get(key);
     }
 
@@ -62,7 +63,7 @@ public class DefaultCacheMap<U, V> implements CacheMap<U, V> {
      * {@inheritDoc}
      */
     @Override
-    public CacheMap<U, V> set(U key, V value) {
+    public CacheMap<U, V> set(U key, CompletableFuture<V> value) {
         cache.put(key, value);
         return this;
     }

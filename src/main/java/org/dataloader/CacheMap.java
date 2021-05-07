@@ -46,7 +46,7 @@ public interface CacheMap<U, V> {
      *
      * @return the cache map
      */
-    static <U, V> CacheMap<U, CompletableFuture<V>> simpleMap() {
+    static <U, V> CacheMap<U, V> simpleMap() {
         return new DefaultCacheMap<>();
     }
 
@@ -69,7 +69,7 @@ public interface CacheMap<U, V> {
      *
      * @return the cached value, or {@code null} if not found (depends on cache implementation)
      */
-    V get(U key);
+    CompletableFuture<V> get(U key);
 
     /**
      * Creates a new cache map entry with the specified key and value, or updates the value if the key already exists.
@@ -79,7 +79,7 @@ public interface CacheMap<U, V> {
      *
      * @return the cache map for fluent coding
      */
-    CacheMap<U, V> set(U key, V value);
+    CacheMap<U, V> set(U key, CompletableFuture<V> value);
 
     /**
      * Deletes the entry with the specified key from the cache map, if it exists.

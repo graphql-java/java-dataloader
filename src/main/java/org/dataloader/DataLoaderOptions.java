@@ -39,6 +39,7 @@ public class DataLoaderOptions {
     private boolean cachingExceptionsEnabled;
     private CacheKey cacheKeyFunction;
     private CacheMap cacheMap;
+    private CacheStore cacheStore;
     private int maxBatchSize;
     private Supplier<StatisticsCollector> statisticsCollector;
     private BatchLoaderContextProvider environmentProvider;
@@ -67,6 +68,7 @@ public class DataLoaderOptions {
         this.cachingExceptionsEnabled = other.cachingExceptionsEnabled;
         this.cacheKeyFunction = other.cacheKeyFunction;
         this.cacheMap = other.cacheMap;
+        this.cacheStore = other.cacheStore;
         this.maxBatchSize = other.maxBatchSize;
         this.statisticsCollector = other.statisticsCollector;
         this.environmentProvider = other.environmentProvider;
@@ -190,6 +192,15 @@ public class DataLoaderOptions {
      */
     public DataLoaderOptions setCacheMap(CacheMap cacheMap) {
         this.cacheMap = cacheMap;
+        return this;
+    }
+
+    public Optional<CacheStore> cacheStore() {
+        return Optional.ofNullable(cacheStore);
+    }
+
+    public DataLoaderOptions setCacheStore(CacheStore cacheStore) {
+        this.cacheStore = cacheStore;
         return this;
     }
 

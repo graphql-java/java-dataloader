@@ -58,8 +58,9 @@ import static org.dataloader.impl.Assertions.nonNull;
 public class DataLoader<K, V> {
 
     private final DataLoaderHelper<K, V> helper;
-    private final CacheMap<Object, CompletableFuture<V>> futureCache;
     private final StatisticsCollector stats;
+    private final CacheMap<Object, V> futureCache;
+    private final CacheStore<Object, V> cacheStore;
 
     /**
      * Creates new DataLoader with the specified batch loader function and default options
@@ -333,15 +334,21 @@ public class DataLoader<K, V> {
     private DataLoader(Object batchLoadFunction, DataLoaderOptions options) {
         DataLoaderOptions loaderOptions = options == null ? new DataLoaderOptions() : options;
         this.futureCache = determineCacheMap(loaderOptions);
+        this.cacheStore = determineCacheStore(loaderOptions);
         // order of keys matter in data loader
         this.stats = nonNull(loaderOptions.getStatisticsCollector());
 
-        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.stats);
+        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.cacheStore, this.stats);
     }
 
     @SuppressWarnings("unchecked")
-    private CacheMap<Object, CompletableFuture<V>> determineCacheMap(DataLoaderOptions loaderOptions) {
-        return loaderOptions.cacheMap().isPresent() ? (CacheMap<Object, CompletableFuture<V>>) loaderOptions.cacheMap().get() : CacheMap.simpleMap();
+    private CacheMap<Object, V> determineCacheMap(DataLoaderOptions loaderOptions) {
+        return loaderOptions.cacheMap().orElseGet(CacheMap::simpleMap);
+    }
+
+    @SuppressWarnings("unchecked")
+    private CacheStore<Object, V> determineCacheStore(DataLoaderOptions loaderOptions) {
+        return loaderOptions.cacheStore().orElse(null);
     }
 
     /**
