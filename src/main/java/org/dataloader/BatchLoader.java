@@ -16,6 +16,8 @@
 
 package org.dataloader;
 
+import org.dataloader.annotations.PublicSpi;
+
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 

@@ -1,5 +1,6 @@
 package org.dataloader;
 
+import org.dataloader.annotations.Internal;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.StatisticsCollector;
 

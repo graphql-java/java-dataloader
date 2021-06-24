@@ -1,6 +1,6 @@
 package org.dataloader.stats;
 
-import org.dataloader.PublicSpi;
+import org.dataloader.annotations.PublicSpi;
 
 /**
  * This allows statistics to be collected for {@link org.dataloader.DataLoader} operations

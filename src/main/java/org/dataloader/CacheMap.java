@@ -16,6 +16,7 @@
 
 package org.dataloader;
 
+import org.dataloader.annotations.PublicSpi;
 import org.dataloader.impl.DefaultCacheMap;
 
 import java.util.concurrent.CompletableFuture;

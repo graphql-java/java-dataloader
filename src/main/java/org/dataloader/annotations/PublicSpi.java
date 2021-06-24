@@ -1,4 +1,4 @@
-package org.dataloader;
+package org.dataloader.annotations;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;

@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
+import org.dataloader.annotations.PublicApi;
 import org.dataloader.stats.Statistics;
 
 /**

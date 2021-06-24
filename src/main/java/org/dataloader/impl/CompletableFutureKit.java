@@ -1,6 +1,6 @@
 package org.dataloader.impl;
 
-import org.dataloader.Internal;
+import org.dataloader.annotations.Internal;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

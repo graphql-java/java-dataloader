@@ -16,6 +16,7 @@
 
 package org.dataloader;
 
+import org.dataloader.annotations.PublicApi;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.Statistics;
 import org.dataloader.stats.StatisticsCollector;
