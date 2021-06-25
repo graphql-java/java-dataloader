@@ -1,5 +1,6 @@
 package org.dataloader;
 
+import org.dataloader.annotations.PublicApi;
 import org.dataloader.impl.Assertions;
 
 import java.util.ArrayList;

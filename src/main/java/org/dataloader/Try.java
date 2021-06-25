@@ -1,5 +1,7 @@
 package org.dataloader;
 
+import org.dataloader.annotations.PublicApi;
+
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;

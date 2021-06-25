@@ -1,5 +1,7 @@
 package org.dataloader;
 
+import org.dataloader.annotations.PublicApi;
+
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 

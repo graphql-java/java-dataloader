@@ -16,6 +16,7 @@
 
 package org.dataloader;
 
+import org.dataloader.annotations.PublicApi;
 import org.dataloader.stats.SimpleStatisticsCollector;
 import org.dataloader.stats.StatisticsCollector;
 

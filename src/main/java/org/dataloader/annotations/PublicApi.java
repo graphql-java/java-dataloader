@@ -1,5 +1,6 @@
-package org.dataloader;
+package org.dataloader.annotations;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -10,12 +11,14 @@ import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
 
 /**
- * This represents code that the java-dataloader project considers internal code that MAY not be stable within
+ * This represents code that the java-dataloader project considers public API and has an imperative to be stable within
  * major releases.
  *
- * In general unnecessary changes will be avoided but you should not depend on internal classes being stable
+ * The guarantee  is for code calling classes and interfaces with this annotation, not derived from them.  New methods
+ * maybe be added which would break derivations but not callers.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = {CONSTRUCTOR, METHOD, TYPE, FIELD})
-public @interface Internal {
+@Documented
+public @interface PublicApi {
 }

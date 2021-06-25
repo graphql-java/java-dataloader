@@ -1,6 +1,6 @@
 package org.dataloader.stats;
 
-import org.dataloader.PublicApi;
+import org.dataloader.annotations.PublicApi;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

@@ -1,5 +1,7 @@
 package org.dataloader;
 
+import org.dataloader.annotations.PublicSpi;
+
 /**
  * A BatchLoaderEnvironmentProvider is used by the {@link org.dataloader.DataLoader} code to
  * provide {@link org.dataloader.BatchLoaderEnvironment} calling context to
