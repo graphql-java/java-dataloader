@@ -4,6 +4,8 @@ import org.dataloader.annotations.Internal;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.StatisticsCollector;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -13,6 +15,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyList;
@@ -29,7 +32,6 @@ import static org.dataloader.impl.Assertions.nonNull;
  */
 @Internal
 class DataLoaderHelper<K, V> {
-
 
     static class LoaderQueueEntry<K, V> {
 
@@ -62,14 +64,27 @@ class DataLoaderHelper<K, V> {
     private final CacheMap<Object, CompletableFuture<V>> futureCache;
     private final List<LoaderQueueEntry<K, CompletableFuture<V>>> loaderQueue;
     private final StatisticsCollector stats;
+    private final Clock clock;
+    private final AtomicReference<Instant> lastDispatchTime;
 
-    DataLoaderHelper(DataLoader<K, V> dataLoader, Object batchLoadFunction, DataLoaderOptions loaderOptions, CacheMap<Object, CompletableFuture<V>> futureCache, StatisticsCollector stats) {
+    DataLoaderHelper(DataLoader<K, V> dataLoader, Object batchLoadFunction, DataLoaderOptions loaderOptions, CacheMap<Object, CompletableFuture<V>> futureCache, StatisticsCollector stats, Clock clock) {
         this.dataLoader = dataLoader;
         this.batchLoadFunction = batchLoadFunction;
         this.loaderOptions = loaderOptions;
         this.futureCache = futureCache;
         this.loaderQueue = new ArrayList<>();
         this.stats = stats;
+        this.clock = clock;
+        this.lastDispatchTime = new AtomicReference<>();
+        this.lastDispatchTime.set(now());
+    }
+
+    private Instant now() {
+        return Instant.now(clock);
+    }
+
+    public Instant getLastDispatchTime() {
+        return lastDispatchTime.get();
     }
 
     Optional<CompletableFuture<V>> getIfPresent(K key) {
@@ -146,7 +161,7 @@ class DataLoaderHelper<K, V> {
     @SuppressWarnings("unchecked")
     Object getCacheKeyWithContext(K key, Object context) {
         return loaderOptions.cacheKeyFunction().isPresent() ?
-                loaderOptions.cacheKeyFunction().get().getKeyWithContext(key, context): key;
+                loaderOptions.cacheKeyFunction().get().getKeyWithContext(key, context) : key;
     }
 
     DispatchResult<V> dispatch() {
@@ -163,6 +178,7 @@ class DataLoaderHelper<K, V> {
                 callContexts.add(entry.getCallContext());
             });
             loaderQueue.clear();
+            lastDispatchTime.set(now());
         }
         if (!batchingEnabled || keys.isEmpty()) {
             return new DispatchResult<>(CompletableFuture.completedFuture(emptyList()), 0);
