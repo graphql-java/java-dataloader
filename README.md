@@ -52,7 +52,7 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 - Deals with partial errors when a batch future fails
 - Can disable batching and/or caching in configuration
 - Can supply your own [`CacheMap<K, V>`](https://github.com/graphql-java/java-dataloader/blob/master/src/main/java/io/engagingspaces/vertx/dataloader/CacheMap.java) implementations
-- Has very high test coverage (see [Acknowledgements](#acknowlegdements))
+- Has very high test coverage 
 
 ## Examples
 
@@ -399,17 +399,19 @@ and `NoOpStatisticsCollector`.
 If you are serving web requests then the data can be specific to the user requesting it.  If you have user specific data
 then you will not want to cache data meant for user A to then later give it user B in a subsequent request.
 
-The scope of your `DataLoader` instances is important.  You might want to create them per web request to ensure data is only cached within that
+The scope of your `DataLoader` instances is important.  You will want to create them per web request to ensure data is only cached within that
 web request and no more.
 
-If your data can be shared across web requests then you might want to scope your data loaders so they survive longer than the web request say.
+If your data can be shared across web requests then use a custom cache to keep values in a common place.  
+
+Data loaders are stateful components that contain promises (with context) that are likely share the same affinity as the request.
 
 ## Custom caches
 
-The default cache behind `DataLoader` is an in memory `HashMap`.  There is no expiry on this and it lives for as long as the data loader
+The default cache behind `DataLoader` is an in memory `HashMap`.  There is no expiry on this, and it lives for as long as the data loader
 lives. 
  
-However you can create your own custom cache and supply it to the data loader on construction via the `org.dataloader.CacheMap` interface.
+However, you can create your own custom cache and supply it to the data loader on construction via the `org.dataloader.CacheMap` interface.
 
 ```java
         MyCustomCache customCache = new MyCustomCache();
