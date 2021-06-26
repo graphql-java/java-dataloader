@@ -37,10 +37,10 @@ public class DataLoaderRegistryTest {
         assertThat(registry.getDataLoaders(), equalTo(asList(dlA, dlB, dlC)));
 
 
-        // and unregister
-        DataLoaderRegistry dlUnregistered = registry.unregister("c");
+        // and unregister (fluently)
+        DataLoaderRegistry dlR = registry.unregister("c");
+        assertThat(dlR,equalTo(registry));
 
-        assertThat(dlUnregistered,equalTo(dlC));
         assertThat(registry.getDataLoaders(), equalTo(asList(dlA, dlB)));
 
         // look up by name works

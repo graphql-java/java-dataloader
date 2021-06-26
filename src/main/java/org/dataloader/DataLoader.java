@@ -59,7 +59,6 @@ import static org.dataloader.impl.Assertions.nonNull;
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
-@SuppressWarnings("UnusedReturnValue")
 @PublicApi
 public class DataLoader<K, V> {
 

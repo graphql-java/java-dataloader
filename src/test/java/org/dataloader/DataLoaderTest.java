@@ -35,7 +35,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
-import static org.dataloader.DataLoaderFactory.*;
+import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.dataloader.DataLoaderOptions.newOptions;
 import static org.dataloader.TestKit.listFrom;
 import static org.dataloader.impl.CompletableFutureKit.cause;
@@ -244,7 +244,9 @@ public class DataLoaderTest {
         assertThat(future2.get(), equalTo("B"));
         assertThat(loadCalls, equalTo(singletonList(asList("A", "B"))));
 
-        identityLoader.clear("A");
+        // fluency
+        DataLoader<String, String> dl = identityLoader.clear("A");
+        assertThat(dl, equalTo(identityLoader));
 
         CompletableFuture<String> future1a = identityLoader.load("A");
         CompletableFuture<String> future2a = identityLoader.load("B");
@@ -270,7 +272,8 @@ public class DataLoaderTest {
         assertThat(future2.get(), equalTo("B"));
         assertThat(loadCalls, equalTo(singletonList(asList("A", "B"))));
 
-        identityLoader.clearAll();
+        DataLoader<String, String> dlFluent = identityLoader.clearAll();
+        assertThat(dlFluent, equalTo(identityLoader)); // fluency
 
         CompletableFuture<String> future1a = identityLoader.load("A");
         CompletableFuture<String> future2a = identityLoader.load("B");
@@ -287,7 +290,8 @@ public class DataLoaderTest {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
 
-        identityLoader.prime("A", "A");
+        DataLoader<String, String> dlFluency = identityLoader.prime("A", "A");
+        assertThat(dlFluency, equalTo(identityLoader));
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
