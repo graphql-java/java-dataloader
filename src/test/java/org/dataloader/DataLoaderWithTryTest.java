@@ -8,10 +8,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.dataloader.DataLoaderFactory.*;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
@@ -36,7 +36,7 @@ public class DataLoaderWithTryTest {
             return CompletableFuture.completedFuture(result);
         };
 
-        DataLoader<String, String> dataLoader = DataLoader.newDataLoaderWithTry(batchLoader);
+        DataLoader<String, String> dataLoader = newDataLoaderWithTry(batchLoader);
 
         commonTryAsserts(batchKeyCalls, dataLoader);
     }
@@ -59,7 +59,7 @@ public class DataLoaderWithTryTest {
             return CompletableFuture.completedFuture(result);
         };
 
-        DataLoader<String, String> dataLoader = DataLoader.newMappedDataLoaderWithTry(batchLoader);
+        DataLoader<String, String> dataLoader = newMappedDataLoaderWithTry(batchLoader);
 
         commonTryAsserts(batchKeyCalls, dataLoader);
     }

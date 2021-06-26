@@ -75,7 +75,10 @@ public class DataLoader<K, V> {
      * @param <V>               the value type
      *
      * @return a new DataLoader
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newDataLoader(BatchLoader<K, V> batchLoadFunction) {
         return newDataLoader(batchLoadFunction, null);
     }
@@ -89,9 +92,12 @@ public class DataLoader<K, V> {
      * @param <V>               the value type
      *
      * @return a new DataLoader
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newDataLoader(BatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
-        return new DataLoader<>(batchLoadFunction, options);
+        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
     }
 
     /**
@@ -110,7 +116,10 @@ public class DataLoader<K, V> {
      * @param <V>               the value type
      *
      * @return a new DataLoader
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoader<K, Try<V>> batchLoadFunction) {
         return newDataLoaderWithTry(batchLoadFunction, null);
     }
@@ -127,11 +136,12 @@ public class DataLoader<K, V> {
      *
      * @return a new DataLoader
      *
-     * @see #newDataLoaderWithTry(BatchLoader)
+     * @see DataLoaderFactory#newDataLoaderWithTry(BatchLoader)
+     * @deprecated use {@link DataLoaderFactory} instead
      */
-    @SuppressWarnings("unchecked")
+    @Deprecated
     public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoader<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
-        return new DataLoader<>((BatchLoader<K, V>) batchLoadFunction, options);
+        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
     }
 
     /**
@@ -143,7 +153,10 @@ public class DataLoader<K, V> {
      * @param <V>               the value type
      *
      * @return a new DataLoader
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newDataLoader(BatchLoaderWithContext<K, V> batchLoadFunction) {
         return newDataLoader(batchLoadFunction, null);
     }
@@ -157,9 +170,12 @@ public class DataLoader<K, V> {
      * @param <V>               the value type
      *
      * @return a new DataLoader
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newDataLoader(BatchLoaderWithContext<K, V> batchLoadFunction, DataLoaderOptions options) {
-        return new DataLoader<>(batchLoadFunction, options);
+        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
     }
 
     /**
@@ -178,7 +194,10 @@ public class DataLoader<K, V> {
      * @param <V>               the value type
      *
      * @return a new DataLoader
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoaderWithContext<K, Try<V>> batchLoadFunction) {
         return newDataLoaderWithTry(batchLoadFunction, null);
     }
@@ -195,10 +214,12 @@ public class DataLoader<K, V> {
      *
      * @return a new DataLoader
      *
-     * @see #newDataLoaderWithTry(BatchLoader)
+     * @see DataLoaderFactory#newDataLoaderWithTry(BatchLoader)
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoaderWithContext<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
-        return new DataLoader<>(batchLoadFunction, options);
+        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
     }
 
     /**
@@ -210,7 +231,10 @@ public class DataLoader<K, V> {
      * @param <V>               the value type
      *
      * @return a new DataLoader
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoader<K, V> batchLoadFunction) {
         return newMappedDataLoader(batchLoadFunction, null);
     }
@@ -224,9 +248,12 @@ public class DataLoader<K, V> {
      * @param <V>               the value type
      *
      * @return a new DataLoader
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
-        return new DataLoader<>(batchLoadFunction, options);
+        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
     }
 
     /**
@@ -246,7 +273,10 @@ public class DataLoader<K, V> {
      * @param <V>               the value type
      *
      * @return a new DataLoader
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoader<K, Try<V>> batchLoadFunction) {
         return newMappedDataLoaderWithTry(batchLoadFunction, null);
     }
@@ -263,10 +293,12 @@ public class DataLoader<K, V> {
      *
      * @return a new DataLoader
      *
-     * @see #newDataLoaderWithTry(BatchLoader)
+     * @see DataLoaderFactory#newDataLoaderWithTry(BatchLoader)
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoader<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
-        return new DataLoader<>(batchLoadFunction, options);
+        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
     }
 
     /**
@@ -278,7 +310,10 @@ public class DataLoader<K, V> {
      * @param <V>               the value type
      *
      * @return a new DataLoader
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoaderWithContext<K, V> batchLoadFunction) {
         return newMappedDataLoader(batchLoadFunction, null);
     }
@@ -292,9 +327,12 @@ public class DataLoader<K, V> {
      * @param <V>               the value type
      *
      * @return a new DataLoader
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoaderWithContext<K, V> batchLoadFunction, DataLoaderOptions options) {
-        return new DataLoader<>(batchLoadFunction, options);
+        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
     }
 
     /**
@@ -313,7 +351,10 @@ public class DataLoader<K, V> {
      * @param <V>               the value type
      *
      * @return a new DataLoader
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoaderWithContext<K, Try<V>> batchLoadFunction) {
         return newMappedDataLoaderWithTry(batchLoadFunction, null);
     }
@@ -330,19 +371,24 @@ public class DataLoader<K, V> {
      *
      * @return a new DataLoader
      *
-     * @see #newDataLoaderWithTry(BatchLoader)
+     * @see DataLoaderFactory#newDataLoaderWithTry(BatchLoader)
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoaderWithContext<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
-        return new DataLoader<>(batchLoadFunction, options);
+        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
     }
 
     /**
      * Creates a new data loader with the provided batch load function, and default options.
      *
      * @param batchLoadFunction the batch load function to use
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public DataLoader(BatchLoader<K, V> batchLoadFunction) {
-        this(batchLoadFunction, null);
+        this((Object) batchLoadFunction, null);
     }
 
     /**
@@ -350,12 +396,15 @@ public class DataLoader<K, V> {
      *
      * @param batchLoadFunction the batch load function to use
      * @param options           the batch load options
+     *
+     * @deprecated use {@link DataLoaderFactory} instead
      */
+    @Deprecated
     public DataLoader(BatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
         this((Object) batchLoadFunction, options);
     }
 
-    private DataLoader(Object batchLoadFunction, DataLoaderOptions options) {
+    DataLoader(Object batchLoadFunction, DataLoaderOptions options) {
         DataLoaderOptions loaderOptions = options == null ? new DataLoaderOptions() : options;
         this.futureCache = determineCacheMap(loaderOptions);
         // order of keys matter in data loader

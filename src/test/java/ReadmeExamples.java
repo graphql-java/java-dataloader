@@ -3,6 +3,7 @@ import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.BatchLoaderWithContext;
 import org.dataloader.CacheMap;
 import org.dataloader.DataLoader;
+import org.dataloader.DataLoaderFactory;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.MappedBatchLoaderWithContext;
 import org.dataloader.Try;
@@ -59,7 +60,7 @@ public class ReadmeExamples {
             }
         };
 
-        DataLoader<Long, User> userLoader = DataLoader.newDataLoader(userBatchLoader);
+        DataLoader<Long, User> userLoader = DataLoaderFactory.newDataLoader(userBatchLoader);
 
         CompletionStage<User> load1 = userLoader.load(1L);
 
@@ -96,7 +97,7 @@ public class ReadmeExamples {
             }
         };
 
-        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoader(batchLoader, options);
     }
 
     private void keyContextExample() {
@@ -120,7 +121,7 @@ public class ReadmeExamples {
             }
         };
 
-        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoader(batchLoader, options);
         loader.load("keyA", "contextForA");
         loader.load("keyB", "contextForB");
     }
@@ -138,7 +139,7 @@ public class ReadmeExamples {
             }
         };
 
-        DataLoader<Long, User> userLoader = DataLoader.newMappedDataLoader(mapBatchLoader);
+        DataLoader<Long, User> userLoader = DataLoaderFactory.newMappedDataLoader(mapBatchLoader);
 
         // ...
     }
@@ -162,7 +163,7 @@ public class ReadmeExamples {
     }
 
     private void tryBatcLoader() {
-        DataLoader<String, User> dataLoader = DataLoader.newDataLoaderWithTry(new BatchLoader<String, Try<User>>() {
+        DataLoader<String, User> dataLoader = DataLoaderFactory.newDataLoaderWithTry(new BatchLoader<String, Try<User>>() {
             @Override
             public CompletionStage<List<Try<User>>> load(List<String> keys) {
                 return CompletableFuture.supplyAsync(() -> {
@@ -194,7 +195,7 @@ public class ReadmeExamples {
     BatchLoader<String, User> userBatchLoader;
 
     private void disableCache() {
-        DataLoader.newDataLoader(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
+        DataLoaderFactory.newDataLoader(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
 
 
         userDataLoader.load("A");
@@ -237,7 +238,7 @@ public class ReadmeExamples {
 
         MyCustomCache customCache = new MyCustomCache();
         DataLoaderOptions options = DataLoaderOptions.newOptions().setCacheMap(customCache);
-        DataLoader.newDataLoader(userBatchLoader, options);
+        DataLoaderFactory.newDataLoader(userBatchLoader, options);
     }
 
     private void processUser(User user) {
@@ -265,7 +266,7 @@ public class ReadmeExamples {
     private void statsConfigExample() {
 
         DataLoaderOptions options = DataLoaderOptions.newOptions().setStatisticsCollector(() -> new ThreadLocalStatisticsCollector());
-        DataLoader<String, User> userDataLoader = DataLoader.newDataLoader(userBatchLoader, options);
+        DataLoader<String, User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader, options);
     }
 
 }

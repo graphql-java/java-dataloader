@@ -52,7 +52,7 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 - Deals with partial errors when a batch future fails
 - Can disable batching and/or caching in configuration
 - Can supply your own [`CacheMap<K, V>`](https://github.com/graphql-java/java-dataloader/blob/master/src/main/java/io/engagingspaces/vertx/dataloader/CacheMap.java) implementations
-- Has very high test coverage (see [Acknowledgements](#acknowlegdements))
+- Has very high test coverage 
 
 ## Examples
 
@@ -70,7 +70,7 @@ a list of keys
             }
         };
 
-        DataLoader<Long, User> userLoader = DataLoader.newDataLoader(userBatchLoader);
+        DataLoader<Long, User> userLoader = DataLoaderFactory.newDataLoader(userBatchLoader);
 
 ```
 
@@ -188,7 +188,7 @@ for the context object.
             }
         };
 
-        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoader(batchLoader, options);
 ```
 
 The batch loading code will now receive this environment object and it can be used to get context perhaps allowing it
@@ -219,7 +219,7 @@ You can gain access to them as a map by key or as the original list of context o
             }
         };
 
-        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoader(batchLoader, options);
         loader.load("keyA", "contextForA");
         loader.load("keyB", "contextForB");
 ```
@@ -255,7 +255,7 @@ For example, let's assume you want to load users from a database, you could prob
             }
         };
 
-        DataLoader<Long, User> userLoader = DataLoader.newMappedDataLoader(mapBatchLoader);
+        DataLoader<Long, User> userLoader = DataLoaderFactory.newMappedDataLoader(mapBatchLoader);
 
         // ...
 ```
@@ -295,7 +295,7 @@ DataLoader supports this type and you can use this form to create a batch loader
 and some of which may have failed.  From that data loader can infer the right behavior in terms of the `load(x)` promise.
 
 ```java
-        DataLoader<String, User> dataLoader = DataLoader.newDataLoaderWithTry(new BatchLoader<String, Try<User>>() {
+        DataLoader<String, User> dataLoader = DataLoaderFactory.newDataLoaderWithTry(new BatchLoader<String, Try<User>>() {
             @Override
             public CompletionStage<List<Try<User>>> load(List<String> keys) {
                 return CompletableFuture.supplyAsync(() -> {
@@ -320,7 +320,7 @@ react to that, in a type safe manner.
 In certain uncommon cases, a DataLoader which does not cache may be desirable. 
 
 ```java
-    DataLoader.newDataLoader(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
+    DataLoaderFactory.newDataLoader(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
 ``` 
 
 Calling the above will ensure that every call to `.load()` will produce a new promise, and requested keys will not be saved in memory.
@@ -387,7 +387,7 @@ You can configure the statistics collector used when you build the data loader
 
 ```java
         DataLoaderOptions options = DataLoaderOptions.newOptions().setStatisticsCollector(() -> new ThreadLocalStatisticsCollector());
-        DataLoader<String,User> userDataLoader = DataLoader.newDataLoader(userBatchLoader,options);
+        DataLoader<String,User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader,options);
 
 ```
 
@@ -399,22 +399,24 @@ and `NoOpStatisticsCollector`.
 If you are serving web requests then the data can be specific to the user requesting it.  If you have user specific data
 then you will not want to cache data meant for user A to then later give it user B in a subsequent request.
 
-The scope of your `DataLoader` instances is important.  You might want to create them per web request to ensure data is only cached within that
+The scope of your `DataLoader` instances is important.  You will want to create them per web request to ensure data is only cached within that
 web request and no more.
 
-If your data can be shared across web requests then you might want to scope your data loaders so they survive longer than the web request say.
+If your data can be shared across web requests then use a custom cache to keep values in a common place.  
+
+Data loaders are stateful components that contain promises (with context) that are likely share the same affinity as the request.
 
 ## Custom caches
 
-The default cache behind `DataLoader` is an in memory `HashMap`.  There is no expiry on this and it lives for as long as the data loader
+The default cache behind `DataLoader` is an in memory `HashMap`.  There is no expiry on this, and it lives for as long as the data loader
 lives. 
  
-However you can create your own custom cache and supply it to the data loader on construction via the `org.dataloader.CacheMap` interface.
+However, you can create your own custom cache and supply it to the data loader on construction via the `org.dataloader.CacheMap` interface.
 
 ```java
         MyCustomCache customCache = new MyCustomCache();
         DataLoaderOptions options = DataLoaderOptions.newOptions().setCacheMap(customCache);
-        DataLoader.newDataLoader(userBatchLoader, options);
+        DataLoaderFactory.newDataLoader(userBatchLoader, options);
 ```
 
 You could choose to use one of the fancy cache implementations from Guava or Kaffeine and wrap it in a `CacheMap` wrapper ready
