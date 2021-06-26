@@ -17,10 +17,13 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
+import org.dataloader.annotations.VisibleForTesting;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.Statistics;
 import org.dataloader.stats.StatisticsCollector;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -52,6 +55,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  *
  * @param <K> type parameter indicating the type of the data load keys
  * @param <V> type parameter indicating the type of the data that is returned
+ *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
@@ -69,6 +73,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newDataLoader(BatchLoader<K, V> batchLoadFunction) {
@@ -82,6 +87,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newDataLoader(BatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
@@ -102,6 +108,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoader<K, Try<V>> batchLoadFunction) {
@@ -117,7 +124,9 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
+     *
      * @see #newDataLoaderWithTry(BatchLoader)
      */
     @SuppressWarnings("unchecked")
@@ -132,6 +141,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newDataLoader(BatchLoaderWithContext<K, V> batchLoadFunction) {
@@ -145,6 +155,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newDataLoader(BatchLoaderWithContext<K, V> batchLoadFunction, DataLoaderOptions options) {
@@ -165,6 +176,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoaderWithContext<K, Try<V>> batchLoadFunction) {
@@ -180,7 +192,9 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
+     *
      * @see #newDataLoaderWithTry(BatchLoader)
      */
     public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoaderWithContext<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
@@ -194,6 +208,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoader<K, V> batchLoadFunction) {
@@ -207,6 +222,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
@@ -228,6 +244,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoader<K, Try<V>> batchLoadFunction) {
@@ -243,7 +260,9 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
+     *
      * @see #newDataLoaderWithTry(BatchLoader)
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoader<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
@@ -257,6 +276,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoaderWithContext<K, V> batchLoadFunction) {
@@ -270,6 +290,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoaderWithContext<K, V> batchLoadFunction, DataLoaderOptions options) {
@@ -290,6 +311,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoaderWithContext<K, Try<V>> batchLoadFunction) {
@@ -305,7 +327,9 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
+     *
      * @return a new DataLoader
+     *
      * @see #newDataLoaderWithTry(BatchLoader)
      */
     public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoaderWithContext<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
@@ -337,13 +361,29 @@ public class DataLoader<K, V> {
         // order of keys matter in data loader
         this.stats = nonNull(loaderOptions.getStatisticsCollector());
 
-        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.stats);
+        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.stats, clock());
+    }
+
+    @VisibleForTesting
+    Clock clock() {
+        return Clock.systemUTC();
     }
 
     @SuppressWarnings("unchecked")
     private CacheMap<Object, CompletableFuture<V>> determineCacheMap(DataLoaderOptions loaderOptions) {
         return loaderOptions.cacheMap().isPresent() ? (CacheMap<Object, CompletableFuture<V>>) loaderOptions.cacheMap().get() : CacheMap.simpleMap();
     }
+
+
+    /**
+     * This returns the last instant the data loader was dispatched.  When the data loader is created this value is set to now.
+     *
+     * @return the instant since the last dispatch
+     */
+    public Instant getLastDispatchTime() {
+        return helper.getLastDispatchTime();
+    }
+
 
     /**
      * Requests to load the data with the specified key asynchronously, and returns a future of the resulting value.
@@ -353,6 +393,7 @@ public class DataLoader<K, V> {
      * and returned from cache).
      *
      * @param key the key to load
+     *
      * @return the future of the value
      */
     public CompletableFuture<V> load(K key) {
@@ -370,6 +411,7 @@ public class DataLoader<K, V> {
      * NOTE : This will NOT cause a data load to happen.  You must called {@link #load(Object)} for that to happen.
      *
      * @param key the key to check
+     *
      * @return an Optional to the future of the value
      */
     public Optional<CompletableFuture<V>> getIfPresent(K key) {
@@ -388,6 +430,7 @@ public class DataLoader<K, V> {
      * NOTE : This will NOT cause a data load to happen.  You must called {@link #load(Object)} for that to happen.
      *
      * @param key the key to check
+     *
      * @return an Optional to the future of the value
      */
     public Optional<CompletableFuture<V>> getIfCompleted(K key) {
@@ -407,6 +450,7 @@ public class DataLoader<K, V> {
      *
      * @param key        the key to load
      * @param keyContext a context object that is specific to this key
+     *
      * @return the future of the value
      */
     public CompletableFuture<V> load(K key, Object keyContext) {
@@ -422,6 +466,7 @@ public class DataLoader<K, V> {
      * and returned from cache).
      *
      * @param keys the list of keys to load
+     *
      * @return the composite future of the list of values
      */
     public CompletableFuture<List<V>> loadMany(List<K> keys) {
@@ -441,6 +486,7 @@ public class DataLoader<K, V> {
      *
      * @param keys        the list of keys to load
      * @param keyContexts the list of key calling context objects
+     *
      * @return the composite future of the list of values
      */
     public CompletableFuture<List<V>> loadMany(List<K> keys, List<Object> keyContexts) {
@@ -517,6 +563,7 @@ public class DataLoader<K, V> {
      * on the next load request.
      *
      * @param key the key to remove
+     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clear(K key) {
@@ -544,6 +591,7 @@ public class DataLoader<K, V> {
      *
      * @param key   the key
      * @param value the value
+     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, V value) {
@@ -561,6 +609,7 @@ public class DataLoader<K, V> {
      *
      * @param key   the key
      * @param error the exception to prime instead of a value
+     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, Exception error) {
@@ -578,6 +627,7 @@ public class DataLoader<K, V> {
      * If no cache key function is present in {@link DataLoaderOptions}, then the returned value equals the input key.
      *
      * @param key the input key
+     *
      * @return the cache key after the input is transformed with the cache key function
      */
     public Object getCacheKey(K key) {
