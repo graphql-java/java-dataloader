@@ -70,7 +70,7 @@ a list of keys
             }
         };
 
-        DataLoader<Long, User> userLoader = DataLoader.newDataLoader(userBatchLoader);
+        DataLoader<Long, User> userLoader = DataLoaderFactory.newDataLoader(userBatchLoader);
 
 ```
 
@@ -188,7 +188,7 @@ for the context object.
             }
         };
 
-        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoader(batchLoader, options);
 ```
 
 The batch loading code will now receive this environment object and it can be used to get context perhaps allowing it
@@ -219,7 +219,7 @@ You can gain access to them as a map by key or as the original list of context o
             }
         };
 
-        DataLoader<String, String> loader = DataLoader.newDataLoader(batchLoader, options);
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoader(batchLoader, options);
         loader.load("keyA", "contextForA");
         loader.load("keyB", "contextForB");
 ```
@@ -255,7 +255,7 @@ For example, let's assume you want to load users from a database, you could prob
             }
         };
 
-        DataLoader<Long, User> userLoader = DataLoader.newMappedDataLoader(mapBatchLoader);
+        DataLoader<Long, User> userLoader = DataLoaderFactory.newMappedDataLoader(mapBatchLoader);
 
         // ...
 ```
@@ -295,7 +295,7 @@ DataLoader supports this type and you can use this form to create a batch loader
 and some of which may have failed.  From that data loader can infer the right behavior in terms of the `load(x)` promise.
 
 ```java
-        DataLoader<String, User> dataLoader = DataLoader.newDataLoaderWithTry(new BatchLoader<String, Try<User>>() {
+        DataLoader<String, User> dataLoader = DataLoaderFactory.newDataLoaderWithTry(new BatchLoader<String, Try<User>>() {
             @Override
             public CompletionStage<List<Try<User>>> load(List<String> keys) {
                 return CompletableFuture.supplyAsync(() -> {
@@ -320,7 +320,7 @@ react to that, in a type safe manner.
 In certain uncommon cases, a DataLoader which does not cache may be desirable. 
 
 ```java
-    DataLoader.newDataLoader(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
+    DataLoaderFactory.newDataLoader(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
 ``` 
 
 Calling the above will ensure that every call to `.load()` will produce a new promise, and requested keys will not be saved in memory.
@@ -387,7 +387,7 @@ You can configure the statistics collector used when you build the data loader
 
 ```java
         DataLoaderOptions options = DataLoaderOptions.newOptions().setStatisticsCollector(() -> new ThreadLocalStatisticsCollector());
-        DataLoader<String,User> userDataLoader = DataLoader.newDataLoader(userBatchLoader,options);
+        DataLoader<String,User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader,options);
 
 ```
 
@@ -414,7 +414,7 @@ However you can create your own custom cache and supply it to the data loader on
 ```java
         MyCustomCache customCache = new MyCustomCache();
         DataLoaderOptions options = DataLoaderOptions.newOptions().setCacheMap(customCache);
-        DataLoader.newDataLoader(userBatchLoader, options);
+        DataLoaderFactory.newDataLoader(userBatchLoader, options);
 ```
 
 You could choose to use one of the fancy cache implementations from Guava or Kaffeine and wrap it in a `CacheMap` wrapper ready

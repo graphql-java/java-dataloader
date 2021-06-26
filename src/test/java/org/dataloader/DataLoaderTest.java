@@ -35,6 +35,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
+import static org.dataloader.DataLoaderFactory.*;
 import static org.dataloader.DataLoaderOptions.newOptions;
 import static org.dataloader.TestKit.listFrom;
 import static org.dataloader.impl.CompletableFutureKit.cause;
@@ -60,7 +61,7 @@ public class DataLoaderTest {
     @Test
     public void should_Build_a_really_really_simple_data_loader() {
         AtomicBoolean success = new AtomicBoolean();
-        DataLoader<Integer, Integer> identityLoader = new DataLoader<>(keysAsValues());
+        DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValues());
 
         CompletionStage<Integer> future1 = identityLoader.load(1);
 
@@ -75,7 +76,7 @@ public class DataLoaderTest {
     @Test
     public void should_Support_loading_multiple_keys_in_one_call() {
         AtomicBoolean success = new AtomicBoolean();
-        DataLoader<Integer, Integer> identityLoader = new DataLoader<>(keysAsValues());
+        DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValues());
 
         CompletionStage<List<Integer>> futureAll = identityLoader.loadMany(asList(1, 2));
         futureAll.thenAccept(promisedValues -> {
@@ -90,7 +91,7 @@ public class DataLoaderTest {
     @Test
     public void should_Resolve_to_empty_list_when_no_keys_supplied() {
         AtomicBoolean success = new AtomicBoolean();
-        DataLoader<Integer, Integer> identityLoader = new DataLoader<>(keysAsValues());
+        DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValues());
         CompletableFuture<List<Integer>> futureEmpty = identityLoader.loadMany(emptyList());
         futureEmpty.thenAccept(promisedValues -> {
             assertThat(promisedValues.size(), is(0));
@@ -104,13 +105,13 @@ public class DataLoaderTest {
     @Test
     public void should_Return_zero_entries_dispatched_when_no_keys_supplied() {
         AtomicBoolean success = new AtomicBoolean();
-        DataLoader<Integer, Integer> identityLoader = new DataLoader<>(keysAsValues());
+        DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValues());
         CompletableFuture<List<Integer>> futureEmpty = identityLoader.loadMany(emptyList());
         futureEmpty.thenAccept(promisedValues -> {
             assertThat(promisedValues.size(), is(0));
             success.set(true);
         });
-        DispatchResult dispatchResult = identityLoader.dispatchWithCounts();
+        DispatchResult<Integer> dispatchResult = identityLoader.dispatchWithCounts();
         await().untilAtomic(success, is(true));
         assertThat(dispatchResult.getKeysCount(), equalTo(0));
     }
@@ -131,12 +132,11 @@ public class DataLoaderTest {
     }
 
     @Test
-    public void should_Return_number_of_batched_entries() throws ExecutionException, InterruptedException {
+    public void should_Return_number_of_batched_entries() {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<Integer> future1 = identityLoader.load(1);
-        CompletableFuture<Integer> future1a = identityLoader.load(1);
         CompletableFuture<Integer> future2 = identityLoader.load(2);
         DispatchResult<?> dispatchResult = identityLoader.dispatchWithCounts();
 
@@ -759,8 +759,8 @@ public class DataLoaderTest {
 
         // Fetches as expected
 
-        CompletableFuture future1 = identityLoader.load("a");
-        CompletableFuture future2 = identityLoader.load("b");
+        CompletableFuture<String> future1 = identityLoader.load("a");
+        CompletableFuture<String> future2 = identityLoader.load("b");
         CompletableFuture<List<String>> composite = identityLoader.dispatch();
 
         await().until(composite::isDone);
@@ -770,8 +770,8 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(singletonList(asList("a", "b"))));
         assertArrayEquals(customMap.stash.keySet().toArray(), asList("a", "b").toArray());
 
-        CompletableFuture future3 = identityLoader.load("c");
-        CompletableFuture future2a = identityLoader.load("b");
+        CompletableFuture<String> future3 = identityLoader.load("c");
+        CompletableFuture<String> future2a = identityLoader.load("b");
         composite = identityLoader.dispatch();
 
         await().until(composite::isDone);
@@ -786,7 +786,7 @@ public class DataLoaderTest {
         identityLoader.clear("b");
         assertArrayEquals(customMap.stash.keySet().toArray(), asList("a", "c").toArray());
 
-        CompletableFuture future2b = identityLoader.load("b");
+        CompletableFuture<String> future2b = identityLoader.load("b");
         composite = identityLoader.dispatch();
 
         await().until(composite::isDone);
@@ -802,7 +802,7 @@ public class DataLoaderTest {
     }
 
     @Test
-    public void batching_disabled_should_dispatch_immediately() throws Exception {
+    public void batching_disabled_should_dispatch_immediately() {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setBatchingEnabled(false);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
@@ -830,7 +830,7 @@ public class DataLoaderTest {
     }
 
     @Test
-    public void batching_disabled_and_caching_disabled_should_dispatch_immediately_and_forget() throws Exception {
+    public void batching_disabled_and_caching_disabled_should_dispatch_immediately_and_forget() {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setBatchingEnabled(false).setCachingEnabled(false);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
@@ -861,7 +861,7 @@ public class DataLoaderTest {
     }
 
     @Test
-    public void batches_multiple_requests_with_max_batch_size() throws Exception {
+    public void batches_multiple_requests_with_max_batch_size() {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> identityLoader = idLoader(newOptions().setMaxBatchSize(2), loadCalls);
 
@@ -882,7 +882,7 @@ public class DataLoaderTest {
     }
 
     @Test
-    public void can_split_max_batch_sizes_correctly() throws Exception {
+    public void can_split_max_batch_sizes_correctly() {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> identityLoader = idLoader(newOptions().setMaxBatchSize(5), loadCalls);
 
@@ -938,19 +938,19 @@ public class DataLoaderTest {
     @Test
     public void can_call_a_loader_from_a_loader() throws Exception {
         List<Collection<String>> deepLoadCalls = new ArrayList<>();
-        DataLoader<String, String> deepLoader = DataLoader.newDataLoader(keys -> {
+        DataLoader<String, String> deepLoader = newDataLoader(keys -> {
             deepLoadCalls.add(keys);
             return CompletableFuture.completedFuture(keys);
         });
 
         List<Collection<String>> aLoadCalls = new ArrayList<>();
-        DataLoader<String, String> aLoader = new DataLoader<>(keys -> {
+        DataLoader<String, String> aLoader = newDataLoader(keys -> {
             aLoadCalls.add(keys);
             return deepLoader.loadMany(keys);
         });
 
         List<Collection<String>> bLoadCalls = new ArrayList<>();
-        DataLoader<String, String> bLoader = new DataLoader<>(keys -> {
+        DataLoader<String, String> bLoader = newDataLoader(keys -> {
             bLoadCalls.add(keys);
             return deepLoader.loadMany(keys);
         });
@@ -983,7 +983,7 @@ public class DataLoaderTest {
     }
 
     @Test
-    public void should_allow_composition_of_data_loader_calls() throws Exception {
+    public void should_allow_composition_of_data_loader_calls() {
         UserManager userManager = new UserManager();
 
         BatchLoader<Long, User> userBatchLoader = userIds -> CompletableFuture
@@ -991,7 +991,7 @@ public class DataLoaderTest {
                         .stream()
                         .map(userManager::loadUserById)
                         .collect(Collectors.toList()));
-        DataLoader<Long, User> userLoader = new DataLoader<>(userBatchLoader);
+        DataLoader<Long, User> userLoader = newDataLoader(userBatchLoader);
 
         AtomicBoolean gandalfCalled = new AtomicBoolean(false);
         AtomicBoolean sarumanCalled = new AtomicBoolean(false);
@@ -1027,7 +1027,7 @@ public class DataLoaderTest {
     }
 
     private static <K, V> DataLoader<K, V> idLoader(DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return DataLoader.newDataLoader(keys -> {
+        return newDataLoader(keys -> {
             loadCalls.add(new ArrayList<>(keys));
             @SuppressWarnings("unchecked")
             List<V> values = keys.stream()
@@ -1039,7 +1039,7 @@ public class DataLoaderTest {
 
     private static <K, V> DataLoader<K, V> idLoaderBlowsUps(
             DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return new DataLoader<>(keys -> {
+        return newDataLoader(keys -> {
             loadCalls.add(new ArrayList<>(keys));
             return TestKit.futureError();
         }, options);
@@ -1047,7 +1047,7 @@ public class DataLoaderTest {
 
     private static <K> DataLoader<K, Object> idLoaderAllExceptions(
             DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return new DataLoader<>(keys -> {
+        return newDataLoader(keys -> {
             loadCalls.add(new ArrayList<>(keys));
 
             List<Object> errors = keys.stream().map(k -> new IllegalStateException("Error")).collect(Collectors.toList());
@@ -1057,7 +1057,7 @@ public class DataLoaderTest {
 
     private static DataLoader<Integer, Object> idLoaderOddEvenExceptions(
             DataLoaderOptions options, List<Collection<Integer>> loadCalls) {
-        return new DataLoader<>(keys -> {
+        return newDataLoader(keys -> {
             loadCalls.add(new ArrayList<>(keys));
 
             List<Object> errors = new ArrayList<>();

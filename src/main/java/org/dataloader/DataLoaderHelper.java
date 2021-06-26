@@ -242,7 +242,7 @@ class DataLoaderHelper<K, V> {
 
                     List<K> clearCacheKeys = new ArrayList<>();
                     for (int idx = 0; idx < queuedFutures.size(); idx++) {
-                        Object value = values.get(idx);
+                        V value = values.get(idx);
                         CompletableFuture<V> future = queuedFutures.get(idx);
                         if (value instanceof Throwable) {
                             stats.incrementLoadErrorCount();
@@ -260,8 +260,7 @@ class DataLoaderHelper<K, V> {
                                 clearCacheKeys.add(keys.get(idx));
                             }
                         } else {
-                            V val = (V) value;
-                            future.complete(val);
+                            future.complete(value);
                         }
                     }
                     possiblyClearCacheEntriesOnExceptions(clearCacheKeys);

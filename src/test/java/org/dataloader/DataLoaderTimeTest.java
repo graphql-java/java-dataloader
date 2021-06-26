@@ -28,6 +28,7 @@ public class DataLoaderTimeTest {
 
         Instant startInstant = now();
 
+        @SuppressWarnings("deprecation")
         DataLoader<Integer, Integer> dataLoader = new DataLoader<Integer, Integer>(keysAsValues()) {
             @Override
             Clock clock() {

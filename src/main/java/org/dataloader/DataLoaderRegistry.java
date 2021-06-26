@@ -1,15 +1,16 @@
 package org.dataloader;
 
+import org.dataloader.annotations.PublicApi;
+import org.dataloader.stats.Statistics;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-
-import org.dataloader.annotations.PublicApi;
-import org.dataloader.stats.Statistics;
 
 /**
  * This allows data loaders to be registered together into a single place so
@@ -20,11 +21,19 @@ import org.dataloader.stats.Statistics;
 public class DataLoaderRegistry {
     private final Map<String, DataLoader<?, ?>> dataLoaders = new ConcurrentHashMap<>();
 
+    public DataLoaderRegistry() {
+    }
+
+    private DataLoaderRegistry(Builder builder) {
+        this.dataLoaders.putAll(builder.dataLoaders);
+    }
+
     /**
      * This will register a new dataloader
      *
      * @param key        the key to put the data loader under
      * @param dataLoader the data loader to register
+     *
      * @return this registry
      */
     public DataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader) {
@@ -43,6 +52,7 @@ public class DataLoaderRegistry {
      * @param mappingFunction the function to compute a data loader
      * @param <K>             the type of keys
      * @param <V>             the type of values
+     *
      * @return a data loader
      */
     @SuppressWarnings("unchecked")
@@ -56,6 +66,7 @@ public class DataLoaderRegistry {
      * and return a new combined registry
      *
      * @param registry the registry to combine into this registry
+     *
      * @return a new combined registry
      */
     public DataLoaderRegistry combine(DataLoaderRegistry registry) {
@@ -77,6 +88,7 @@ public class DataLoaderRegistry {
      * This will unregister a new dataloader
      *
      * @param key the key of the data loader to unregister
+     *
      * @return this registry
      */
     public DataLoaderRegistry unregister(String key) {
@@ -90,6 +102,7 @@ public class DataLoaderRegistry {
      * @param key the key of the data loader
      * @param <K> the type of keys
      * @param <V> the type of values
+     *
      * @return a data loader or null if its not present
      */
     @SuppressWarnings("unchecked")
@@ -120,7 +133,7 @@ public class DataLoaderRegistry {
      */
     public int dispatchAllWithCount() {
         int sum = 0;
-        for (DataLoader<?,?> dataLoader : getDataLoaders()) {
+        for (DataLoader<?, ?> dataLoader : getDataLoaders()) {
             sum += dataLoader.dispatchWithCounts().getKeysCount();
         }
         return sum;
@@ -132,7 +145,7 @@ public class DataLoaderRegistry {
      */
     public int dispatchDepth() {
         int totalDispatchDepth = 0;
-        for (DataLoader dataLoader : getDataLoaders()) {
+        for (DataLoader<?, ?> dataLoader : getDataLoaders()) {
             totalDispatchDepth += dataLoader.dispatchDepth();
         }
         return totalDispatchDepth;
@@ -148,5 +161,50 @@ public class DataLoaderRegistry {
             stats = stats.combine(dataLoader.getStatistics());
         }
         return stats;
+    }
+
+    /**
+     * @return A builder of {@link DataLoaderRegistry}s
+     */
+    public static Builder newRegistry() {
+        return new Builder();
+    }
+
+    public static class Builder {
+
+        private final Map<String, DataLoader<?, ?>> dataLoaders = new HashMap<>();
+
+        /**
+         * This will register a new dataloader
+         *
+         * @param key        the key to put the data loader under
+         * @param dataLoader the data loader to register
+         *
+         * @return this builder for a fluent pattern
+         */
+        public Builder register(String key, DataLoader<?, ?> dataLoader) {
+            dataLoaders.put(key, dataLoader);
+            return this;
+        }
+
+        /**
+         * This will combine together the data loaders in this builder with the ones
+         * from a previous {@link DataLoaderRegistry}
+         *
+         * @param otherRegistry the previous {@link DataLoaderRegistry}
+         *
+         * @return this builder for a fluent pattern
+         */
+        public Builder registerAll(DataLoaderRegistry otherRegistry) {
+            dataLoaders.putAll(otherRegistry.dataLoaders);
+            return this;
+        }
+
+        /**
+         * @return the newly built {@link DataLoaderRegistry}
+         */
+        public DataLoaderRegistry build() {
+            return new DataLoaderRegistry(this);
+        }
     }
 }
