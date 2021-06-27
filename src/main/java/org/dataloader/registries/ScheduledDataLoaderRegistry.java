@@ -25,17 +25,27 @@ import static org.dataloader.impl.Assertions.nonNull;
  * call {@link #rescheduleNow()}.
  */
 @PublicApi
-public class ScheduledDataLoaderRegistry extends DataLoaderRegistry {
+public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements AutoCloseable {
 
     private final ScheduledExecutorService scheduledExecutorService;
     private final DispatchPredicate dispatchPredicate;
     private final Duration schedule;
+    private volatile boolean closed;
 
     private ScheduledDataLoaderRegistry(Builder builder) {
         this.dataLoaders.putAll(builder.dataLoaders);
         this.scheduledExecutorService = builder.scheduledExecutorService;
         this.dispatchPredicate = builder.dispatchPredicate;
         this.schedule = builder.schedule;
+        this.closed = false;
+    }
+
+    /**
+     * Once closed this registry will never again reschedule checks
+     */
+    @Override
+    public void close() {
+        closed = true;
     }
 
     /**
@@ -92,8 +102,10 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry {
     }
 
     private void reschedule(String key, DataLoader<?, ?> dataLoader) {
-        Runnable runThis = () -> dispatchOrReschedule(key, dataLoader);
-        scheduledExecutorService.schedule(runThis, schedule.toMillis(), TimeUnit.MILLISECONDS);
+        if (!closed) {
+            Runnable runThis = () -> dispatchOrReschedule(key, dataLoader);
+            scheduledExecutorService.schedule(runThis, schedule.toMillis(), TimeUnit.MILLISECONDS);
+        }
     }
 
     private void dispatchOrReschedule(String key, DataLoader<?, ?> dataLoader) {

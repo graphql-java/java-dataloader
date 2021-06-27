@@ -212,7 +212,49 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         snooze(2000);
 
         assertThat(calls, equalTo(asList(asList("K1", "K2"), asList("K3", "K4"))));
+    }
 
+    public void test_close_is_a_one_way_door() {
+        AtomicInteger counter = new AtomicInteger();
+        DispatchPredicate countingPredicate = (dataLoaderKey, dataLoader) -> {
+            counter.incrementAndGet();
+            return false;
+        };
 
+        DataLoader<String, String> dlA = TestKit.idLoader();
+        dlA.load("K1");
+        dlA.load("K2");
+
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
+                .register("a", dlA)
+                .dispatchPredicate(countingPredicate)
+                .schedule(Duration.ofMillis(10))
+                .build();
+
+        registry.rescheduleNow();
+
+        snooze(200);
+
+        assertTrue(counter.get() > 0);
+
+        registry.close();
+
+        snooze(100);
+        int countThen = counter.get();
+
+        registry.rescheduleNow();
+        snooze(200);
+        assertEquals(counter.get(), countThen);
+
+        registry.rescheduleNow();
+        snooze(200);
+        assertEquals(counter.get(), countThen);
+
+        registry.dispatchAll();
+        snooze(200);
+        assertEquals(counter.get(), countThen + 1); // will have re-entered
+
+        snooze(200);
+        assertEquals(counter.get(), countThen + 1);
     }
 }
