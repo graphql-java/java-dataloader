@@ -16,6 +16,8 @@
 
 package org.dataloader;
 
+import org.dataloader.fixtures.JsonObject;
+import org.dataloader.fixtures.TestKit;
 import org.dataloader.fixtures.User;
 import org.dataloader.fixtures.UserManager;
 import org.dataloader.impl.CompletableFutureKit;
@@ -37,7 +39,7 @@ import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.dataloader.DataLoaderOptions.newOptions;
-import static org.dataloader.TestKit.listFrom;
+import static org.dataloader.fixtures.TestKit.listFrom;
 import static org.dataloader.impl.CompletableFutureKit.cause;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;

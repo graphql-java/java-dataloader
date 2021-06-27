@@ -1,68 +1,45 @@
 package org.dataloader;
 
+import org.dataloader.fixtures.TestingClock;
 import org.junit.Test;
 
-import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
 
+import static org.dataloader.fixtures.TestKit.keysAsValues;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 
 @SuppressWarnings("UnusedReturnValue")
 public class DataLoaderTimeTest {
 
-    private <T> BatchLoader<T, T> keysAsValues() {
-        return CompletableFuture::completedFuture;
-    }
-
-    AtomicReference<Clock> clockRef = new AtomicReference<>();
 
     @Test
     public void should_set_and_instant_if_dispatched() {
-        Clock clock = zeroEpoch();
-        clockRef.set(clock);
 
-        Instant startInstant = now();
+        TestingClock clock = new TestingClock();
+        DataLoader<Integer, Integer> dataLoader = new ClockDataLoader<>(keysAsValues(), clock);
+        Instant then = clock.instant();
 
-        @SuppressWarnings("deprecation")
-        DataLoader<Integer, Integer> dataLoader = new DataLoader<Integer, Integer>(keysAsValues()) {
-            @Override
-            Clock clock() {
-                return clockRef.get();
-            }
-        };
-
-        long sinceMS = msSince(dataLoader.getLastDispatchTime());
+        long sinceMS = dataLoader.getTimeSinceDispatch().toMillis();
         assertThat(sinceMS, equalTo(0L));
-        assertThat(startInstant, equalTo(dataLoader.getLastDispatchTime()));
+        assertThat(then, equalTo(dataLoader.getLastDispatchTime()));
 
-        jump(clock, 1000);
+        then = clock.instant();
+        clock.jump(1000);
+
+        sinceMS = dataLoader.getTimeSinceDispatch().toMillis();
+        assertThat(sinceMS, equalTo(1000L));
+        assertThat(then, equalTo(dataLoader.getLastDispatchTime()));
+
+        // dispatch and hence reset the time of last dispatch
+        then = clock.instant();
         dataLoader.dispatch();
 
-        sinceMS = msSince(dataLoader.getLastDispatchTime());
-        assertThat(sinceMS, equalTo(1000L));
+        sinceMS = dataLoader.getTimeSinceDispatch().toMillis();
+        assertThat(sinceMS, equalTo(0L));
+        assertThat(then, equalTo(dataLoader.getLastDispatchTime()));
+
     }
 
-    private long msSince(Instant lastDispatchTime) {
-        return Duration.between(lastDispatchTime, now()).toMillis();
-    }
-
-    private Instant now() {
-        return Instant.now(clockRef.get());
-    }
-
-    private Clock jump(Clock clock, int millis) {
-        clock = Clock.offset(clock, Duration.ofMillis(millis));
-        clockRef.set(clock);
-        return clock;
-    }
-
-    private Clock zeroEpoch() {
-        return Clock.fixed(Instant.ofEpochMilli(0), ZoneId.systemDefault());
-    }
 
 }
