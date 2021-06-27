@@ -79,8 +79,8 @@ class DataLoaderHelper<K, V> {
         this.lastDispatchTime.set(now());
     }
 
-    private Instant now() {
-        return Instant.now(clock);
+    Instant now() {
+        return clock.instant();
     }
 
     public Instant getLastDispatchTime() {

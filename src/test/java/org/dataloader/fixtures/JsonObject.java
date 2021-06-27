@@ -1,14 +1,14 @@
-package org.dataloader;
+package org.dataloader.fixtures;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
-class JsonObject {
+public class JsonObject {
 
     private final Map<String, Object> values;
 
-    JsonObject() {
+    public JsonObject() {
         values = new LinkedHashMap<>();
     }
 
@@ -19,8 +19,12 @@ class JsonObject {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
 
         JsonObject that = (JsonObject) o;
 

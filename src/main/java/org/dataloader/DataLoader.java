@@ -23,6 +23,7 @@ import org.dataloader.stats.Statistics;
 import org.dataloader.stats.StatisticsCollector;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -404,19 +405,21 @@ public class DataLoader<K, V> {
         this((Object) batchLoadFunction, options);
     }
 
+    @VisibleForTesting
     DataLoader(Object batchLoadFunction, DataLoaderOptions options) {
+        this(batchLoadFunction, options, Clock.systemUTC());
+    }
+
+    @VisibleForTesting
+    DataLoader(Object batchLoadFunction, DataLoaderOptions options, Clock clock) {
         DataLoaderOptions loaderOptions = options == null ? new DataLoaderOptions() : options;
         this.futureCache = determineCacheMap(loaderOptions);
         // order of keys matter in data loader
         this.stats = nonNull(loaderOptions.getStatisticsCollector());
 
-        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.stats, clock());
+        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.stats, clock);
     }
 
-    @VisibleForTesting
-    Clock clock() {
-        return Clock.systemUTC();
-    }
 
     @SuppressWarnings("unchecked")
     private CacheMap<Object, CompletableFuture<V>> determineCacheMap(DataLoaderOptions loaderOptions) {
@@ -431,6 +434,15 @@ public class DataLoader<K, V> {
      */
     public Instant getLastDispatchTime() {
         return helper.getLastDispatchTime();
+    }
+
+    /**
+     * This returns the {@link Duration} since the data loader was dispatched.  When the data loader is created this is zero.
+     *
+     * @return the time duration since the last dispatch
+     */
+    public Duration getTimeSinceDispatch() {
+        return Duration.between(helper.getLastDispatchTime(), helper.now());
     }
 
 
