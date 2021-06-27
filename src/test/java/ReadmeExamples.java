@@ -10,9 +10,12 @@ import org.dataloader.Try;
 import org.dataloader.fixtures.SecurityCtx;
 import org.dataloader.fixtures.User;
 import org.dataloader.fixtures.UserManager;
+import org.dataloader.registries.DispatchPredicate;
+import org.dataloader.registries.ScheduledDataLoaderRegistry;
 import org.dataloader.stats.Statistics;
 import org.dataloader.stats.ThreadLocalStatisticsCollector;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -269,4 +272,14 @@ public class ReadmeExamples {
         DataLoader<String, User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader, options);
     }
 
+    private void ScheduledDispatche() {
+        DispatchPredicate depthOrTimePredicate = DispatchPredicate.dispatchIfDepthGreaterThan(10)
+                .or(DispatchPredicate.dispatchIfLongerThan(Duration.ofMillis(200)));
+
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
+                .dispatchPredicate(depthOrTimePredicate)
+                .schedule(Duration.ofMillis(10))
+                .register("users", userDataLoader)
+                .build();
+    }
 }
