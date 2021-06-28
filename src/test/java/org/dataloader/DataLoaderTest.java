@@ -16,6 +16,7 @@
 
 package org.dataloader;
 
+import org.dataloader.fixtures.CustomCacheMap;
 import org.dataloader.fixtures.JsonObject;
 import org.dataloader.fixtures.TestKit;
 import org.dataloader.fixtures.User;

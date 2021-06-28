@@ -214,12 +214,12 @@ public class ReadmeExamples {
         }
 
         @Override
-        public Object get(Object key) {
+        public CompletableFuture<Object> get(Object key) {
             return null;
         }
 
         @Override
-        public CacheMap set(Object key, Object value) {
+        public CacheMap set(Object key, CompletableFuture value) {
             return null;
         }
 

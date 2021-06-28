@@ -21,19 +21,20 @@ import org.dataloader.annotations.Internal;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Default implementation of {@link CacheMap} that is based on a regular {@link java.util.LinkedHashMap}.
  *
- * @param <U> type parameter indicating the type of the cache keys
+ * @param <K> type parameter indicating the type of the cache keys
  * @param <V> type parameter indicating the type of the data that is cached
  *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  */
 @Internal
-public class DefaultCacheMap<U, V> implements CacheMap<U, V> {
+public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
 
-    private final Map<U, V> cache;
+    private final Map<K, CompletableFuture<V>> cache;
 
     /**
      * Default constructor
@@ -46,15 +47,16 @@ public class DefaultCacheMap<U, V> implements CacheMap<U, V> {
      * {@inheritDoc}
      */
     @Override
-    public boolean containsKey(U key) {
+    public boolean containsKey(K key) {
         return cache.containsKey(key);
     }
+
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public V get(U key) {
+    public CompletableFuture<V> get(K key) {
         return cache.get(key);
     }
 
@@ -62,7 +64,7 @@ public class DefaultCacheMap<U, V> implements CacheMap<U, V> {
      * {@inheritDoc}
      */
     @Override
-    public CacheMap<U, V> set(U key, V value) {
+    public CacheMap<K, V> set(K key, CompletableFuture<V> value) {
         cache.put(key, value);
         return this;
     }
@@ -71,7 +73,7 @@ public class DefaultCacheMap<U, V> implements CacheMap<U, V> {
      * {@inheritDoc}
      */
     @Override
-    public CacheMap<U, V> delete(U key) {
+    public CacheMap<K, V> delete(K key) {
         cache.remove(key);
         return this;
     }
@@ -80,7 +82,7 @@ public class DefaultCacheMap<U, V> implements CacheMap<U, V> {
      * {@inheritDoc}
      */
     @Override
-    public CacheMap<U, V> clear() {
+    public CacheMap<K, V> clear() {
         cache.clear();
         return this;
     }

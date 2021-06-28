@@ -38,8 +38,9 @@ public class DataLoaderOptions {
     private boolean batchingEnabled;
     private boolean cachingEnabled;
     private boolean cachingExceptionsEnabled;
-    private CacheKey cacheKeyFunction;
-    private CacheMap cacheMap;
+    private CacheKey<?> cacheKeyFunction;
+    private CacheMap<?,?> cacheMap;
+    private CachedValueStore<?,?> cachedValueStore;
     private int maxBatchSize;
     private Supplier<StatisticsCollector> statisticsCollector;
     private BatchLoaderContextProvider environmentProvider;
@@ -166,7 +167,7 @@ public class DataLoaderOptions {
      *
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setCacheKeyFunction(CacheKey cacheKeyFunction) {
+    public DataLoaderOptions setCacheKeyFunction(CacheKey<?> cacheKeyFunction) {
         this.cacheKeyFunction = cacheKeyFunction;
         return this;
     }
@@ -178,7 +179,7 @@ public class DataLoaderOptions {
      *
      * @return an optional with the cache map instance, or empty
      */
-    public Optional<CacheMap> cacheMap() {
+    public Optional<CacheMap<?,?>> cacheMap() {
         return Optional.ofNullable(cacheMap);
     }
 
@@ -189,7 +190,7 @@ public class DataLoaderOptions {
      *
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setCacheMap(CacheMap cacheMap) {
+    public DataLoaderOptions setCacheMap(CacheMap<?,?> cacheMap) {
         this.cacheMap = cacheMap;
         return this;
     }
@@ -256,4 +257,28 @@ public class DataLoaderOptions {
         this.environmentProvider = nonNull(contextProvider);
         return this;
     }
+
+    /**
+     * Gets the (optional) cache store implementation that is used for value storage, if caching is enabled.
+     * <p>
+     * If missing, a no-op implementation will be used.
+     *
+     * @return an optional with the cache store instance, or empty
+     */
+    public Optional<CachedValueStore<?,?>> cachedValueStore() {
+        return Optional.ofNullable(cachedValueStore);
+    }
+
+    /**
+     * Sets the value store implementation to use for caching values, if caching is enabled.
+     *
+     * @param cachedValueStore the cache store instance
+     *
+     * @return the data loader options for fluent coding
+     */
+    public DataLoaderOptions setCachedValueStore(CachedValueStore<?,?> cachedValueStore) {
+        this.cachedValueStore = cachedValueStore;
+        return this;
+    }
+
 }

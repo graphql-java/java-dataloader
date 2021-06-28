@@ -28,37 +28,39 @@ import java.util.concurrent.CompletableFuture;
  * implementation could also have used a regular {@link java.util.Map} instead of this {@link CacheMap}, but
  * this aligns better to the reference data loader implementation provided by Facebook
  * <p>
- * Also it doesn't require you to implement the full set of map overloads, just the required methods.
+ * This is really a cache of completed {@link CompletableFuture} values in memory.  It is used, when caching is enabled, to
+ * give back the same future to any code that may call it.  if you need a cache of the underlying values that is possible external to the JVM
+ * then you will want to use {{@link CachedValueStore}} which is designed for external cache access.
  *
- * @param <U> type parameter indicating the type of the cache keys
+ * @param <K> type parameter indicating the type of the cache keys
  * @param <V> type parameter indicating the type of the data that is cached
  *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
 @PublicSpi
-public interface CacheMap<U, V> {
+public interface CacheMap<K, V> {
 
     /**
      * Creates a new cache map, using the default implementation that is based on a {@link java.util.LinkedHashMap}.
      *
-     * @param <U> type parameter indicating the type of the cache keys
+     * @param <K> type parameter indicating the type of the cache keys
      * @param <V> type parameter indicating the type of the data that is cached
      *
      * @return the cache map
      */
-    static <U, V> CacheMap<U, CompletableFuture<V>> simpleMap() {
+    static <K, V> CacheMap<K, V> simpleMap() {
         return new DefaultCacheMap<>();
     }
 
     /**
-     * Checks whether the specified key is contained in the cach map.
+     * Checks whether the specified key is contained in the cache map.
      *
      * @param key the key to check
      *
      * @return {@code true} if the cache contains the key, {@code false} otherwise
      */
-    boolean containsKey(U key);
+    boolean containsKey(K key);
 
     /**
      * Gets the specified key from the cache map.
@@ -70,7 +72,7 @@ public interface CacheMap<U, V> {
      *
      * @return the cached value, or {@code null} if not found (depends on cache implementation)
      */
-    V get(U key);
+    CompletableFuture<V> get(K key);
 
     /**
      * Creates a new cache map entry with the specified key and value, or updates the value if the key already exists.
@@ -80,7 +82,7 @@ public interface CacheMap<U, V> {
      *
      * @return the cache map for fluent coding
      */
-    CacheMap<U, V> set(U key, V value);
+    CacheMap<K, V> set(K key, CompletableFuture<V> value);
 
     /**
      * Deletes the entry with the specified key from the cache map, if it exists.
@@ -89,12 +91,12 @@ public interface CacheMap<U, V> {
      *
      * @return the cache map for fluent coding
      */
-    CacheMap<U, V> delete(U key);
+    CacheMap<K, V> delete(K key);
 
     /**
      * Clears all entries of the cache map
      *
      * @return the cache map for fluent coding
      */
-    CacheMap<U, V> clear();
+    CacheMap<K, V> clear();
 }

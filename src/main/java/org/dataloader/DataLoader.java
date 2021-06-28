@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 
 import static org.dataloader.impl.Assertions.nonNull;
 
@@ -64,8 +65,9 @@ import static org.dataloader.impl.Assertions.nonNull;
 public class DataLoader<K, V> {
 
     private final DataLoaderHelper<K, V> helper;
-    private final CacheMap<Object, CompletableFuture<V>> futureCache;
     private final StatisticsCollector stats;
+    private final CacheMap<Object, V> futureCache;
+    private final CachedValueStore<Object, V> cachedValueStore;
 
     /**
      * Creates new DataLoader with the specified batch loader function and default options
@@ -414,18 +416,23 @@ public class DataLoader<K, V> {
     DataLoader(Object batchLoadFunction, DataLoaderOptions options, Clock clock) {
         DataLoaderOptions loaderOptions = options == null ? new DataLoaderOptions() : options;
         this.futureCache = determineCacheMap(loaderOptions);
+        this.cachedValueStore = determineCacheStore(loaderOptions);
         // order of keys matter in data loader
         this.stats = nonNull(loaderOptions.getStatisticsCollector());
 
-        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.stats, clock);
+        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.cachedValueStore, this.stats, clock);
     }
 
 
     @SuppressWarnings("unchecked")
-    private CacheMap<Object, CompletableFuture<V>> determineCacheMap(DataLoaderOptions loaderOptions) {
-        return loaderOptions.cacheMap().isPresent() ? (CacheMap<Object, CompletableFuture<V>>) loaderOptions.cacheMap().get() : CacheMap.simpleMap();
+    private CacheMap<Object, V> determineCacheMap(DataLoaderOptions loaderOptions) {
+        return (CacheMap<Object, V>) loaderOptions.cacheMap().orElseGet(CacheMap::simpleMap);
     }
 
+    @SuppressWarnings("unchecked")
+    private CachedValueStore<Object, V> determineCacheStore(DataLoaderOptions loaderOptions) {
+        return (CachedValueStore<Object, V>) loaderOptions.cachedValueStore().orElseGet(CachedValueStore::defaultStore);
+    }
 
     /**
      * This returns the last instant the data loader was dispatched.  When the data loader is created this value is set to now.
@@ -628,9 +635,24 @@ public class DataLoader<K, V> {
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clear(K key) {
+        return clear(key, (v, e) -> {
+        });
+    }
+
+    /**
+     * Clears the future with the specified key from the cache remote value store, if caching is enabled
+     * and a remote store is set, so it will be re-fetched and stored on the next load request.
+     *
+     * @param key     the key to remove
+     * @param handler a handler that will be called after the async remote clear completes
+     *
+     * @return the data loader for fluent coding
+     */
+    public DataLoader<K, V> clear(K key, BiConsumer<Void, Throwable> handler) {
         Object cacheKey = getCacheKey(key);
         synchronized (this) {
             futureCache.delete(cacheKey);
+            cachedValueStore.delete(key).whenComplete(handler);
         }
         return this;
     }
@@ -641,14 +663,29 @@ public class DataLoader<K, V> {
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clearAll() {
+        return clearAll((v, e) -> {
+        });
+    }
+
+    /**
+     * Clears the entire cache map of the loader, and of the cached value store.
+     *
+     * @param handler a handler that will be called after the async remote clear all completes
+     *
+     * @return the data loader for fluent coding
+     */
+    public DataLoader<K, V> clearAll(BiConsumer<Void, Throwable> handler) {
         synchronized (this) {
             futureCache.clear();
+            cachedValueStore.clear().whenComplete(handler);
         }
         return this;
     }
 
     /**
-     * Primes the cache with the given key and value.
+     * Primes the cache with the given key and value.  Note this will only prime the future cache
+     * and not the value store.  Use {@link CachedValueStore#set(Object, Object)} if you want
+     * o prime it with values before use
      *
      * @param key   the key
      * @param value the value
