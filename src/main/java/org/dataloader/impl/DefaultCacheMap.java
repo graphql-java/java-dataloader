@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Default implementation of {@link CacheMap} that is based on a regular {@link java.util.LinkedHashMap}.
+ * Default implementation of {@link CacheMap} that is based on a regular {@link java.util.HashMap}.
  *
  * @param <K> type parameter indicating the type of the cache keys
  * @param <V> type parameter indicating the type of the data that is cached

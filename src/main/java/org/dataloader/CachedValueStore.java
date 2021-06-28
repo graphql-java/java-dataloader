@@ -1,7 +1,7 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicSpi;
-import org.dataloader.impl.DefaultCachedValueStore;
+import org.dataloader.impl.NoOpCachedValueStore;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 @PublicSpi
 public interface CachedValueStore<K, V> {
 
+
     /**
      * Creates a new store, using the default no-op implementation.
      *
@@ -33,7 +34,8 @@ public interface CachedValueStore<K, V> {
      * @return the cache store
      */
     static <K, V> CachedValueStore<K, V> defaultStore() {
-        return new DefaultCachedValueStore<>();
+        //noinspection unchecked
+        return (CachedValueStore<K, V>) NoOpCachedValueStore.NOOP;
     }
 
     /**
