@@ -2,6 +2,7 @@ package org.dataloader.fixtures;
 
 
 import org.dataloader.CachedValueStore;
+import org.dataloader.impl.CompletableFutureKit;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -12,12 +13,10 @@ public class CustomCachedValueStore implements CachedValueStore<String, Object> 
     public final Map<String, Object> store = new ConcurrentHashMap<>();
 
     @Override
-    public CompletableFuture<Boolean> containsKey(String key) {
-        return CompletableFuture.completedFuture(store.containsKey(key));
-    }
-
-    @Override
     public CompletableFuture<Object> get(String key) {
+        if (!store.containsKey(key)) {
+            return CompletableFutureKit.failedFuture(new RuntimeException("The key is missing"));
+        }
         return CompletableFuture.completedFuture(store.get(key));
     }
 

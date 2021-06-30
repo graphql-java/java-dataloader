@@ -16,12 +16,6 @@ public class CaffeineCachedValueStore implements CachedValueStore<String, Object
     }
 
     @Override
-    public CompletableFuture<Boolean> containsKey(String key) {
-        // caffeine cant answer this question efficiently so we rely on
-        return CompletableFuture.completedFuture(true);
-    }
-
-    @Override
     public CompletableFuture<Object> get(String key) {
         Object value = cache.getIfPresent(key);
         if (value == null) {

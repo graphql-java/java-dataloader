@@ -146,47 +146,6 @@ public class DataLoaderCachedValueStoreTest {
     }
 
     @Test
-    public void will_invoke_loader_if_CACHE_CONTAINS_call_throws_exception() {
-        CustomCachedValueStore customStore = new CustomCachedValueStore() {
-            @Override
-            public CompletableFuture<Boolean> containsKey(String key) {
-                if (key.equals("a")) {
-                    return failedFuture(new IllegalStateException("no A"));
-                }
-                if (key.equals("c")) {
-                    return completedFuture(false);
-                }
-                return super.containsKey(key);
-            }
-        };
-        customStore.set("a", "Not From Cache A");
-        customStore.set("b", "From Cache");
-        customStore.set("c", "Not From Cache C");
-
-        List<List<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().setCachedValueStore(customStore);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
-
-        // Fetches as expected
-
-        CompletableFuture<String> fA = identityLoader.load("a");
-        CompletableFuture<String> fB = identityLoader.load("b");
-        CompletableFuture<String> fC = identityLoader.load("c");
-
-        await().until(identityLoader.dispatch()::isDone);
-        assertThat(fA.join(), equalTo("a"));
-        assertThat(fB.join(), equalTo("From Cache"));
-        assertThat(fC.join(), equalTo("c"));
-
-        // a was not in cache (according to containsKey) and hence needed to be loaded
-        assertThat(loadCalls, equalTo(singletonList(asList("a", "c"))));
-
-        // the failed containsKey calls will be SET back into the value cache after batch loading
-        assertArrayEquals(customStore.store.keySet().toArray(), asList("a", "b", "c").toArray());
-        assertArrayEquals(customStore.store.values().toArray(), asList("a", "From Cache", "c").toArray());
-    }
-
-    @Test
     public void will_invoke_loader_if_CACHE_GET_call_throws_exception() {
         CustomCachedValueStore customStore = new CustomCachedValueStore() {
 

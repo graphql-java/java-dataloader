@@ -307,17 +307,9 @@ class DataLoaderHelper<K, V> {
          */
         final CompletableFuture<V> future = new CompletableFuture<>();
 
-        cachedValueStore.containsKey(cacheKey).whenComplete((hasKey, containsCallEx) -> {
-            boolean containsKey = containsCallEx == null && Boolean.TRUE.equals(hasKey);
-            if (containsKey) {
-                cachedValueStore.get(cacheKey).whenComplete((cachedValue, getCallEx) -> {
-                    if (getCallEx == null) {
-                        future.complete(cachedValue);
-                    } else {
-                        queueOrInvokeLoader(key, loadContext, batchingEnabled)
-                                .whenComplete(setValueIntoCacheAndCompleteFuture(cacheKey, future));
-                    }
-                });
+        cachedValueStore.get(cacheKey).whenComplete((cachedValue, getCallEx) -> {
+            if (getCallEx == null) {
+                future.complete(cachedValue);
             } else {
                 queueOrInvokeLoader(key, loadContext, batchingEnabled)
                         .whenComplete(setValueIntoCacheAndCompleteFuture(cacheKey, future));

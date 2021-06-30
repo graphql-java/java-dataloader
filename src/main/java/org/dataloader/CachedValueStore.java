@@ -3,7 +3,6 @@ package org.dataloader;
 import org.dataloader.annotations.PublicSpi;
 import org.dataloader.impl.NoOpCachedValueStore;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -33,36 +32,21 @@ public interface CachedValueStore<K, V> {
      *
      * @return the cache store
      */
-    static <K, V> CachedValueStore<K, V> defaultStore() {
+    static <K, V> CachedValueStore<K, V> defaultCachedValueStore() {
         //noinspection unchecked
         return (CachedValueStore<K, V>) NoOpCachedValueStore.NOOP;
     }
 
     /**
-     * Checks whether the specified key is contained in the store.
-     * <p>
-     * {@link DataLoader} first calls {@link #containsKey(Object)} and then calls {@link #get(Object)}.  If the
-     * backing cache implementation cannot answer the `containsKey` call then simply return true and the
-     * following `get` call can complete exceptionally to cause the {@link DataLoader}
-     * to enqueue the key to the {@link BatchLoader#load(List)} call since it is not present in cache.
-     *
-     * @param key the key to check if its present in the cache
-     *
-     * @return {@code true} if the cache contains the key, {@code false} otherwise
-     */
-    CompletableFuture<Boolean> containsKey(K key);
-
-    /**
-     * Gets the specified key from the store.
+     * Gets the specified key from the store.  if the key si not present, then the implementation MUST return an exceptionally completed future
+     * and not null because null is a valid cacheable value.  Any exception is will cause {@link DataLoader} to load the key via batch loading
+     * instead.
      *
      * @param key the key to retrieve
      *
-     * @return a future containing the cached value (which maybe null) or an exception if the key does
+     * @return a future containing the cached value (which maybe null) or exceptionally completed future if the key does
      * not exist in the cache.
      *
-     * IMPORTANT: The future may fail if the key does not exist depending on implementation. Implementations should
-     * return an exceptional future if the key is not present in the cache, not null which is a valid value
-     * for a key.
      */
     CompletableFuture<V> get(K key);
 

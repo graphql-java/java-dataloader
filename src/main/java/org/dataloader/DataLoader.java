@@ -415,8 +415,8 @@ public class DataLoader<K, V> {
     @VisibleForTesting
     DataLoader(Object batchLoadFunction, DataLoaderOptions options, Clock clock) {
         DataLoaderOptions loaderOptions = options == null ? new DataLoaderOptions() : options;
-        this.futureCache = determineCacheMap(loaderOptions);
-        this.cachedValueStore = determineCacheStore(loaderOptions);
+        this.futureCache = determineFutureCache(loaderOptions);
+        this.cachedValueStore = determineCachedValueStore(loaderOptions);
         // order of keys matter in data loader
         this.stats = nonNull(loaderOptions.getStatisticsCollector());
 
@@ -425,13 +425,13 @@ public class DataLoader<K, V> {
 
 
     @SuppressWarnings("unchecked")
-    private CacheMap<Object, V> determineCacheMap(DataLoaderOptions loaderOptions) {
+    private CacheMap<Object, V> determineFutureCache(DataLoaderOptions loaderOptions) {
         return (CacheMap<Object, V>) loaderOptions.cacheMap().orElseGet(CacheMap::simpleMap);
     }
 
     @SuppressWarnings("unchecked")
-    private CachedValueStore<Object, V> determineCacheStore(DataLoaderOptions loaderOptions) {
-        return (CachedValueStore<Object, V>) loaderOptions.cachedValueStore().orElseGet(CachedValueStore::defaultStore);
+    private CachedValueStore<Object, V> determineCachedValueStore(DataLoaderOptions loaderOptions) {
+        return (CachedValueStore<Object, V>) loaderOptions.cachedValueStore().orElseGet(CachedValueStore::defaultCachedValueStore);
     }
 
     /**

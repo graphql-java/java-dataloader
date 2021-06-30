@@ -26,14 +26,6 @@ public class NoOpCachedValueStore<K, V> implements CachedValueStore<K, V> {
      * {@inheritDoc}
      */
     @Override
-    public CompletableFuture<Boolean> containsKey(K key) {
-        return CompletableFuture.completedFuture(false);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public CompletableFuture<V> get(K key) {
         return CompletableFutureKit.failedFuture(new UnsupportedOperationException());
     }
