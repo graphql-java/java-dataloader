@@ -80,7 +80,7 @@ public interface DispatchPredicate {
     /**
      * This predicate will return true if the {@link DataLoader#dispatchDepth()} is greater than the specified depth.
      *
-     * This will act as minimum batch size.  There must be more then `depth` items queued for the predicate to return true.
+     * This will act as minimum batch size.  There must be more than `depth` items queued for the predicate to return true.
      *
      * @param depth the value to be greater than
      *
