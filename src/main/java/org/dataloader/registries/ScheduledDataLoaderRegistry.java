@@ -2,7 +2,7 @@ package org.dataloader.registries;
 
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderRegistry;
-import org.dataloader.annotations.PublicApi;
+import org.dataloader.annotations.ExperimentalApi;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -23,8 +23,10 @@ import static org.dataloader.impl.Assertions.nonNull;
  * <p>
  * If you wanted to create a ScheduledDataLoaderRegistry that started a rescheduling immediately, just create one and
  * call {@link #rescheduleNow()}.
+ * <p>
+ * This code is currently marked as {@link ExperimentalApi}
  */
-@PublicApi
+@ExperimentalApi
 public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements AutoCloseable {
 
     private final ScheduledExecutorService scheduledExecutorService;
