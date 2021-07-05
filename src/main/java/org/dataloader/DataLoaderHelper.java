@@ -63,7 +63,7 @@ class DataLoaderHelper<K, V> {
     private final Object batchLoadFunction;
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, V> futureCache;
-    private final CachedValueStore<Object, V> cachedValueStore;
+    private final ValueCache<Object, V> valueCache;
     private final List<LoaderQueueEntry<K, CompletableFuture<V>>> loaderQueue;
     private final StatisticsCollector stats;
     private final Clock clock;
@@ -73,14 +73,14 @@ class DataLoaderHelper<K, V> {
                      Object batchLoadFunction,
                      DataLoaderOptions loaderOptions,
                      CacheMap<Object, V> futureCache,
-                     CachedValueStore<Object, V> cachedValueStore,
+                     ValueCache<Object, V> valueCache,
                      StatisticsCollector stats,
                      Clock clock) {
         this.dataLoader = dataLoader;
         this.batchLoadFunction = batchLoadFunction;
         this.loaderOptions = loaderOptions;
         this.futureCache = futureCache;
-        this.cachedValueStore = cachedValueStore;
+        this.valueCache = valueCache;
         this.loaderQueue = new ArrayList<>();
         this.stats = stats;
         this.clock = clock;
@@ -307,7 +307,7 @@ class DataLoaderHelper<K, V> {
          */
         final CompletableFuture<V> future = new CompletableFuture<>();
 
-        cachedValueStore.get(cacheKey).whenComplete((cachedValue, getCallEx) -> {
+        valueCache.get(cacheKey).whenComplete((cachedValue, getCallEx) -> {
             if (getCallEx == null) {
                 future.complete(cachedValue);
             } else {
@@ -324,7 +324,7 @@ class DataLoaderHelper<K, V> {
     private BiConsumer<V, Throwable> setValueIntoCacheAndCompleteFuture(Object cacheKey, CompletableFuture<V> future) {
         return (result, loadCallEx) -> {
             if (loadCallEx == null) {
-                cachedValueStore.set(cacheKey, result)
+                valueCache.set(cacheKey, result)
                         .whenComplete((v, setCallExIgnored) -> future.complete(result));
             } else {
                 future.completeExceptionally(loadCallEx);

@@ -1,13 +1,13 @@
 package org.dataloader.impl;
 
 
-import org.dataloader.CachedValueStore;
+import org.dataloader.ValueCache;
 import org.dataloader.annotations.Internal;
 
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Implementation of {@link CachedValueStore} that does nothing.
+ * Implementation of {@link ValueCache} that does nothing.
  * <p>
  * We don't want to store values in memory twice, so when using the default store we just
  * say we never have the key and complete the other methods by doing nothing.
@@ -18,9 +18,9 @@ import java.util.concurrent.CompletableFuture;
  * @author <a href="https://github.com/craig-day">Craig Day</a>
  */
 @Internal
-public class NoOpCachedValueStore<K, V> implements CachedValueStore<K, V> {
+public class NoOpValueCache<K, V> implements ValueCache<K, V> {
 
-    public static NoOpCachedValueStore<?, ?> NOOP = new NoOpCachedValueStore<>();
+    public static NoOpValueCache<?, ?> NOOP = new NoOpValueCache<>();
 
     /**
      * {@inheritDoc}

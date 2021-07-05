@@ -40,7 +40,7 @@ public class DataLoaderOptions {
     private boolean cachingExceptionsEnabled;
     private CacheKey<?> cacheKeyFunction;
     private CacheMap<?,?> cacheMap;
-    private CachedValueStore<?,?> cachedValueStore;
+    private ValueCache<?,?> valueCache;
     private int maxBatchSize;
     private Supplier<StatisticsCollector> statisticsCollector;
     private BatchLoaderContextProvider environmentProvider;
@@ -259,26 +259,25 @@ public class DataLoaderOptions {
     }
 
     /**
-     * Gets the (optional) cache store implementation that is used for value storage, if caching is enabled.
+     * Gets the (optional) cache store implementation that is used for value caching, if caching is enabled.
      * <p>
      * If missing, a no-op implementation will be used.
      *
      * @return an optional with the cache store instance, or empty
      */
-    public Optional<CachedValueStore<?,?>> cachedValueStore() {
-        return Optional.ofNullable(cachedValueStore);
+    public Optional<ValueCache<?,?>> valueCache() {
+        return Optional.ofNullable(valueCache);
     }
 
     /**
-     * Sets the value store implementation to use for caching values, if caching is enabled.
+     * Sets the value cache implementation to use for caching values, if caching is enabled.
      *
-     * @param cachedValueStore the cache store instance
+     * @param valueCache the value cache instance
      *
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setCachedValueStore(CachedValueStore<?,?> cachedValueStore) {
-        this.cachedValueStore = cachedValueStore;
+    public DataLoaderOptions setValueCache(ValueCache<?,?> valueCache) {
+        this.valueCache = valueCache;
         return this;
     }
-
 }

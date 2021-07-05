@@ -67,7 +67,7 @@ public class DataLoader<K, V> {
     private final DataLoaderHelper<K, V> helper;
     private final StatisticsCollector stats;
     private final CacheMap<Object, V> futureCache;
-    private final CachedValueStore<Object, V> cachedValueStore;
+    private final ValueCache<Object, V> valueCache;
 
     /**
      * Creates new DataLoader with the specified batch loader function and default options
@@ -416,11 +416,11 @@ public class DataLoader<K, V> {
     DataLoader(Object batchLoadFunction, DataLoaderOptions options, Clock clock) {
         DataLoaderOptions loaderOptions = options == null ? new DataLoaderOptions() : options;
         this.futureCache = determineFutureCache(loaderOptions);
-        this.cachedValueStore = determineCachedValueStore(loaderOptions);
+        this.valueCache = determineValueCache(loaderOptions);
         // order of keys matter in data loader
         this.stats = nonNull(loaderOptions.getStatisticsCollector());
 
-        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.cachedValueStore, this.stats, clock);
+        this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.valueCache, this.stats, clock);
     }
 
 
@@ -430,8 +430,8 @@ public class DataLoader<K, V> {
     }
 
     @SuppressWarnings("unchecked")
-    private CachedValueStore<Object, V> determineCachedValueStore(DataLoaderOptions loaderOptions) {
-        return (CachedValueStore<Object, V>) loaderOptions.cachedValueStore().orElseGet(CachedValueStore::defaultCachedValueStore);
+    private ValueCache<Object, V> determineValueCache(DataLoaderOptions loaderOptions) {
+        return (ValueCache<Object, V>) loaderOptions.valueCache().orElseGet(ValueCache::defaultValueCache);
     }
 
     /**
@@ -652,7 +652,7 @@ public class DataLoader<K, V> {
         Object cacheKey = getCacheKey(key);
         synchronized (this) {
             futureCache.delete(cacheKey);
-            cachedValueStore.delete(key).whenComplete(handler);
+            valueCache.delete(key).whenComplete(handler);
         }
         return this;
     }
@@ -677,14 +677,14 @@ public class DataLoader<K, V> {
     public DataLoader<K, V> clearAll(BiConsumer<Void, Throwable> handler) {
         synchronized (this) {
             futureCache.clear();
-            cachedValueStore.clear().whenComplete(handler);
+            valueCache.clear().whenComplete(handler);
         }
         return this;
     }
 
     /**
      * Primes the cache with the given key and value.  Note this will only prime the future cache
-     * and not the value store.  Use {@link CachedValueStore#set(Object, Object)} if you want
+     * and not the value store.  Use {@link ValueCache#set(Object, Object)} if you want
      * o prime it with values before use
      *
      * @param key   the key

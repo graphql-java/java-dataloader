@@ -2,8 +2,8 @@ package org.dataloader;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.dataloader.fixtures.CaffeineCachedValueStore;
-import org.dataloader.fixtures.CustomCachedValueStore;
+import org.dataloader.fixtures.CaffeineValueCache;
+import org.dataloader.fixtures.CustomValueCache;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderOptions.newOptions;
 import static org.dataloader.fixtures.TestKit.idLoader;
@@ -25,7 +24,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-public class DataLoaderCachedValueStoreTest {
+public class DataLoaderValueCacheTest {
 
     @Test
     public void test_by_default_we_have_no_value_caching() {
@@ -63,9 +62,9 @@ public class DataLoaderCachedValueStoreTest {
 
     @Test
     public void should_accept_a_remote_value_store_for_caching() {
-        CustomCachedValueStore customStore = new CustomCachedValueStore();
+        CustomValueCache customStore = new CustomValueCache();
         List<List<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().setCachedValueStore(customStore);
+        DataLoaderOptions options = newOptions().setValueCache(customStore);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
 
         // Fetches as expected
@@ -116,10 +115,10 @@ public class DataLoaderCachedValueStoreTest {
                 .maximumSize(100)
                 .build();
 
-        CachedValueStore<String, Object> customStore = new CaffeineCachedValueStore(caffeineCache);
+        ValueCache<String, Object> customStore = new CaffeineValueCache(caffeineCache);
 
         List<List<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().setCachedValueStore(customStore);
+        DataLoaderOptions options = newOptions().setValueCache(customStore);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
 
         // Fetches as expected
@@ -147,7 +146,7 @@ public class DataLoaderCachedValueStoreTest {
 
     @Test
     public void will_invoke_loader_if_CACHE_GET_call_throws_exception() {
-        CustomCachedValueStore customStore = new CustomCachedValueStore() {
+        CustomValueCache customStore = new CustomValueCache() {
 
             @Override
             public CompletableFuture<Object> get(String key) {
@@ -161,7 +160,7 @@ public class DataLoaderCachedValueStoreTest {
         customStore.set("b", "From Cache");
 
         List<List<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().setCachedValueStore(customStore);
+        DataLoaderOptions options = newOptions().setValueCache(customStore);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
@@ -177,7 +176,7 @@ public class DataLoaderCachedValueStoreTest {
 
     @Test
     public void will_still_work_if_CACHE_SET_call_throws_exception() {
-        CustomCachedValueStore customStore = new CustomCachedValueStore() {
+        CustomValueCache customStore = new CustomValueCache() {
             @Override
             public CompletableFuture<Object> set(String key, Object value) {
                 if (key.equals("a")) {
@@ -188,7 +187,7 @@ public class DataLoaderCachedValueStoreTest {
         };
 
         List<List<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().setCachedValueStore(customStore);
+        DataLoaderOptions options = newOptions().setValueCache(customStore);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");

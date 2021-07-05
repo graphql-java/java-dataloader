@@ -1,14 +1,14 @@
 package org.dataloader.fixtures;
 
 
-import org.dataloader.CachedValueStore;
+import org.dataloader.ValueCache;
 import org.dataloader.impl.CompletableFutureKit;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class CustomCachedValueStore implements CachedValueStore<String, Object> {
+public class CustomValueCache implements ValueCache<String, Object> {
 
     public final Map<String, Object> store = new ConcurrentHashMap<>();
 

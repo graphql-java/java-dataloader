@@ -322,13 +322,13 @@ will be given the same future and hence the same value.
 
 This cache can only work local to the JVM, since its caches `CompletableFuture`s which cannot be serialised across a network say.
 
-The second level cache is a value cache represented by the interface `org.dataloader.CachedValueStore`.  By default, this is not enabled and is a no-op.
+The second level cache is a value cache represented by the interface `org.dataloader.ValueCache`.  By default, this is not enabled and is a no-op.
 
 The value cache uses an async API pattern to encapsulate the idea that the value cache could be in a remote place such as REDIS or Memcached.
 
 ## Custom future caches
 
-The default cache behind `DataLoader` is an in memory `HashMap`.  There is no expiry on this, and it lives for as long as the data loader
+The default future cache behind `DataLoader` is an in memory `HashMap`.  There is no expiry on this, and it lives for as long as the data loader
 lives.
 
 However, you can create your own custom cache and supply it to the data loader on construction via the `org.dataloader.CacheMap` interface.
@@ -346,13 +346,15 @@ As stated above, a custom `org.dataloader.CacheMap` is a local cache of futures 
 
 ## Custom value caches
 
-You will need to create your own implementations of the `org.dataloader.CachedValueStore` if your want to use an external cache.  
+You will need to create your own implementations of the `org.dataloader.ValueCache` if your want to use an external cache.  
 
-This library does not ship with any implementations of `CachedValueStore` because it does not want to have 
-production dependencies on external cache libraries.
+This library does not ship with any implementations of `ValueCache` because it does not want to have 
+production dependencies on external cache libraries, but you can easily write your own.  
 
-The API of `CachedValueStore` has been designed to be asynchronous because it is expected that the value cache could be outside
-your JVM.  It uses `Future`s to get and set values into cache, which may involve a network call and hence exceptional failures to get 
+The tests have an example based on [Caffeine](https://github.com/ben-manes/caffeine).
+
+The API of `ValueCache` has been designed to be asynchronous because it is expected that the value cache could be outside
+your JVM.  It uses `CompleteableFuture`s to get and set values into cache, which may involve a network call and hence exceptional failures to get 
 or set values.
 
 

@@ -2,16 +2,16 @@ package org.dataloader.fixtures;
 
 
 import com.github.benmanes.caffeine.cache.Cache;
-import org.dataloader.CachedValueStore;
+import org.dataloader.ValueCache;
 import org.dataloader.impl.CompletableFutureKit;
 
 import java.util.concurrent.CompletableFuture;
 
-public class CaffeineCachedValueStore implements CachedValueStore<String, Object> {
+public class CaffeineValueCache implements ValueCache<String, Object> {
 
     public final Cache<String, Object> cache;
 
-    public CaffeineCachedValueStore(Cache<String, Object> cache) {
+    public CaffeineValueCache(Cache<String, Object> cache) {
         this.cache = cache;
     }
 

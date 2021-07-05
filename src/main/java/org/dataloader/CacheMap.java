@@ -22,15 +22,14 @@ import org.dataloader.impl.DefaultCacheMap;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Cache map interface for data loaders that use caching.
+ * CacheMap is used by data loaders that use caching promises to values aka {@link CompletableFuture}&lt;V>.  A better name for this
+ * class might have been FutureCache but that is history now.
  * <p>
- * The default implementation used by the data loader is based on a {@link java.util.LinkedHashMap}. Note that the
- * implementation could also have used a regular {@link java.util.Map} instead of this {@link CacheMap}, but
- * this aligns better to the reference data loader implementation provided by Facebook
+ * The default implementation used by the data loader is based on a {@link java.util.LinkedHashMap}.
  * <p>
- * This is really a cache of completed {@link CompletableFuture} values in memory.  It is used, when caching is enabled, to
- * give back the same future to any code that may call it.  if you need a cache of the underlying values that is possible external to the JVM
- * then you will want to use {{@link CachedValueStore}} which is designed for external cache access.
+ * This is really a cache of completed {@link CompletableFuture}&lt;V> values in memory.  It is used, when caching is enabled, to
+ * give back the same future to any code that may call it.  If you need a cache of the underlying values that is possible external to the JVM
+ * then you will want to use {{@link ValueCache}} which is designed for external cache access.
  *
  * @param <K> type parameter indicating the type of the cache keys
  * @param <V> type parameter indicating the type of the data that is cached

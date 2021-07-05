@@ -1,16 +1,26 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicSpi;
-import org.dataloader.impl.NoOpCachedValueStore;
+import org.dataloader.impl.NoOpValueCache;
 
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Cache value store for data loaders that use caching and want a long-lived or external cache.
+ * The {@link ValueCache} is used by data loaders that use caching and want a long-lived or external cache
+ * of values.  The {@link ValueCache} is used as a place to cache values when they come back from
+ * <p>
+ * It differs from {@link CacheMap} which is in fact a cache of promises to values aka {@link CompletableFuture}&lt;V> and it rather suited
+ * to be a wrapper of a long lived or external value cache.  {@link CompletableFuture}s cant be easily placed in an external cache
+ * outside the JVM say, hence the need for the {@link ValueCache}.
+ * <p>
+ * {@link DataLoader}s use a two stage cache strategy if caching is enabled.  If the {@link CacheMap} already has the promise to a value
+ * that is used.  If not then the {@link ValueCache} is asked for a value, if it has one then that is returned (and cached as a promise in the {@link CacheMap}.
+ * If there is no value then the key is queued and loaded via the {@link BatchLoader} calls.  The returned values will then be stored in
+ * the {@link ValueCache} and the promises to those values are also stored in the {@link CacheMap}.
  * <p>
  * The default implementation is a no-op store which replies with the key always missing and doesn't
  * store any actual results. This is to avoid duplicating the stored data between the {@link CacheMap}
- * and the store.
+ * out of the box.
  * <p>
  * The API signature uses completable futures because the backing implementation MAY be a remote external cache
  * and hence exceptions may happen in retrieving values.
@@ -21,20 +31,20 @@ import java.util.concurrent.CompletableFuture;
  * @author <a href="https://github.com/craig-day">Craig Day</a>
  */
 @PublicSpi
-public interface CachedValueStore<K, V> {
+public interface ValueCache<K, V> {
 
 
     /**
-     * Creates a new store, using the default no-op implementation.
+     * Creates a new value cache, using the default no-op implementation.
      *
      * @param <K> the type of cache keys
      * @param <V> the type of cache values
      *
      * @return the cache store
      */
-    static <K, V> CachedValueStore<K, V> defaultCachedValueStore() {
+    static <K, V> ValueCache<K, V> defaultValueCache() {
         //noinspection unchecked
-        return (CachedValueStore<K, V>) NoOpCachedValueStore.NOOP;
+        return (ValueCache<K, V>) NoOpValueCache.NOOP;
     }
 
     /**
@@ -46,7 +56,6 @@ public interface CachedValueStore<K, V> {
      *
      * @return a future containing the cached value (which maybe null) or exceptionally completed future if the key does
      * not exist in the cache.
-     *
      */
     CompletableFuture<V> get(K key);
 
