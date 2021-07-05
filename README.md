@@ -144,7 +144,7 @@ a list of user ids in one call.
  This is important consideration.  By using `dataloader` you have batched up the requests for N keys in a list of keys that can be 
  retrieved at one time.
  
- If you don't have batched backing services, then you cant be as efficient as possible as you will have to make N calls for each key.
+ If you don't have batched backing services, then you can't be as efficient as possible as you will have to make N calls for each key.
  
  ```java
         BatchLoader<Long, User> lessEfficientUserBatchLoader = new BatchLoader<Long, User>() {
@@ -313,6 +313,49 @@ and some of which may have failed.  From that data loader can infer the right be
 On the above example if one of the `Try` objects represents a failure, then its `load()` promise will complete exceptionally and you can 
 react to that, in a type safe manner. 
 
+## Caching
+
+`DataLoader` has a two tiered caching system in place.  
+
+The first cache is represented by the interface `org.dataloader.CacheMap`.  It will cache `CompletableFuture`s by key and hence future `load(key)` calls
+will be given the same future and hence the same value.
+
+This cache can only work local to the JVM, since its caches `CompletableFuture`s which cannot be serialised across a network say.
+
+The second level cache is a value cache represented by the interface `org.dataloader.ValueCache`.  By default, this is not enabled and is a no-op.
+
+The value cache uses an async API pattern to encapsulate the idea that the value cache could be in a remote place such as REDIS or Memcached.
+
+## Custom future caches
+
+The default future cache behind `DataLoader` is an in memory `HashMap`.  There is no expiry on this, and it lives for as long as the data loader
+lives.
+
+However, you can create your own custom cache and supply it to the data loader on construction via the `org.dataloader.CacheMap` interface.
+
+```java
+        MyCustomCache customCache = new MyCustomCache();
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setCacheMap(customCache);
+        DataLoaderFactory.newDataLoader(userBatchLoader, options);
+```
+
+You could choose to use one of the fancy cache implementations from Guava or Caffeine and wrap it in a `CacheMap` wrapper ready
+for data loader.  They can do fancy things like time eviction and efficient LRU caching.
+
+As stated above, a custom `org.dataloader.CacheMap` is a local cache of futures with values, not values per se.
+
+## Custom value caches
+
+You will need to create your own implementations of the `org.dataloader.ValueCache` if your want to use an external cache.  
+
+This library does not ship with any implementations of `ValueCache` because it does not want to have 
+production dependencies on external cache libraries, but you can easily write your own.  
+
+The tests have an example based on [Caffeine](https://github.com/ben-manes/caffeine).
+
+The API of `ValueCache` has been designed to be asynchronous because it is expected that the value cache could be outside
+your JVM.  It uses `CompleteableFuture`s to get and set values into cache, which may involve a network call and hence exceptional failures to get 
+or set values.
 
 
 ## Disabling caching 
@@ -346,7 +389,7 @@ More complex cache behavior can be achieved by calling `.clear()` or `.clearAll(
 ## Caching errors
  
 If a batch load fails (that is, a batch function returns a rejected CompletionStage), then the requested values will not be cached. 
-However if a batch function returns a `Try` or `Throwable` instance for an individual value, then that will be cached to avoid frequently loading 
+However, if a batch function returns a `Try` or `Throwable` instance for an individual value, then that will be cached to avoid frequently loading 
 the same problem object.
  
 In some circumstances you may wish to clear the cache for these individual problems: 
@@ -406,33 +449,18 @@ If your data can be shared across web requests then use a custom cache to keep v
 
 Data loaders are stateful components that contain promises (with context) that are likely share the same affinity as the request.
 
-## Custom caches
-
-The default cache behind `DataLoader` is an in memory `HashMap`.  There is no expiry on this, and it lives for as long as the data loader
-lives. 
- 
-However, you can create your own custom cache and supply it to the data loader on construction via the `org.dataloader.CacheMap` interface.
-
-```java
-        MyCustomCache customCache = new MyCustomCache();
-        DataLoaderOptions options = DataLoaderOptions.newOptions().setCacheMap(customCache);
-        DataLoaderFactory.newDataLoader(userBatchLoader, options);
-```
-
-You could choose to use one of the fancy cache implementations from Guava or Kaffeine and wrap it in a `CacheMap` wrapper ready
-for data loader.  They can do fancy things like time eviction and efficient LRU caching.
-
 ## Manual dispatching
 
-The original [Facebook DataLoader](https://github.com/facebook/dataloader) was written in Javascript for NodeJS. NodeJS is single-threaded in nature, but simulates
-asynchronous logic by invoking functions on separate threads in an event loop, as explained
+The original [Facebook DataLoader](https://github.com/facebook/dataloader) was written in Javascript for NodeJS. 
+
+NodeJS is single-threaded in nature, but simulates asynchronous logic by invoking functions on separate threads in an event loop, as explained
 [in this post](http://stackoverflow.com/a/19823583/3455094) on StackOverflow.
 
 NodeJS generates so-call 'ticks' in which queued functions are dispatched for execution, and Facebook `DataLoader` uses
 the `nextTick()` function in NodeJS to _automatically_ dequeue load requests and send them to the batch execution function 
 for processing.
 
-And here there is an **IMPORTANT DIFFERENCE** compared to how `java-dataloader` operates!!
+Here there is an **IMPORTANT DIFFERENCE** compared to how `java-dataloader` operates!!
 
 In NodeJS the batch preparation will not affect the asynchronous processing behaviour in any way. It will just prepare
 batches in 'spare time' as it were.

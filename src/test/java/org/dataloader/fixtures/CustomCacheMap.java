@@ -1,11 +1,14 @@
-package org.dataloader;
+package org.dataloader.fixtures;
+
+import org.dataloader.CacheMap;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public class CustomCacheMap implements CacheMap<String, Object> {
 
-    public Map<String, Object> stash;
+    public Map<String, CompletableFuture<Object>> stash;
 
     public CustomCacheMap() {
         stash = new LinkedHashMap<>();
@@ -17,12 +20,12 @@ public class CustomCacheMap implements CacheMap<String, Object> {
     }
 
     @Override
-    public Object get(String key) {
+    public CompletableFuture<Object> get(String key) {
         return stash.get(key);
     }
 
     @Override
-    public CacheMap<String, Object> set(String key, Object value) {
+    public CacheMap<String, Object> set(String key, CompletableFuture<Object> value) {
         stash.put(key, value);
         return this;
     }
