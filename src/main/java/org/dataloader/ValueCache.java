@@ -9,7 +9,7 @@ import java.util.concurrent.CompletableFuture;
  * The {@link ValueCache} is used by data loaders that use caching and want a long-lived or external cache
  * of values.  The {@link ValueCache} is used as a place to cache values when they come back from
  * <p>
- * It differs from {@link CacheMap} which is in fact a cache of promises to values aka {@link CompletableFuture}&lt;V> and it rather suited
+ * It differs from {@link CacheMap} which is in fact a cache of promises to values aka {@link CompletableFuture}&lt;V&gt; and it rather suited
  * to be a wrapper of a long lived or external value cache.  {@link CompletableFuture}s cant be easily placed in an external cache
  * outside the JVM say, hence the need for the {@link ValueCache}.
  * <p>

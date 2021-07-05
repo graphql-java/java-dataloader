@@ -22,12 +22,12 @@ import org.dataloader.impl.DefaultCacheMap;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * CacheMap is used by data loaders that use caching promises to values aka {@link CompletableFuture}&lt;V>.  A better name for this
+ * CacheMap is used by data loaders that use caching promises to values aka {@link CompletableFuture}&lt;V&gt;.  A better name for this
  * class might have been FutureCache but that is history now.
  * <p>
  * The default implementation used by the data loader is based on a {@link java.util.LinkedHashMap}.
  * <p>
- * This is really a cache of completed {@link CompletableFuture}&lt;V> values in memory.  It is used, when caching is enabled, to
+ * This is really a cache of completed {@link CompletableFuture}&lt;V&gt; values in memory.  It is used, when caching is enabled, to
  * give back the same future to any code that may call it.  If you need a cache of the underlying values that is possible external to the JVM
  * then you will want to use {{@link ValueCache}} which is designed for external cache access.
  *
