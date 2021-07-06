@@ -483,7 +483,7 @@ in the load request queue will never be batched, and thus _will never complete_!
 `ScheduledDataLoaderRegistry` is a registry that allows for dispatching to be done on a schedule. It contains a
 predicate that is evaluated (per data loader contained within) when `dispatchAll` is invoked.
 
-If that predicate is true, it will make a `dispatch` call on the data loader, otherwise is will schedule as task to
+If that predicate is true, it will make a `dispatch` call on the data loader, otherwise is will schedule a task to
 perform that check again. Once a predicate evaluated to true, it will not reschedule and another call to
 `dispatchAll` is required to be made.
 
