@@ -31,6 +31,10 @@ public class TestKit {
         };
     }
 
+    public static <K, V> DataLoader<K, V> idLoader() {
+        return idLoader(null, new ArrayList<>());
+    }
+
     public static <K, V> DataLoader<K, V> idLoader(List<List<K>> loadCalls) {
         return idLoader(null, loadCalls);
     }

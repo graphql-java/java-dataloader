@@ -6,6 +6,7 @@ import org.dataloader.stats.Statistics;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,7 +20,7 @@ import java.util.function.Function;
  */
 @PublicApi
 public class DataLoaderRegistry {
-    private final Map<String, DataLoader<?, ?>> dataLoaders = new ConcurrentHashMap<>();
+    protected final Map<String, DataLoader<?, ?>> dataLoaders = new ConcurrentHashMap<>();
 
     public DataLoaderRegistry() {
     }
@@ -27,6 +28,7 @@ public class DataLoaderRegistry {
     private DataLoaderRegistry(Builder builder) {
         this.dataLoaders.putAll(builder.dataLoaders);
     }
+
 
     /**
      * This will register a new dataloader
@@ -82,6 +84,13 @@ public class DataLoaderRegistry {
      */
     public List<DataLoader<?, ?>> getDataLoaders() {
         return new ArrayList<>(dataLoaders.values());
+    }
+
+    /**
+     * @return the currently registered data loaders as a map
+     */
+    public Map<String, DataLoader<?, ?>> getDataLoadersMap() {
+        return new LinkedHashMap<>(dataLoaders);
     }
 
     /**

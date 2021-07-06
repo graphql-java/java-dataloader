@@ -478,6 +478,33 @@ and there are also gains to this different mode of operation:
 However, with batch execution control comes responsibility! If you forget to make the call to `dispatch()` then the futures
 in the load request queue will never be batched, and thus _will never complete_! So be careful when crafting your loader designs.
 
+## Scheduled Dispatching
+
+`ScheduledDataLoaderRegistry` is a registry that allows for dispatching to be done on a schedule. It contains a
+predicate that is evaluated (per data loader contained within) when `dispatchAll` is invoked.
+
+If that predicate is true, it will make a `dispatch` call on the data loader, otherwise is will schedule a task to
+perform that check again. Once a predicate evaluated to true, it will not reschedule and another call to
+`dispatchAll` is required to be made.
+
+This allows you to do things like "dispatch ONLY if the queue depth is > 10 deep or more than 200 millis have passed
+since it was last dispatched".
+
+```java
+
+        DispatchPredicate depthOrTimePredicate = DispatchPredicate
+            .dispatchIfDepthGreaterThan(10)
+            .or(DispatchPredicate.dispatchIfLongerThan(Duration.ofMillis(200)));
+
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
+            .dispatchPredicate(depthOrTimePredicate)
+            .schedule(Duration.ofMillis(10))
+            .register("users",userDataLoader)
+            .build();
+```
+
+The above acts as a kind of minimum batch depth, with a time overload. It won't dispatch if the loader depth is less
+than or equal to 10 but if 200ms pass it will dispatch.
 
 ## Let's get started!
 
