@@ -311,8 +311,10 @@ class DataLoaderHelper<K, V> {
             if (getCallEx == null) {
                 future.complete(cachedValue);
             } else {
-                queueOrInvokeLoader(key, loadContext, batchingEnabled)
-                        .whenComplete(setValueIntoCacheAndCompleteFuture(cacheKey, future));
+                synchronized (dataLoader) {
+                    queueOrInvokeLoader(key, loadContext, batchingEnabled)
+                            .whenComplete(setValueIntoCacheAndCompleteFuture(cacheKey, future));
+                }
             }
         });
 
