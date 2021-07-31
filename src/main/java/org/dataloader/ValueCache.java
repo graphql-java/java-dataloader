@@ -12,7 +12,7 @@ import java.util.concurrent.CompletableFuture;
  * <p>
  * It differs from {@link CacheMap} which is in fact a cache of promised values aka {@link CompletableFuture}&lt;V&gt;'s.
  * <p>
- * {@link ValueCache is more suited to be a wrapper of a long-lived or externallly cached values.  {@link CompletableFuture}s cant
+ * {@link ValueCache} is more suited to be a wrapper of a long-lived or externallly cached values.  {@link CompletableFuture}s cant
  * be easily placed in an external cache outside the JVM say, hence the need for the {@link ValueCache}.
  * <p>
  * {@link DataLoader}s use a two stage cache strategy if caching is enabled.  If the {@link CacheMap} already has the promise to a value
