@@ -134,7 +134,8 @@ class DataLoaderHelper<K, V> {
             if (cachingEnabled) {
                 return loadFromCache(key, loadContext, batchingEnabled);
             } else {
-                return queueOrInvokeLoader(key, loadContext, batchingEnabled);
+                CompletableFuture<V> future = new CompletableFuture<>();
+                return queueOrInvokeLoader(key, loadContext, batchingEnabled, future);
             }
         }
     }
@@ -296,8 +297,8 @@ class DataLoaderHelper<K, V> {
         We haven't been asked for this key yet. We want to do one of two things:
 
         1. Check if our cache store has it. If so:
-            a. Get the value from the cache store
-            b. Add a recovery case so we queue the load if fetching from cache store fails
+            a. Get the value from the cache store (this can take non-zero time)
+            b. Add a recovery case, so we queue the load if fetching from cache store fails
             c. Put that future in our futureCache to hit the early return next time
             d. Return the resilient future
         2. If not in value cache:
@@ -305,40 +306,65 @@ class DataLoaderHelper<K, V> {
             b. Add a success handler to store the result in the cache store
             c. Return the result
          */
-        final CompletableFuture<V> future = new CompletableFuture<>();
+        final CompletableFuture<V> loadCallFuture = new CompletableFuture<>();
 
-        valueCache.get(cacheKey).whenComplete((cachedValue, getCallEx) -> {
-            if (getCallEx == null) {
-                future.complete(cachedValue);
+        CompletableFuture<V> cacheLookupCF = valueCache.get(cacheKey);
+        boolean cachedLookupCompletedImmediately = cacheLookupCF.isDone();
+
+        cacheLookupCF.whenComplete((cachedValue, cacheException) -> {
+            if (cacheException == null) {
+                loadCallFuture.complete(cachedValue);
             } else {
+                CompletableFuture<V> loaderCF;
                 synchronized (dataLoader) {
-                    queueOrInvokeLoader(key, loadContext, batchingEnabled)
-                            .whenComplete(setValueIntoCacheAndCompleteFuture(cacheKey, future));
+                    loaderCF = queueOrInvokeLoader(key, loadContext, batchingEnabled, loadCallFuture);
+                    loaderCF.whenComplete(setValueIntoValueCacheAndCompleteFuture(cacheKey, loadCallFuture));
+                }
+                //
+                // is possible that if the cache lookup step took some time to execute
+                // (e.g. an async network lookup to REDIS etc...) then it's possible that this
+                // load call has already returned and a dispatch call has been made, and hence this code
+                // is running after the dispatch was made - so we dispatch to catch up because
+                // it's likely to hang if we do not.  We might dispatch too early, but we will not
+                // hang because of an async cache lookup
+                //
+                if (!cachedLookupCompletedImmediately && !loaderCF.isDone()) {
+                    if (loaderOptions.getValueCacheOptions().isDispatchOnCacheMiss()) {
+                        dispatch();
+                    }
                 }
             }
         });
-
-        futureCache.set(cacheKey, future);
-
-        return future;
+        futureCache.set(cacheKey, loadCallFuture);
+        return loadCallFuture;
     }
 
-    private BiConsumer<V, Throwable> setValueIntoCacheAndCompleteFuture(Object cacheKey, CompletableFuture<V> future) {
-        return (result, loadCallEx) -> {
-            if (loadCallEx == null) {
-                valueCache.set(cacheKey, result)
-                        .whenComplete((v, setCallExIgnored) -> future.complete(result));
+    private BiConsumer<V, Throwable> setValueIntoValueCacheAndCompleteFuture(Object cacheKey, CompletableFuture<V> loadCallFuture) {
+        return (result, loadCallException) -> {
+            if (loadCallException == null) {
+                //
+                // we have completed our load call, and we should try to cache the value
+                // however we don't wait on the caching to complete before completing the load call
+                // this way a network cache call (say a REDIS put) does not have to be completed in order
+                // for the calling code to get a value.  There is an option that controls
+                // which is off by default to make the code faster.
+                //
+                CompletableFuture<V> valueCacheSetCF = valueCache.set(cacheKey, result);
+                if (loaderOptions.getValueCacheOptions().isCompleteValueAfterCacheSet()) {
+                    valueCacheSetCF.whenComplete((v, setCallExceptionIgnored) -> loadCallFuture.complete(result));
+                } else {
+                    loadCallFuture.complete(result);
+                }
             } else {
-                future.completeExceptionally(loadCallEx);
+                loadCallFuture.completeExceptionally(loadCallException);
             }
         };
     }
 
-    private CompletableFuture<V> queueOrInvokeLoader(K key, Object loadContext, boolean batchingEnabled) {
+    private CompletableFuture<V> queueOrInvokeLoader(K key, Object loadContext, boolean batchingEnabled, CompletableFuture<V> loadCallFuture) {
         if (batchingEnabled) {
-            CompletableFuture<V> future = new CompletableFuture<>();
-            loaderQueue.add(new LoaderQueueEntry<>(key, future, loadContext));
-            return future;
+            loaderQueue.add(new LoaderQueueEntry<>(key, loadCallFuture, loadContext));
+            return loadCallFuture;
         } else {
             stats.incrementBatchLoadCountBy(1);
             // immediate execution of batch function

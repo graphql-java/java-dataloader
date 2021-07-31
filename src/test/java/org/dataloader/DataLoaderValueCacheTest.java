@@ -4,6 +4,8 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dataloader.fixtures.CaffeineValueCache;
 import org.dataloader.fixtures.CustomValueCache;
+import org.dataloader.fixtures.TestKit;
+import org.dataloader.impl.CompletableFutureKit;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -200,5 +202,50 @@ public class DataLoaderValueCacheTest {
         // a was not in cache (according to get) and hence needed to be loaded
         assertThat(loadCalls, equalTo(singletonList(asList("a", "b"))));
         assertArrayEquals(customStore.store.keySet().toArray(), singletonList("b").toArray());
+    }
+
+
+    @Test
+    public void dispatch_will_be_called_if_a_cache_value_miss_takes_some_time() {
+        //
+        // without the extra dispatch() internally, fA would never
+        // have completed.  In the spirit of RRD, this test was written first
+        // and would hang before the support code was put in place
+        //
+        CustomValueCache customStore = new CustomValueCache() {
+
+            @Override
+            public CompletableFuture<Object> get(String key) {
+                if (key.equals("a")) {
+                    return CompletableFuture.supplyAsync(() -> {
+                        TestKit.snooze(1000);
+                        throw new IllegalStateException("no a in cache");
+                    });
+                }
+                return super.get(key);
+            }
+
+        };
+
+        List<List<String>> loadCalls = new ArrayList<>();
+        DataLoaderOptions options = newOptions().setValueCache(customStore);
+        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+
+        CompletableFuture<String> fA = identityLoader.load("a");
+        CompletableFuture<String> fB = identityLoader.load("b");
+
+        CompletableFuture<List<String>> dispatchedCall = identityLoader.dispatch();
+
+        CompletableFuture<List<String>> bothCalls = CompletableFutureKit.allOf(asList(fA, fB));
+        await().atMost(5, TimeUnit.SECONDS).until(bothCalls::isDone);
+
+        assertTrue(dispatchedCall.isDone());
+        assertTrue(fA.isDone());
+        assertTrue(fB.isDone());
+        assertThat(fA.join(), equalTo("a"));
+        assertThat(fB.join(), equalTo("b"));
+
+        // 'b' will complete in real time while 'a' was a cache miss after some time
+        assertThat(loadCalls, equalTo(asList(singletonList("b"), singletonList("a"))));
     }
 }
