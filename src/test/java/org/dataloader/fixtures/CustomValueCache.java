@@ -37,4 +37,8 @@ public class CustomValueCache implements ValueCache<String, Object> {
         store.clear();
         return CompletableFuture.completedFuture(null);
     }
+
+    public Map<String, Object> asMap() {
+        return store;
+    }
 }

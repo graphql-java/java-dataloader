@@ -8,19 +8,22 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.toList;
 import static org.dataloader.impl.Assertions.assertState;
 import static org.dataloader.impl.Assertions.nonNull;
 
@@ -63,7 +66,7 @@ class DataLoaderHelper<K, V> {
     private final Object batchLoadFunction;
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, V> futureCache;
-    private final ValueCache<Object, V> valueCache;
+    private final ValueCache<K, V> valueCache;
     private final List<LoaderQueueEntry<K, CompletableFuture<V>>> loaderQueue;
     private final StatisticsCollector stats;
     private final Clock clock;
@@ -73,7 +76,7 @@ class DataLoaderHelper<K, V> {
                      Object batchLoadFunction,
                      DataLoaderOptions loaderOptions,
                      CacheMap<Object, V> futureCache,
-                     ValueCache<Object, V> valueCache,
+                     ValueCache<K, V> valueCache,
                      StatisticsCollector stats,
                      Clock clock) {
         this.dataLoader = dataLoader;
@@ -134,8 +137,7 @@ class DataLoaderHelper<K, V> {
             if (cachingEnabled) {
                 return loadFromCache(key, loadContext, batchingEnabled);
             } else {
-                CompletableFuture<V> future = new CompletableFuture<>();
-                return queueOrInvokeLoader(key, loadContext, batchingEnabled, future);
+                return queueOrInvokeLoader(key, loadContext, batchingEnabled, false);
             }
         }
     }
@@ -169,7 +171,7 @@ class DataLoaderHelper<K, V> {
             lastDispatchTime.set(now());
         }
         if (!batchingEnabled || keys.isEmpty()) {
-            return new DispatchResult<>(CompletableFuture.completedFuture(emptyList()), 0);
+            return new DispatchResult<>(completedFuture(emptyList()), 0);
         }
         final int totalEntriesHandled = keys.size();
         //
@@ -212,17 +214,17 @@ class DataLoaderHelper<K, V> {
         }
         //
         // now reassemble all the futures into one that is the complete set of results
-        return CompletableFuture.allOf(allBatches.toArray(new CompletableFuture[0]))
+        return allOf(allBatches.toArray(new CompletableFuture[0]))
                 .thenApply(v -> allBatches.stream()
                         .map(CompletableFuture::join)
                         .flatMap(Collection::stream)
-                        .collect(Collectors.toList()));
+                        .collect(toList()));
     }
 
     @SuppressWarnings("unchecked")
     private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<Object> callContexts, List<CompletableFuture<V>> queuedFutures) {
         stats.incrementBatchLoadCountBy(keys.size());
-        CompletionStage<List<V>> batchLoad = invokeLoader(keys, callContexts);
+        CompletionStage<List<V>> batchLoad = invokeLoader(keys, callContexts, loaderOptions.cachingEnabled());
         return batchLoad
                 .toCompletableFuture()
                 .thenApply(values -> {
@@ -255,6 +257,9 @@ class DataLoaderHelper<K, V> {
                     return values;
                 }).exceptionally(ex -> {
                     stats.incrementBatchLoadExceptionCount();
+                    if (ex instanceof CompletionException) {
+                        ex = ex.getCause();
+                    }
                     for (int idx = 0; idx < queuedFutures.size(); idx++) {
                         K key = keys.get(idx);
                         CompletableFuture<V> future = queuedFutures.get(idx);
@@ -268,7 +273,7 @@ class DataLoaderHelper<K, V> {
 
 
     private void assertResultSize(List<K> keys, List<V> values) {
-        assertState(keys.size() == values.size(), "The size of the promised values MUST be the same size as the key list");
+        assertState(keys.size() == values.size(), () -> "The size of the promised values MUST be the same size as the key list");
     }
 
     private void possiblyClearCacheEntriesOnExceptions(List<K> keys) {
@@ -293,102 +298,90 @@ class DataLoaderHelper<K, V> {
             return futureCache.get(cacheKey);
         }
 
-        /*
-        We haven't been asked for this key yet. We want to do one of two things:
+        CompletableFuture<V> loadCallFuture;
+        synchronized (dataLoader) {
+            loadCallFuture = queueOrInvokeLoader(key, loadContext, batchingEnabled, true);
+        }
 
-        1. Check if our cache store has it. If so:
-            a. Get the value from the cache store (this can take non-zero time)
-            b. Add a recovery case, so we queue the load if fetching from cache store fails
-            c. Put that future in our futureCache to hit the early return next time
-            d. Return the resilient future
-        2. If not in value cache:
-            a. queue or invoke the load
-            b. Add a success handler to store the result in the cache store
-            c. Return the result
-         */
-        final CompletableFuture<V> loadCallFuture = new CompletableFuture<>();
-
-        CompletableFuture<V> cacheLookupCF = valueCache.get(cacheKey);
-        boolean cachedLookupCompletedImmediately = cacheLookupCF.isDone();
-
-        cacheLookupCF.whenComplete((cachedValue, cacheException) -> {
-            if (cacheException == null) {
-                loadCallFuture.complete(cachedValue);
-            } else {
-                CompletableFuture<V> loaderCF;
-                synchronized (dataLoader) {
-                    loaderCF = queueOrInvokeLoader(key, loadContext, batchingEnabled, loadCallFuture);
-                    loaderCF.whenComplete(setValueIntoValueCacheAndCompleteFuture(cacheKey, loadCallFuture));
-                }
-                //
-                // is possible that if the cache lookup step took some time to execute
-                // (e.g. an async network lookup to REDIS etc...) then it's possible that this
-                // load call has already returned and a dispatch call has been made, and hence this code
-                // is running after the dispatch was made - so we dispatch to catch up because
-                // it's likely to hang if we do not.  We might dispatch too early, but we will not
-                // hang because of an async cache lookup
-                //
-                if (!cachedLookupCompletedImmediately && !loaderCF.isDone()) {
-                    if (loaderOptions.getValueCacheOptions().isDispatchOnCacheMiss()) {
-                        dispatch();
-                    }
-                }
-            }
-        });
         futureCache.set(cacheKey, loadCallFuture);
         return loadCallFuture;
     }
 
-    private BiConsumer<V, Throwable> setValueIntoValueCacheAndCompleteFuture(Object cacheKey, CompletableFuture<V> loadCallFuture) {
-        return (result, loadCallException) -> {
-            if (loadCallException == null) {
-                //
-                // we have completed our load call, and we should try to cache the value
-                // however we don't wait on the caching to complete before completing the load call
-                // this way a network cache call (say a REDIS put) does not have to be completed in order
-                // for the calling code to get a value.  There is an option that controls
-                // which is off by default to make the code faster.
-                //
-                CompletableFuture<V> valueCacheSetCF = valueCache.set(cacheKey, result);
-                if (loaderOptions.getValueCacheOptions().isCompleteValueAfterCacheSet()) {
-                    valueCacheSetCF.whenComplete((v, setCallExceptionIgnored) -> loadCallFuture.complete(result));
-                } else {
-                    loadCallFuture.complete(result);
-                }
-            } else {
-                loadCallFuture.completeExceptionally(loadCallException);
-            }
-        };
-    }
-
-    private CompletableFuture<V> queueOrInvokeLoader(K key, Object loadContext, boolean batchingEnabled, CompletableFuture<V> loadCallFuture) {
+    private CompletableFuture<V> queueOrInvokeLoader(K key, Object loadContext, boolean batchingEnabled, boolean cachingEnabled) {
         if (batchingEnabled) {
+            CompletableFuture<V> loadCallFuture = new CompletableFuture<>();
             loaderQueue.add(new LoaderQueueEntry<>(key, loadCallFuture, loadContext));
             return loadCallFuture;
         } else {
             stats.incrementBatchLoadCountBy(1);
             // immediate execution of batch function
-            return invokeLoaderImmediately(key, loadContext);
+            return invokeLoaderImmediately(key, loadContext, cachingEnabled);
         }
     }
 
-    CompletableFuture<V> invokeLoaderImmediately(K key, Object keyContext) {
+    CompletableFuture<V> invokeLoaderImmediately(K key, Object keyContext, boolean cachingEnabled) {
         List<K> keys = singletonList(key);
-        CompletionStage<V> singleLoadCall;
-        try {
-            Object context = loaderOptions.getBatchLoaderContextProvider().getContext();
-            BatchLoaderEnvironment environment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
-                    .context(context).keyContexts(keys, singletonList(keyContext)).build();
-            if (isMapLoader()) {
-                singleLoadCall = invokeMapBatchLoader(keys, environment).thenApply(list -> list.get(0));
-            } else {
-                singleLoadCall = invokeListBatchLoader(keys, environment).thenApply(list -> list.get(0));
-            }
-            return singleLoadCall.toCompletableFuture();
-        } catch (Exception e) {
-            return CompletableFutureKit.failedFuture(e);
-        }
+        List<Object> keyContexts = singletonList(keyContext);
+        return invokeLoader(keys, keyContexts, cachingEnabled)
+                .thenApply(list -> list.get(0))
+                .toCompletableFuture();
     }
+
+    CompletionStage<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts, boolean cachingEnabled) {
+        if (!cachingEnabled) {
+            return invokeLoader(keys, keyContexts);
+        }
+        CompletableFuture<List<Try<V>>> cacheCallCF = getFromValueCache(keys);
+        return cacheCallCF.thenCompose(cachedValues -> {
+
+            assertState(keys.size() == cachedValues.size(), () -> "The size of the cached values MUST be the same size as the key list");
+
+            LinkedHashMap<K, V> valuesInKeyOrder = new LinkedHashMap<>();
+            List<K> cacheMissedKeys = new ArrayList<>();
+            List<Object> cacheMissedContexts = new ArrayList<>();
+            for (int i = 0; i < keys.size(); i++) {
+                K key = keys.get(i);
+                Object keyContext = keyContexts.get(i);
+                Try<V> cacheGet = cachedValues.get(i);
+                if (cacheGet.isSuccess()) {
+                    valuesInKeyOrder.put(key, cacheGet.get());
+                } else {
+                    valuesInKeyOrder.put(key, null); // an entry to be replaced later
+                    cacheMissedKeys.add(key);
+                    cacheMissedContexts.add(keyContext);
+                }
+            }
+            if (cacheMissedKeys.isEmpty()) {
+                //
+                // everything was cached
+                //
+                return completedFuture(new ArrayList<>(valuesInKeyOrder.values()));
+            } else {
+                //
+                // we missed some of the keys from cache, so send them to the batch loader
+                // and then fill in their values
+                //
+                CompletionStage<List<V>> batchLoad = invokeLoader(cacheMissedKeys, cacheMissedContexts);
+                CompletionStage<List<V>> assembledValues = batchLoad.thenApply(batchedValues -> {
+                    assertResultSize(cacheMissedKeys, batchedValues);
+
+                    for (int i = 0; i < batchedValues.size(); i++) {
+                        K missedKey = cacheMissedKeys.get(i);
+                        V v = batchedValues.get(i);
+                        valuesInKeyOrder.put(missedKey, v);
+                    }
+                    return new ArrayList<>(valuesInKeyOrder.values());
+                });
+                //
+                // fire off a call to the ValueCache to allow it to set values into the
+                // cache now that we have them
+                assembledValues = setToValueCache(keys, assembledValues);
+
+                return assembledValues;
+            }
+        });
+    }
+
 
     CompletionStage<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts) {
         CompletionStage<List<V>> batchLoad;
@@ -415,7 +408,7 @@ class DataLoaderHelper<K, V> {
         } else {
             loadResult = ((BatchLoader<K, V>) batchLoadFunction).load(keys);
         }
-        return nonNull(loadResult, "Your batch loader function MUST return a non null CompletionStage promise");
+        return nonNull(loadResult, () -> "Your batch loader function MUST return a non null CompletionStage promise");
     }
 
 
@@ -432,7 +425,7 @@ class DataLoaderHelper<K, V> {
         } else {
             loadResult = ((MappedBatchLoader<K, V>) batchLoadFunction).load(setOfKeys);
         }
-        CompletionStage<Map<K, V>> mapBatchLoad = nonNull(loadResult, "Your batch loader function MUST return a non null CompletionStage promise");
+        CompletionStage<Map<K, V>> mapBatchLoad = nonNull(loadResult, () -> "Your batch loader function MUST return a non null CompletionStage promise");
         return mapBatchLoad.thenApply(map -> {
             List<V> values = new ArrayList<>();
             for (K key : keys) {
@@ -452,4 +445,31 @@ class DataLoaderHelper<K, V> {
             return loaderQueue.size();
         }
     }
+
+    private CompletableFuture<List<Try<V>>> getFromValueCache(List<K> keys) {
+        try {
+            return nonNull(valueCache.getValues(keys), () -> "Your ValueCache.getValues function MUST return a non null promise");
+        } catch (RuntimeException e) {
+            return CompletableFutureKit.failedFuture(e);
+        }
+    }
+
+    private CompletionStage<List<V>> setToValueCache(List<K> keys, CompletionStage<List<V>> assembledValues) {
+        boolean completeValueAfterCacheSet = loaderOptions.getValueCacheOptions().isCompleteValueAfterCacheSet();
+        if (completeValueAfterCacheSet) {
+            return assembledValues.thenCompose(values -> nonNull(valueCache
+                    .setValues(keys, values), () -> "Your ValueCache.setValues function MUST return a non null promise")
+                    // we dont trust the set cache to give us the values back - we have them - lets use them
+                    // if the cache set fails - then they wont be in cache and maybe next time they will
+                    .handle((ignored, setExIgnored) -> values));
+        } else {
+            return assembledValues.thenApply(values -> {
+                // no one is waiting for the set to happen here so if its truly async
+                // it will happen eventually but no result will be dependant on it
+                valueCache.setValues(keys, values);
+                return values;
+            });
+        }
+    }
+
 }

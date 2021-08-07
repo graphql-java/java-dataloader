@@ -67,7 +67,7 @@ public class DataLoader<K, V> {
     private final DataLoaderHelper<K, V> helper;
     private final StatisticsCollector stats;
     private final CacheMap<Object, V> futureCache;
-    private final ValueCache<Object, V> valueCache;
+    private final ValueCache<K, V> valueCache;
 
     /**
      * Creates new DataLoader with the specified batch loader function and default options
@@ -430,8 +430,8 @@ public class DataLoader<K, V> {
     }
 
     @SuppressWarnings("unchecked")
-    private ValueCache<Object, V> determineValueCache(DataLoaderOptions loaderOptions) {
-        return (ValueCache<Object, V>) loaderOptions.valueCache().orElseGet(ValueCache::defaultValueCache);
+    private ValueCache<K, V> determineValueCache(DataLoaderOptions loaderOptions) {
+        return (ValueCache<K, V>) loaderOptions.valueCache().orElseGet(ValueCache::defaultValueCache);
     }
 
     /**

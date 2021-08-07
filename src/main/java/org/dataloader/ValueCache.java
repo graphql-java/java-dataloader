@@ -1,8 +1,11 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicSpi;
+import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.impl.NoOpValueCache;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -55,8 +58,6 @@ public interface ValueCache<K, V> {
      * and not null because null is a valid cacheable value.  An exceptionally completed future will cause {@link DataLoader} to load the key via batch loading
      * instead.
      * <p>
-     * NOTE: Your implementation MUST not throw exceptions, rather it should return a CompletableFuture that has completed exceptionally.  Failure
-     * to do this may cause the {@link DataLoader} code to not run properly.
      *
      * @param key the key to retrieve
      *
@@ -66,10 +67,41 @@ public interface ValueCache<K, V> {
     CompletableFuture<V> get(K key);
 
     /**
-     * Stores the value with the specified key, or updates it if the key already exists.
+     * Gets the specified key from the value cache.  If the key is not present, then the returned {@link Try} will be a failed one
+     * other wise it has the cached value.  This is preferred over the {@link #get(Object)} method.
      * <p>
-     * NOTE: Your implementation MUST not throw exceptions, rather it should return a CompletableFuture that has completed exceptionally.  Failure
-     * to do this may cause the {@link DataLoader} code to not run properly.
+     *
+     * @param key the key to retrieve
+     *
+     * @return a future containing the {@link Try} cached value (which maybe null) or a failed {@link Try} if the key does
+     * not exist in the cache.
+     */
+    default CompletableFuture<Try<V>> getValue(K key) {
+        return Try.tryFuture(get(key));
+    }
+
+    /**
+     * Gets the specified keys from the value cache, in a batch call.  If your underlying cache cant do batch caching retrieval
+     * then do not implement this method and it will delegate back to {@link #getValue(Object)} for you
+     * <p>
+     * You MUST return a List that is the same size as the keys passed in.  The code will assert if you do not.
+     *
+     * @param keys the list of keys to get cached values for.
+     *
+     * @return a future containing a list of {@link Try} cached values (which maybe {@link Try#succeeded(Object)} or a failed {@link Try}
+     * per key if they do not exist in the cache.
+     */
+    default CompletableFuture<List<Try<V>>> getValues(List<K> keys) {
+        List<CompletableFuture<Try<V>>> cacheLookups = new ArrayList<>();
+        for (K key : keys) {
+            CompletableFuture<Try<V>> cacheTry = getValue(key);
+            cacheLookups.add(cacheTry);
+        }
+        return CompletableFutureKit.allOf(cacheLookups);
+    }
+
+    /**
+     * Stores the value with the specified key, or updates it if the key already exists.
      *
      * @param key   the key to store
      * @param value the value to store
@@ -77,6 +109,27 @@ public interface ValueCache<K, V> {
      * @return a future containing the stored value for fluent composition
      */
     CompletableFuture<V> set(K key, V value);
+
+    /**
+     * Stores the value with the specified keys, or updates it if the keys if they already exist.  If your underlying cache cant do batch caching setting
+     * then do not implement this method and it will delegate back to {@link #set(Object, Object)} for you
+     *
+     * @param keys   the keys to store
+     * @param values the values to store
+     *
+     * @return a future containing the stored values for fluent composition
+     */
+    default CompletableFuture<List<V>> setValues(List<K> keys, List<V> values) {
+        List<CompletableFuture<V>> cacheSets = new ArrayList<>();
+        for (int i = 0; i < keys.size(); i++) {
+            K k = keys.get(i);
+            V v = values.get(i);
+            CompletableFuture<V> setCall = set(k, v);
+            CompletableFuture<V> set = Try.tryFuture(setCall).thenApply(ignored -> v);
+            cacheSets.add(set);
+        }
+        return CompletableFutureKit.allOf(cacheSets);
+    }
 
     /**
      * Deletes the entry with the specified key from the value cache, if it exists.

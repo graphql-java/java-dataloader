@@ -5,13 +5,14 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dataloader.fixtures.CaffeineValueCache;
 import org.dataloader.fixtures.CustomValueCache;
 import org.dataloader.fixtures.TestKit;
-import org.dataloader.impl.CompletableFutureKit;
+import org.dataloader.impl.DataLoaderAssertionException;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -64,9 +65,9 @@ public class DataLoaderValueCacheTest {
 
     @Test
     public void should_accept_a_remote_value_store_for_caching() {
-        CustomValueCache customStore = new CustomValueCache();
+        CustomValueCache customValueCache = new CustomValueCache();
         List<List<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().setValueCache(customStore);
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
 
         // Fetches as expected
@@ -79,7 +80,7 @@ public class DataLoaderValueCacheTest {
         assertThat(fB.join(), equalTo("b"));
 
         assertThat(loadCalls, equalTo(singletonList(asList("a", "b"))));
-        assertArrayEquals(customStore.store.keySet().toArray(), asList("a", "b").toArray());
+        assertArrayEquals(customValueCache.store.keySet().toArray(), asList("a", "b").toArray());
 
         CompletableFuture<String> future3 = identityLoader.load("c");
         CompletableFuture<String> future2a = identityLoader.load("b");
@@ -89,21 +90,21 @@ public class DataLoaderValueCacheTest {
         assertThat(future2a.join(), equalTo("b"));
 
         assertThat(loadCalls, equalTo(asList(asList("a", "b"), singletonList("c"))));
-        assertArrayEquals(customStore.store.keySet().toArray(), asList("a", "b", "c").toArray());
+        assertArrayEquals(customValueCache.store.keySet().toArray(), asList("a", "b", "c").toArray());
 
         // Supports clear
 
         CompletableFuture<Void> fC = new CompletableFuture<>();
         identityLoader.clear("b", (v, e) -> fC.complete(v));
         await().until(fC::isDone);
-        assertArrayEquals(customStore.store.keySet().toArray(), asList("a", "c").toArray());
+        assertArrayEquals(customValueCache.store.keySet().toArray(), asList("a", "c").toArray());
 
         // Supports clear all
 
         CompletableFuture<Void> fCa = new CompletableFuture<>();
         identityLoader.clearAll((v, e) -> fCa.complete(v));
         await().until(fCa::isDone);
-        assertArrayEquals(customStore.store.keySet().toArray(), emptyList().toArray());
+        assertArrayEquals(customValueCache.store.keySet().toArray(), emptyList().toArray());
     }
 
     @Test
@@ -117,10 +118,10 @@ public class DataLoaderValueCacheTest {
                 .maximumSize(100)
                 .build();
 
-        ValueCache<String, Object> customStore = new CaffeineValueCache(caffeineCache);
+        ValueCache<String, Object> caffeineValueCache = new CaffeineValueCache(caffeineCache);
 
         List<List<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().setValueCache(customStore);
+        DataLoaderOptions options = newOptions().setValueCache(caffeineValueCache);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
 
         // Fetches as expected
@@ -148,7 +149,7 @@ public class DataLoaderValueCacheTest {
 
     @Test
     public void will_invoke_loader_if_CACHE_GET_call_throws_exception() {
-        CustomValueCache customStore = new CustomValueCache() {
+        CustomValueCache customValueCache = new CustomValueCache() {
 
             @Override
             public CompletableFuture<Object> get(String key) {
@@ -158,11 +159,11 @@ public class DataLoaderValueCacheTest {
                 return super.get(key);
             }
         };
-        customStore.set("a", "Not From Cache");
-        customStore.set("b", "From Cache");
+        customValueCache.set("a", "Not From Cache");
+        customValueCache.set("b", "From Cache");
 
         List<List<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().setValueCache(customStore);
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
@@ -178,7 +179,7 @@ public class DataLoaderValueCacheTest {
 
     @Test
     public void will_still_work_if_CACHE_SET_call_throws_exception() {
-        CustomValueCache customStore = new CustomValueCache() {
+        CustomValueCache customValueCache = new CustomValueCache() {
             @Override
             public CompletableFuture<Object> set(String key, Object value) {
                 if (key.equals("a")) {
@@ -189,7 +190,7 @@ public class DataLoaderValueCacheTest {
         };
 
         List<List<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().setValueCache(customStore);
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
@@ -201,51 +202,166 @@ public class DataLoaderValueCacheTest {
 
         // a was not in cache (according to get) and hence needed to be loaded
         assertThat(loadCalls, equalTo(singletonList(asList("a", "b"))));
-        assertArrayEquals(customStore.store.keySet().toArray(), singletonList("b").toArray());
+        assertArrayEquals(customValueCache.store.keySet().toArray(), singletonList("b").toArray());
     }
 
-
     @Test
-    public void dispatch_will_be_called_if_a_cache_value_miss_takes_some_time() {
-        //
-        // without the extra dispatch() internally, fA would never
-        // have completed.  In the spirit of RRD, this test was written first
-        // and would hang before the support code was put in place
-        //
-        CustomValueCache customStore = new CustomValueCache() {
+    public void caching_can_take_some_time_complete() {
+        CustomValueCache customValueCache = new CustomValueCache() {
 
             @Override
             public CompletableFuture<Object> get(String key) {
-                if (key.equals("a")) {
+                if (key.startsWith("miss")) {
                     return CompletableFuture.supplyAsync(() -> {
                         TestKit.snooze(1000);
                         throw new IllegalStateException("no a in cache");
                     });
+                } else {
+                    return CompletableFuture.supplyAsync(() -> {
+                        TestKit.snooze(1000);
+                        return key;
+                    });
                 }
-                return super.get(key);
             }
 
         };
 
+
         List<List<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().setValueCache(customStore);
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache);
         DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
         CompletableFuture<String> fB = identityLoader.load("b");
+        CompletableFuture<String> fC = identityLoader.load("missC");
+        CompletableFuture<String> fD = identityLoader.load("missD");
 
-        CompletableFuture<List<String>> dispatchedCall = identityLoader.dispatch();
+        await().until(identityLoader.dispatch()::isDone);
 
-        CompletableFuture<List<String>> bothCalls = CompletableFutureKit.allOf(asList(fA, fB));
-        await().atMost(5, TimeUnit.SECONDS).until(bothCalls::isDone);
-
-        assertTrue(dispatchedCall.isDone());
-        assertTrue(fA.isDone());
-        assertTrue(fB.isDone());
         assertThat(fA.join(), equalTo("a"));
         assertThat(fB.join(), equalTo("b"));
+        assertThat(fC.join(), equalTo("missC"));
+        assertThat(fD.join(), equalTo("missD"));
 
-        // 'b' will complete in real time while 'a' was a cache miss after some time
-        assertThat(loadCalls, equalTo(asList(singletonList("b"), singletonList("a"))));
+        assertThat(loadCalls, equalTo(singletonList(asList("missC", "missD"))));
+    }
+
+    @Test
+    public void batch_caching_works_as_expected() {
+        CustomValueCache customValueCache = new CustomValueCache() {
+
+            @Override
+            public CompletableFuture<List<Try<Object>>> getValues(List<String> keys) {
+                List<Try<Object>> cacheCalls = new ArrayList<>();
+                for (String key : keys) {
+                    if (key.startsWith("miss")) {
+                        cacheCalls.add(Try.alwaysFailed());
+                    } else {
+                        cacheCalls.add(Try.succeeded(key));
+                    }
+                }
+                return CompletableFuture.supplyAsync(() -> {
+                    TestKit.snooze(1000);
+                    return cacheCalls;
+                });
+            }
+        };
+
+
+        List<List<String>> loadCalls = new ArrayList<>();
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache);
+        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+
+        CompletableFuture<String> fA = identityLoader.load("a");
+        CompletableFuture<String> fB = identityLoader.load("b");
+        CompletableFuture<String> fC = identityLoader.load("missC");
+        CompletableFuture<String> fD = identityLoader.load("missD");
+
+        await().until(identityLoader.dispatch()::isDone);
+
+        assertThat(fA.join(), equalTo("a"));
+        assertThat(fB.join(), equalTo("b"));
+        assertThat(fC.join(), equalTo("missC"));
+        assertThat(fD.join(), equalTo("missD"));
+
+        assertThat(loadCalls, equalTo(singletonList(asList("missC", "missD"))));
+
+        List<Object> values = new ArrayList<>(customValueCache.asMap().values());
+        assertThat(values, equalTo(asList("a", "b", "missC", "missD")));
+    }
+
+    @Test
+    public void assertions_will_be_thrown_if_the_cache_does_not_follow_contract() {
+        CustomValueCache customValueCache = new CustomValueCache() {
+
+            @Override
+            public CompletableFuture<List<Try<Object>>> getValues(List<String> keys) {
+                List<Try<Object>> cacheCalls = new ArrayList<>();
+                for (String key : keys) {
+                    if (key.startsWith("miss")) {
+                        cacheCalls.add(Try.alwaysFailed());
+                    } else {
+                        cacheCalls.add(Try.succeeded(key));
+                    }
+                }
+                List<Try<Object>> renegOnContract = cacheCalls.subList(1, cacheCalls.size() - 1);
+                return CompletableFuture.completedFuture(renegOnContract);
+            }
+        };
+
+        List<List<String>> loadCalls = new ArrayList<>();
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache);
+        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+
+        CompletableFuture<String> fA = identityLoader.load("a");
+        CompletableFuture<String> fB = identityLoader.load("b");
+        CompletableFuture<String> fC = identityLoader.load("missC");
+        CompletableFuture<String> fD = identityLoader.load("missD");
+
+        await().until(identityLoader.dispatch()::isDone);
+
+        assertTrue(isAssertionException(fA));
+        assertTrue(isAssertionException(fB));
+        assertTrue(isAssertionException(fC));
+        assertTrue(isAssertionException(fD));
+    }
+
+    private boolean isAssertionException(CompletableFuture<String> fA) {
+        Throwable throwable = Try.tryFuture(fA).join().getThrowable();
+        return throwable instanceof DataLoaderAssertionException;
+    }
+
+
+    @Test
+    public void if_caching_is_off_its_never_hit() {
+        AtomicInteger getCalls = new AtomicInteger();
+        CustomValueCache customValueCache = new CustomValueCache() {
+
+            @Override
+            public CompletableFuture<Object> get(String key) {
+                getCalls.incrementAndGet();
+                return super.get(key);
+            }
+        };
+
+        List<List<String>> loadCalls = new ArrayList<>();
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache).setCachingEnabled(false);
+        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+
+        CompletableFuture<String> fA = identityLoader.load("a");
+        CompletableFuture<String> fB = identityLoader.load("b");
+        CompletableFuture<String> fC = identityLoader.load("missC");
+        CompletableFuture<String> fD = identityLoader.load("missD");
+
+        await().until(identityLoader.dispatch()::isDone);
+
+        assertThat(fA.join(), equalTo("a"));
+        assertThat(fB.join(), equalTo("b"));
+        assertThat(fC.join(), equalTo("missC"));
+        assertThat(fD.join(), equalTo("missD"));
+
+        assertThat(loadCalls, equalTo(singletonList(asList("a", "b", "missC", "missD"))));
+        assertThat(getCalls.get(), equalTo(0));
+        assertTrue(customValueCache.asMap().isEmpty());
     }
 }

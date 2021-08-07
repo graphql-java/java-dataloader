@@ -4,6 +4,7 @@ import org.dataloader.annotations.PublicApi;
 
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -26,12 +27,21 @@ import static org.dataloader.impl.Assertions.nonNull;
  */
 @PublicApi
 public class Try<V> {
-    private static Throwable NIL = new Throwable() {
+    private final static Object NIL = new Object() {
+    };
+
+    private final static Throwable NIL_THROWABLE = new RuntimeException() {
+        @Override
+        public String getMessage() {
+            return "failure";
+        }
+
         @Override
         public synchronized Throwable fillInStackTrace() {
             return this;
         }
     };
+
 
     private final Throwable throwable;
     private final V value;
@@ -46,6 +56,12 @@ public class Try<V> {
     private Try(V value) {
         this.value = value;
         this.throwable = null;
+    }
+
+
+    @Override
+    public String toString() {
+        return isSuccess() ? "success" : "failure";
     }
 
     /**
@@ -73,6 +89,18 @@ public class Try<V> {
     }
 
     /**
+     * This returns a Try that has always failed with an consistent exception.  Use this when
+     * yiu dont care about the exception but only that the Try failed.
+     *
+     * @param <V> the type of value
+     *
+     * @return a Try that has failed
+     */
+    public static <V> Try<V> alwaysFailed() {
+        return Try.failed(NIL_THROWABLE);
+    }
+
+    /**
      * Calls the callable and if it returns a value, the Try is successful with that value or if throws
      * and exception the Try captures that
      *
@@ -96,7 +124,7 @@ public class Try<V> {
      * @param completionStage the completion stage that will complete
      * @param <V>             the value type
      *
-     * @return a Try which is the result of the call
+     * @return a CompletionStage Try which is the result of the call
      */
     public static <V> CompletionStage<Try<V>> tryStage(CompletionStage<V> completionStage) {
         return completionStage.handle((value, throwable) -> {
@@ -105,6 +133,19 @@ public class Try<V> {
             }
             return succeeded(value);
         });
+    }
+
+    /**
+     * Creates a CompletableFuture that, when it completes, will capture into a Try whether the given completionStage
+     * was successful or not
+     *
+     * @param completionStage the completion stage that will complete
+     * @param <V>             the value type
+     *
+     * @return a CompletableFuture Try which is the result of the call
+     */
+    public static <V> CompletableFuture<Try<V>> tryFuture(CompletionStage<V> completionStage) {
+        return tryStage(completionStage).toCompletableFuture();
     }
 
     /**
