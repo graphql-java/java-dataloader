@@ -10,14 +10,14 @@ It can serve as integral part of your application's data layer to provide a
 consistent API over various back-ends and reduce message communication overhead through batching and caching.
 
 An important use case for `java-dataloader` is improving the efficiency of GraphQL query execution.  Graphql fields
-are resolved in a independent manner and with a true graph of objects, you may be fetching the same object many times.  
+are resolved independently and, with a true graph of objects, you may be fetching the same object many times.  
 
 A naive implementation of graphql data fetchers can easily lead to the dreaded  "n+1" fetch problem. 
 
 Most of the code is ported directly from Facebook's reference implementation, with one IMPORTANT adaptation to make
 it work for Java 8. ([more on this below](#manual-dispatching)).
 
-But before reading on, be sure to take a short dive into the
+Before reading on, be sure to take a short dive into the
 [original documentation](https://github.com/facebook/dataloader/blob/master/README.md) provided by Lee Byron (@leebyron)
 and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the creators of the original data loader.
 
@@ -51,7 +51,8 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 - Results are ordered according to insertion order of load requests
 - Deals with partial errors when a batch future fails
 - Can disable batching and/or caching in configuration
-- Can supply your own [`CacheMap<K, V>`](https://github.com/graphql-java/java-dataloader/blob/master/src/main/java/io/engagingspaces/vertx/dataloader/CacheMap.java) implementations
+- Can supply your own `CacheMap<K, V>` implementations
+- Can supply your own `ValueCache<K, V>` implementations
 - Has very high test coverage 
 
 ## Examples
@@ -110,7 +111,7 @@ In this version of data loader, this does not happen automatically.  More on thi
 
 As stated on the original Facebook project :
 
->A naive application may have issued four round-trips to a backend for the required information, 
+> A naive application may have issued four round-trips to a backend for the required information, 
 but with DataLoader this application will make at most two.
  
 > DataLoader allows you to decouple unrelated parts of your application without sacrificing the 
@@ -270,9 +271,9 @@ This is not quite as loose in a Java implementation as Java is a type safe langu
 
 A batch loader function is defined as `BatchLoader<K, V>` meaning for a key of type `K` it returns a value of type `V`.  
 
-It cant just return some `Exception` as an object of type `V`.  Type safety matters.  
+It can't just return some `Exception` as an object of type `V`.  Type safety matters.  
 
-However you can use the `Try` data type which can encapsulate a computation that succeeded or returned an exception.
+However, you can use the `Try` data type which can encapsulate a computation that succeeded or returned an exception.
 
 ```java
         Try<String> tryS = Try.tryCall(() -> {
@@ -291,7 +292,7 @@ However you can use the `Try` data type which can encapsulate a computation that
         }
 ```
 
-DataLoader supports this type and you can use this form to create a batch loader that returns a list of `Try` objects, some of which may have succeeded
+DataLoader supports this type, and you can use this form to create a batch loader that returns a list of `Try` objects, some of which may have succeeded, 
 and some of which may have failed.  From that data loader can infer the right behavior in terms of the `load(x)` promise.
 
 ```java
@@ -331,7 +332,7 @@ The value cache uses an async API pattern to encapsulate the idea that the value
 The default future cache behind `DataLoader` is an in memory `HashMap`.  There is no expiry on this, and it lives for as long as the data loader
 lives.
 
-However, you can create your own custom cache and supply it to the data loader on construction via the `org.dataloader.CacheMap` interface.
+However, you can create your own custom future cache and supply it to the data loader on construction via the `org.dataloader.CacheMap` interface.
 
 ```java
         MyCustomCache customCache = new MyCustomCache();
@@ -342,20 +343,26 @@ However, you can create your own custom cache and supply it to the data loader o
 You could choose to use one of the fancy cache implementations from Guava or Caffeine and wrap it in a `CacheMap` wrapper ready
 for data loader.  They can do fancy things like time eviction and efficient LRU caching.
 
-As stated above, a custom `org.dataloader.CacheMap` is a local cache of futures with values, not values per se.
+As stated above, a custom `org.dataloader.CacheMap` is a local cache of `CompleteFuture`s to values, not values per se.  
+
+If you want to externally cache values then you need to use the `org.dataloader.ValueCache` interface.
 
 ## Custom value caches
 
-You will need to create your own implementations of the `org.dataloader.ValueCache` if your want to use an external cache.  
+The `org.dataloader.ValueCache` allows you to use an external cache.  
+
+The API of `ValueCache` has been designed to be asynchronous because it is expected that the value cache could be outside
+your JVM.  It uses `CompleteableFuture`s to get and set values into cache, which may involve a network call and hence exceptional failures to get
+or set values.
+
+The `ValueCache` API is batch oriented, if you have a backing cache that can do batch cache fetches (such a REDIS) then you can use the `ValueCache.getValues*(`
+call directly. However, if you don't have such a backing cache, then the default implementation will break apart the batch of cache value into individual requests
+to `ValueCache.getValue()` for you.
 
 This library does not ship with any implementations of `ValueCache` because it does not want to have 
 production dependencies on external cache libraries, but you can easily write your own.  
 
 The tests have an example based on [Caffeine](https://github.com/ben-manes/caffeine).
-
-The API of `ValueCache` has been designed to be asynchronous because it is expected that the value cache could be outside
-your JVM.  It uses `CompleteableFuture`s to get and set values into cache, which may involve a network call and hence exceptional failures to get 
-or set values.
 
 
 ## Disabling caching 
@@ -369,7 +376,7 @@ In certain uncommon cases, a DataLoader which does not cache may be desirable.
 Calling the above will ensure that every call to `.load()` will produce a new promise, and requested keys will not be saved in memory.
  
 However, when the memoization cache is disabled, your batch function will receive an array of keys which may contain duplicates! Each key will 
-be associated with each call to `.load()`. Your batch loader should provide a value for each instance of the requested key as per the contract
+be associated with each call to `.load()`. Your batch loader MUST provide a value for each instance of the requested key as per the contract
 
 ```java
         userDataLoader.load("A");
@@ -445,7 +452,7 @@ then you will not want to cache data meant for user A to then later give it user
 The scope of your `DataLoader` instances is important.  You will want to create them per web request to ensure data is only cached within that
 web request and no more.
 
-If your data can be shared across web requests then use a custom cache to keep values in a common place.  
+If your data can be shared across web requests then use a custom `org.dataloader.ValueCache` to keep values in a common place.  
 
 Data loaders are stateful components that contain promises (with context) that are likely share the same affinity as the request.
 

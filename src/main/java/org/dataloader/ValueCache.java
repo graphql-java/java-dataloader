@@ -67,34 +67,22 @@ public interface ValueCache<K, V> {
     CompletableFuture<V> get(K key);
 
     /**
-     * Gets the specified key from the value cache.  If the key is not present, then the returned {@link Try} will be a failed one
-     * other wise it has the cached value.  This is preferred over the {@link #get(Object)} method.
-     * <p>
-     *
-     * @param key the key to retrieve
-     *
-     * @return a future containing the {@link Try} cached value (which maybe null) or a failed {@link Try} if the key does
-     * not exist in the cache.
-     */
-    default CompletableFuture<Try<V>> getValue(K key) {
-        return Try.tryFuture(get(key));
-    }
-
-    /**
      * Gets the specified keys from the value cache, in a batch call.  If your underlying cache cant do batch caching retrieval
-     * then do not implement this method and it will delegate back to {@link #getValue(Object)} for you
+     * then do not implement this method and it will delegate back to {@link #get(Object)} for you
+     * <p>
+     * Each item in the returned list of values is a {@link Try}.  If the key could not be found then a failed Try just be returned otherwise
+     * a successful Try contain the cached value is returned.
      * <p>
      * You MUST return a List that is the same size as the keys passed in.  The code will assert if you do not.
      *
      * @param keys the list of keys to get cached values for.
      *
-     * @return a future containing a list of {@link Try} cached values (which maybe {@link Try#succeeded(Object)} or a failed {@link Try}
-     * per key if they do not exist in the cache.
+     * @return a future containing a list of {@link Try} cached values for each key passed in.
      */
     default CompletableFuture<List<Try<V>>> getValues(List<K> keys) {
         List<CompletableFuture<Try<V>>> cacheLookups = new ArrayList<>();
         for (K key : keys) {
-            CompletableFuture<Try<V>> cacheTry = getValue(key);
+            CompletableFuture<Try<V>> cacheTry = Try.tryFuture(get(key));
             cacheLookups.add(cacheTry);
         }
         return CompletableFutureKit.allOf(cacheLookups);
