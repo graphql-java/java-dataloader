@@ -362,21 +362,20 @@ class DataLoaderHelper<K, V> {
                 // and then fill in their values
                 //
                 CompletionStage<List<V>> batchLoad = invokeLoader(cacheMissedKeys, cacheMissedContexts);
-                CompletionStage<CacheMissedData<K, V>> assembledValues = batchLoad.thenApply(batchedValues -> {
-                    assertResultSize(cacheMissedKeys, batchedValues);
+                return batchLoad.thenCompose(missedValues -> {
+                    assertResultSize(cacheMissedKeys, missedValues);
 
-                    for (int i = 0; i < batchedValues.size(); i++) {
+                    for (int i = 0; i < missedValues.size(); i++) {
                         K missedKey = cacheMissedKeys.get(i);
-                        V v = batchedValues.get(i);
+                        V v = missedValues.get(i);
                         valuesInKeyOrder.put(missedKey, v);
                     }
-
-                    return new CacheMissedData<>(cacheMissedKeys, batchedValues, new ArrayList<>(valuesInKeyOrder.values()));
+                    List<V> assembledValues = new ArrayList<>(valuesInKeyOrder.values());
+                    //
+                    // fire off a call to the ValueCache to allow it to set values into the
+                    // cache now that we have them
+                    return setToValueCache(assembledValues, cacheMissedKeys, missedValues);
                 });
-                //
-                // fire off a call to the ValueCache to allow it to set values into the
-                // cache now that we have them
-                return setToValueCache(assembledValues);
             }
         });
     }
@@ -453,40 +452,24 @@ class DataLoaderHelper<K, V> {
         }
     }
 
-    static class CacheMissedData<K, V> {
-        final List<K> missedKeys;
-        final List<V> missedValues;
-        final List<V> assembledValues;
-
-        CacheMissedData(List<K> missedKeys, List<V> missedValues, List<V> assembledValues) {
-            this.missedKeys = missedKeys;
-            this.missedValues = missedValues;
-            this.assembledValues = assembledValues;
-        }
-    }
-
-    private CompletionStage<List<V>> setToValueCache(CompletionStage<CacheMissedData<K, V>> assembledValues) {
+    private CompletionStage<List<V>> setToValueCache(List<V> assembledValues, List<K> missedKeys, List<V> missedValues) {
         try {
             boolean completeValueAfterCacheSet = loaderOptions.getValueCacheOptions().isCompleteValueAfterCacheSet();
             if (completeValueAfterCacheSet) {
-                return assembledValues.thenCompose(cacheMissedData -> nonNull(valueCache
-                        .setValues(cacheMissedData.missedKeys, cacheMissedData.missedValues), () -> "Your ValueCache.setValues function MUST return a non null promise")
+                return nonNull(valueCache
+                        .setValues(missedKeys, missedValues), () -> "Your ValueCache.setValues function MUST return a non null promise")
                         // we dont trust the set cache to give us the values back - we have them - lets use them
                         // if the cache set fails - then they wont be in cache and maybe next time they will
-                        .handle((ignored, setExIgnored) -> cacheMissedData.assembledValues));
+                        .handle((ignored, setExIgnored) -> assembledValues);
             } else {
-                return assembledValues.thenApply(cacheMissedData -> {
-                    // no one is waiting for the set to happen here so if its truly async
-                    // it will happen eventually but no result will be dependant on it
-                    valueCache.setValues(cacheMissedData.missedKeys, cacheMissedData.missedValues);
-                    return cacheMissedData.assembledValues;
-                });
+                // no one is waiting for the set to happen here so if its truly async
+                // it will happen eventually but no result will be dependant on it
+                valueCache.setValues(missedKeys, missedValues);
             }
         } catch (RuntimeException ignored) {
             // if we cant set values back into the cache - so be it - this must be a faulty
             // ValueCache implementation
-            return assembledValues.thenApply(cacheMissedData -> cacheMissedData.assembledValues);
         }
+        return CompletableFuture.completedFuture(assembledValues);
     }
-
 }
