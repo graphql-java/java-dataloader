@@ -288,7 +288,9 @@ public class DataLoaderValueCacheTest {
         assertThat(loadCalls, equalTo(singletonList(asList("missC", "missD"))));
 
         List<Object> values = new ArrayList<>(customValueCache.asMap().values());
-        assertThat(values, equalTo(asList("a", "b", "missC", "missD")));
+        // it will only set back in values that are missed - it wont set in values that successfully
+        // came out of the cache
+        assertThat(values, equalTo(asList("missC", "missD")));
     }
 
     @Test
