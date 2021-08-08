@@ -9,8 +9,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toList;
 import static org.dataloader.impl.CompletableFutureKit.failedFuture;
 
 public class TestKit {
@@ -26,7 +26,7 @@ public class TestKit {
             @SuppressWarnings("unchecked")
             List<V> values = keys.stream()
                     .map(k -> (V) k)
-                    .collect(Collectors.toList());
+                    .collect(toList());
             return CompletableFuture.completedFuture(values);
         };
     }
@@ -61,5 +61,10 @@ public class TestKit {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+
+    public static <T> List<T> sort(Collection<? extends T> collection) {
+        return collection.stream().sorted().collect(toList());
     }
 }

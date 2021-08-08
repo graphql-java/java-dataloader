@@ -455,20 +455,26 @@ class DataLoaderHelper<K, V> {
     }
 
     private CompletionStage<List<V>> setToValueCache(List<K> keys, CompletionStage<List<V>> assembledValues) {
-        boolean completeValueAfterCacheSet = loaderOptions.getValueCacheOptions().isCompleteValueAfterCacheSet();
-        if (completeValueAfterCacheSet) {
-            return assembledValues.thenCompose(values -> nonNull(valueCache
-                    .setValues(keys, values), () -> "Your ValueCache.setValues function MUST return a non null promise")
-                    // we dont trust the set cache to give us the values back - we have them - lets use them
-                    // if the cache set fails - then they wont be in cache and maybe next time they will
-                    .handle((ignored, setExIgnored) -> values));
-        } else {
-            return assembledValues.thenApply(values -> {
-                // no one is waiting for the set to happen here so if its truly async
-                // it will happen eventually but no result will be dependant on it
-                valueCache.setValues(keys, values);
-                return values;
-            });
+        try {
+            boolean completeValueAfterCacheSet = loaderOptions.getValueCacheOptions().isCompleteValueAfterCacheSet();
+            if (completeValueAfterCacheSet) {
+                return assembledValues.thenCompose(values -> nonNull(valueCache
+                        .setValues(keys, values), () -> "Your ValueCache.setValues function MUST return a non null promise")
+                        // we dont trust the set cache to give us the values back - we have them - lets use them
+                        // if the cache set fails - then they wont be in cache and maybe next time they will
+                        .handle((ignored, setExIgnored) -> values));
+            } else {
+                return assembledValues.thenApply(values -> {
+                    // no one is waiting for the set to happen here so if its truly async
+                    // it will happen eventually but no result will be dependant on it
+                    valueCache.setValues(keys, values);
+                    return values;
+                });
+            }
+        } catch (RuntimeException ignored) {
+            // if we cant set values back into the cache - so be it - this must be a faulty
+            // ValueCache implementation
+            return assembledValues;
         }
     }
 

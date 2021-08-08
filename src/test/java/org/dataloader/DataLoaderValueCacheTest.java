@@ -4,7 +4,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dataloader.fixtures.CaffeineValueCache;
 import org.dataloader.fixtures.CustomValueCache;
-import org.dataloader.fixtures.TestKit;
 import org.dataloader.impl.DataLoaderAssertionException;
 import org.junit.Test;
 
@@ -20,6 +19,8 @@ import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderOptions.newOptions;
 import static org.dataloader.fixtures.TestKit.idLoader;
+import static org.dataloader.fixtures.TestKit.snooze;
+import static org.dataloader.fixtures.TestKit.sort;
 import static org.dataloader.impl.CompletableFutureKit.failedFuture;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertArrayEquals;
@@ -48,6 +49,7 @@ public class DataLoaderValueCacheTest {
         assertThat(loadCalls, equalTo(singletonList(asList("a", "b"))));
 
         // futures are still cached but not values
+        loadCalls.clear();
 
         fA = identityLoader.load("a");
         fB = identityLoader.load("b");
@@ -59,8 +61,7 @@ public class DataLoaderValueCacheTest {
         assertThat(fA.join(), equalTo("a"));
         assertThat(fB.join(), equalTo("b"));
 
-        assertThat(loadCalls, equalTo(singletonList(asList("a", "b"))));
-
+        assertThat(loadCalls, equalTo(emptyList()));
     }
 
     @Test
@@ -213,12 +214,12 @@ public class DataLoaderValueCacheTest {
             public CompletableFuture<Object> get(String key) {
                 if (key.startsWith("miss")) {
                     return CompletableFuture.supplyAsync(() -> {
-                        TestKit.snooze(1000);
+                        snooze(1000);
                         throw new IllegalStateException("no a in cache");
                     });
                 } else {
                     return CompletableFuture.supplyAsync(() -> {
-                        TestKit.snooze(1000);
+                        snooze(1000);
                         return key;
                     });
                 }
@@ -261,7 +262,7 @@ public class DataLoaderValueCacheTest {
                     }
                 }
                 return CompletableFuture.supplyAsync(() -> {
-                    TestKit.snooze(1000);
+                    snooze(1000);
                     return cacheCalls;
                 });
             }
@@ -363,5 +364,92 @@ public class DataLoaderValueCacheTest {
         assertThat(loadCalls, equalTo(singletonList(asList("a", "b", "missC", "missD"))));
         assertThat(getCalls.get(), equalTo(0));
         assertTrue(customValueCache.asMap().isEmpty());
+    }
+
+    @Test
+    public void if_everything_is_cached_no_batching_happens() {
+        AtomicInteger getCalls = new AtomicInteger();
+        AtomicInteger setCalls = new AtomicInteger();
+        CustomValueCache customValueCache = new CustomValueCache() {
+
+            @Override
+            public CompletableFuture<Object> get(String key) {
+                getCalls.incrementAndGet();
+                return super.get(key);
+            }
+
+            @Override
+            public CompletableFuture<List<Object>> setValues(List<String> keys, List<Object> values) {
+                setCalls.incrementAndGet();
+                return super.setValues(keys, values);
+            }
+        };
+        customValueCache.asMap().put("a", "cachedA");
+        customValueCache.asMap().put("b", "cachedB");
+        customValueCache.asMap().put("c", "cachedC");
+
+        List<List<String>> loadCalls = new ArrayList<>();
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache).setCachingEnabled(true);
+        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+
+        CompletableFuture<String> fA = identityLoader.load("a");
+        CompletableFuture<String> fB = identityLoader.load("b");
+        CompletableFuture<String> fC = identityLoader.load("c");
+
+        await().until(identityLoader.dispatch()::isDone);
+
+        assertThat(fA.join(), equalTo("cachedA"));
+        assertThat(fB.join(), equalTo("cachedB"));
+        assertThat(fC.join(), equalTo("cachedC"));
+
+        assertThat(loadCalls, equalTo(emptyList()));
+        assertThat(getCalls.get(), equalTo(3));
+        assertThat(setCalls.get(), equalTo(0));
+    }
+
+
+    @Test
+    public void if_batching_is_off_it_still_can_cache() {
+        AtomicInteger getCalls = new AtomicInteger();
+        AtomicInteger setCalls = new AtomicInteger();
+        CustomValueCache customValueCache = new CustomValueCache() {
+
+            @Override
+            public CompletableFuture<Object> get(String key) {
+                getCalls.incrementAndGet();
+                return super.get(key);
+            }
+
+            @Override
+            public CompletableFuture<List<Object>> setValues(List<String> keys, List<Object> values) {
+                setCalls.incrementAndGet();
+                return super.setValues(keys, values);
+            }
+        };
+        customValueCache.asMap().put("a", "cachedA");
+
+        List<List<String>> loadCalls = new ArrayList<>();
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache).setCachingEnabled(true).setBatchingEnabled(false);
+        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+
+        CompletableFuture<String> fA = identityLoader.load("a");
+        CompletableFuture<String> fB = identityLoader.load("b");
+        CompletableFuture<String> fC = identityLoader.load("c");
+
+        assertTrue(fA.isDone()); // with batching off they are dispatched immediately
+        assertTrue(fB.isDone());
+        assertTrue(fC.isDone());
+
+        await().until(identityLoader.dispatch()::isDone);
+
+        assertThat(fA.join(), equalTo("cachedA"));
+        assertThat(fB.join(), equalTo("b"));
+        assertThat(fC.join(), equalTo("c"));
+
+        assertThat(loadCalls, equalTo(asList(singletonList("b"), singletonList("c"))));
+        assertThat(getCalls.get(), equalTo(3));
+        assertThat(setCalls.get(), equalTo(2));
+
+        assertThat(sort(customValueCache.asMap().values()), equalTo(sort(asList("b", "c", "cachedA"))));
     }
 }
