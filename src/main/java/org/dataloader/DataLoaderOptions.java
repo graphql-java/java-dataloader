@@ -17,6 +17,7 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
+import org.dataloader.impl.Assertions;
 import org.dataloader.stats.SimpleStatisticsCollector;
 import org.dataloader.stats.StatisticsCollector;
 
@@ -39,11 +40,12 @@ public class DataLoaderOptions {
     private boolean cachingEnabled;
     private boolean cachingExceptionsEnabled;
     private CacheKey<?> cacheKeyFunction;
-    private CacheMap<?,?> cacheMap;
-    private ValueCache<?,?> valueCache;
+    private CacheMap<?, ?> cacheMap;
+    private ValueCache<?, ?> valueCache;
     private int maxBatchSize;
     private Supplier<StatisticsCollector> statisticsCollector;
     private BatchLoaderContextProvider environmentProvider;
+    private ValueCacheOptions valueCacheOptions;
 
     /**
      * Creates a new data loader options with default settings.
@@ -55,6 +57,7 @@ public class DataLoaderOptions {
         maxBatchSize = -1;
         statisticsCollector = SimpleStatisticsCollector::new;
         environmentProvider = NULL_PROVIDER;
+        valueCacheOptions = ValueCacheOptions.newOptions();
     }
 
     /**
@@ -72,6 +75,7 @@ public class DataLoaderOptions {
         this.maxBatchSize = other.maxBatchSize;
         this.statisticsCollector = other.statisticsCollector;
         this.environmentProvider = other.environmentProvider;
+        this.valueCacheOptions = other.valueCacheOptions;
     }
 
     /**
@@ -179,7 +183,7 @@ public class DataLoaderOptions {
      *
      * @return an optional with the cache map instance, or empty
      */
-    public Optional<CacheMap<?,?>> cacheMap() {
+    public Optional<CacheMap<?, ?>> cacheMap() {
         return Optional.ofNullable(cacheMap);
     }
 
@@ -190,7 +194,7 @@ public class DataLoaderOptions {
      *
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setCacheMap(CacheMap<?,?> cacheMap) {
+    public DataLoaderOptions setCacheMap(CacheMap<?, ?> cacheMap) {
         this.cacheMap = cacheMap;
         return this;
     }
@@ -265,7 +269,7 @@ public class DataLoaderOptions {
      *
      * @return an optional with the cache store instance, or empty
      */
-    public Optional<ValueCache<?,?>> valueCache() {
+    public Optional<ValueCache<?, ?>> valueCache() {
         return Optional.ofNullable(valueCache);
     }
 
@@ -276,8 +280,27 @@ public class DataLoaderOptions {
      *
      * @return the data loader options for fluent coding
      */
-    public DataLoaderOptions setValueCache(ValueCache<?,?> valueCache) {
+    public DataLoaderOptions setValueCache(ValueCache<?, ?> valueCache) {
         this.valueCache = valueCache;
+        return this;
+    }
+
+    /**
+     * @return the {@link ValueCacheOptions} that control how the {@link ValueCache} will be used
+     */
+    public ValueCacheOptions getValueCacheOptions() {
+        return valueCacheOptions;
+    }
+
+    /**
+     * Sets the {@link ValueCacheOptions} that control how the {@link ValueCache} will be used
+     *
+     * @param valueCacheOptions the value cache options
+     *
+     * @return the data loader options for fluent coding
+     */
+    public DataLoaderOptions setValueCacheOptions(ValueCacheOptions valueCacheOptions) {
+        this.valueCacheOptions = Assertions.nonNull(valueCacheOptions);
         return this;
     }
 }

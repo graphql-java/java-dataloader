@@ -104,7 +104,7 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
     @Override
     public T get(int index) {
-        assertState(isDone(), "The PromisedValues MUST be complete before calling the get() method");
+        assertState(isDone(), () -> "The PromisedValues MUST be complete before calling the get() method");
         try {
             CompletionStage<T> future = futures.get(index);
             return future.toCompletableFuture().get();
@@ -115,7 +115,7 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
     @Override
     public List<T> toList() {
-        assertState(isDone(), "The PromisedValues MUST be complete before calling the toList() method");
+        assertState(isDone(), () -> "The PromisedValues MUST be complete before calling the toList() method");
         int size = size();
         List<T> list = new ArrayList<>(size);
         for (int index = 0; index < size; index++) {

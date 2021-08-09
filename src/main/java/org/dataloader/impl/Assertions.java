@@ -2,28 +2,26 @@ package org.dataloader.impl;
 
 import org.dataloader.annotations.Internal;
 
-import java.util.Objects;
+import java.util.function.Supplier;
 
 @Internal
 public class Assertions {
 
-    public static void assertState(boolean state, String message) {
+    public static void assertState(boolean state, Supplier<String> message) {
         if (!state) {
-            throw new AssertionException(message);
+            throw new DataLoaderAssertionException(message.get());
         }
     }
 
     public static <T> T nonNull(T t) {
-        return Objects.requireNonNull(t, "nonNull object required");
+        return nonNull(t, () -> "nonNull object required");
     }
 
-    public static <T> T nonNull(T t, String message) {
-        return Objects.requireNonNull(t, message);
-    }
-
-    private static class AssertionException extends IllegalStateException {
-        public AssertionException(String message) {
-            super(message);
+    public static <T> T nonNull(T t, Supplier<String> message) {
+        if (t == null) {
+            throw new NullPointerException(message.get());
         }
+        return t;
     }
+
 }

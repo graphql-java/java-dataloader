@@ -40,6 +40,19 @@ version = releaseVersion ? releaseVersion : getDevelopmentVersion()
 group = 'com.graphql-java'
 description = 'A pure Java 8 port of Facebook Dataloader'
 
+gradle.buildFinished { buildResult ->
+    println "*******************************"
+    println "*"
+    if (buildResult.failure != null) {
+        println "* FAILURE - ${buildResult.failure}"
+    } else {
+        println "* SUCCESS"
+    }
+    println "* Version: $version"
+    println "*"
+    println "*******************************"
+}
+
 repositories {
     mavenCentral()
     mavenLocal()

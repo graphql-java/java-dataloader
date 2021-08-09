@@ -11,7 +11,9 @@ import java.util.function.Function;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 @SuppressWarnings("ConstantConditions")
 public class TryTest {
@@ -192,5 +194,13 @@ public class TryTest {
         sTry = sTry.recover(t -> "Hello World");
 
         assertSuccess(sTry, "Hello Again");
+    }
+
+    @Test
+    public void canAlwaysFail() {
+        Try<Object> failedTry = Try.alwaysFailed();
+
+        assertTrue(failedTry.isFailure());
+        assertFalse(failedTry.isSuccess());
     }
 }
