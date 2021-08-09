@@ -8,7 +8,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -335,45 +334,46 @@ class DataLoaderHelper<K, V> {
 
             assertState(keys.size() == cachedValues.size(), () -> "The size of the cached values MUST be the same size as the key list");
 
-            LinkedHashMap<K, V> valuesInKeyOrder = new LinkedHashMap<>();
-            List<K> cacheMissedKeys = new ArrayList<>();
-            List<Object> cacheMissedContexts = new ArrayList<>();
+            // the following is NOT a Map because keys in data loader can repeat (by design)
+            // and hence "a","b","c","b" is a valid set of keys
+            List<Try<V>> valuesInKeyOrder = new ArrayList<>();
+            List<Integer> missedKeyIndexes = new ArrayList<>();
+            List<K> missedKeys = new ArrayList<>();
+            List<Object> missedKeyContexts = new ArrayList<>();
             for (int i = 0; i < keys.size(); i++) {
-                K key = keys.get(i);
-                Object keyContext = keyContexts.get(i);
                 Try<V> cacheGet = cachedValues.get(i);
-                if (cacheGet.isSuccess()) {
-                    valuesInKeyOrder.put(key, cacheGet.get());
-                } else {
-                    valuesInKeyOrder.put(key, null); // an entry to be replaced later
-                    cacheMissedKeys.add(key);
-                    cacheMissedContexts.add(keyContext);
+                valuesInKeyOrder.add(cacheGet);
+                if (cacheGet.isFailure()) {
+                    missedKeyIndexes.add(i);
+                    missedKeys.add(keys.get(i));
+                    missedKeyContexts.add(keyContexts.get(i));
                 }
             }
-            if (cacheMissedKeys.isEmpty()) {
+            if (missedKeys.isEmpty()) {
                 //
                 // everything was cached
                 //
-                return completedFuture(new ArrayList<>(valuesInKeyOrder.values()));
+                List<V> assembledValues = valuesInKeyOrder.stream().map(Try::get).collect(toList());
+                return completedFuture(assembledValues);
             } else {
                 //
                 // we missed some of the keys from cache, so send them to the batch loader
                 // and then fill in their values
                 //
-                CompletableFuture<List<V>> batchLoad = invokeLoader(cacheMissedKeys, cacheMissedContexts);
+                CompletableFuture<List<V>> batchLoad = invokeLoader(missedKeys, missedKeyContexts);
                 return batchLoad.thenCompose(missedValues -> {
-                    assertResultSize(cacheMissedKeys, missedValues);
+                    assertResultSize(missedKeys, missedValues);
 
                     for (int i = 0; i < missedValues.size(); i++) {
-                        K missedKey = cacheMissedKeys.get(i);
                         V v = missedValues.get(i);
-                        valuesInKeyOrder.put(missedKey, v);
+                        Integer listIndex = missedKeyIndexes.get(i);
+                        valuesInKeyOrder.set(listIndex, Try.succeeded(v));
                     }
-                    List<V> assembledValues = new ArrayList<>(valuesInKeyOrder.values());
+                    List<V> assembledValues = valuesInKeyOrder.stream().map(Try::get).collect(toList());
                     //
                     // fire off a call to the ValueCache to allow it to set values into the
                     // cache now that we have them
-                    return setToValueCache(assembledValues, cacheMissedKeys, missedValues);
+                    return setToValueCache(assembledValues, missedKeys, missedValues);
                 });
             }
         });
@@ -405,7 +405,7 @@ class DataLoaderHelper<K, V> {
         } else {
             loadResult = ((BatchLoader<K, V>) batchLoadFunction).load(keys);
         }
-        return nonNull(loadResult, () -> "Your batch loader function MUST return a non null CompletionStage promise").toCompletableFuture();
+        return nonNull(loadResult, () -> "Your batch loader function MUST return a non null CompletionStage").toCompletableFuture();
     }
 
 
@@ -422,7 +422,7 @@ class DataLoaderHelper<K, V> {
         } else {
             loadResult = ((MappedBatchLoader<K, V>) batchLoadFunction).load(setOfKeys);
         }
-        CompletableFuture<Map<K, V>> mapBatchLoad = nonNull(loadResult, () -> "Your batch loader function MUST return a non null CompletionStage promise").toCompletableFuture();
+        CompletableFuture<Map<K, V>> mapBatchLoad = nonNull(loadResult, () -> "Your batch loader function MUST return a non null CompletionStage").toCompletableFuture();
         return mapBatchLoad.thenApply(map -> {
             List<V> values = new ArrayList<>();
             for (K key : keys) {
@@ -445,7 +445,7 @@ class DataLoaderHelper<K, V> {
 
     private CompletableFuture<List<Try<V>>> getFromValueCache(List<K> keys) {
         try {
-            return nonNull(valueCache.getValues(keys), () -> "Your ValueCache.getValues function MUST return a non null promise");
+            return nonNull(valueCache.getValues(keys), () -> "Your ValueCache.getValues function MUST return a non null CompletableFuture");
         } catch (RuntimeException e) {
             return CompletableFutureKit.failedFuture(e);
         }
@@ -456,7 +456,7 @@ class DataLoaderHelper<K, V> {
             boolean completeValueAfterCacheSet = loaderOptions.getValueCacheOptions().isCompleteValueAfterCacheSet();
             if (completeValueAfterCacheSet) {
                 return nonNull(valueCache
-                        .setValues(missedKeys, missedValues), () -> "Your ValueCache.setValues function MUST return a non null promise")
+                        .setValues(missedKeys, missedValues), () -> "Your ValueCache.setValues function MUST return a non null CompletableFuture")
                         // we dont trust the set cache to give us the values back - we have them - lets use them
                         // if the cache set fails - then they wont be in cache and maybe next time they will
                         .handle((ignored, setExIgnored) -> assembledValues);
