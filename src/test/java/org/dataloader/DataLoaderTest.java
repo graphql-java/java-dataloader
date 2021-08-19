@@ -363,6 +363,24 @@ public class DataLoaderTest {
     }
 
     @Test
+    public void should_Allow_priming_the_cache_with_a_future() throws ExecutionException, InterruptedException {
+        List<Collection<String>> loadCalls = new ArrayList<>();
+        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+
+        DataLoader<String, String> dlFluency = identityLoader.prime("A", CompletableFuture.completedFuture("A"));
+        assertThat(dlFluency, equalTo(identityLoader));
+
+        CompletableFuture<String> future1 = identityLoader.load("A");
+        CompletableFuture<String> future2 = identityLoader.load("B");
+        identityLoader.dispatch();
+
+        await().until(() -> future1.isDone() && future2.isDone());
+        assertThat(future1.get(), equalTo("A"));
+        assertThat(future2.get(), equalTo("B"));
+        assertThat(loadCalls, equalTo(singletonList(singletonList("B"))));
+    }
+
+    @Test
     public void should_not_Cache_failed_fetches_on_complete_failure() {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> errorLoader = idLoaderBlowsUps(new DataLoaderOptions(), loadCalls);
