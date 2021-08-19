@@ -685,7 +685,7 @@ public class DataLoader<K, V> {
     /**
      * Primes the cache with the given key and value.  Note this will only prime the future cache
      * and not the value store.  Use {@link ValueCache#set(Object, Object)} if you want
-     * o prime it with values before use
+     * to prime it with values before use
      *
      * @param key   the key
      * @param value the value
@@ -693,13 +693,7 @@ public class DataLoader<K, V> {
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, V value) {
-        Object cacheKey = getCacheKey(key);
-        synchronized (this) {
-            if (!futureCache.containsKey(cacheKey)) {
-                futureCache.set(cacheKey, CompletableFuture.completedFuture(value));
-            }
-        }
-        return this;
+        return prime(key, CompletableFuture.completedFuture(value));
     }
 
     /**
@@ -711,9 +705,25 @@ public class DataLoader<K, V> {
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, Exception error) {
+        return prime(key, CompletableFutureKit.failedFuture(error));
+    }
+
+    /**
+     * Primes the cache with the given key and value.  Note this will only prime the future cache
+     * and not the value store.  Use {@link ValueCache#set(Object, Object)} if you want
+     * to prime it with values before use
+     *
+     * @param key   the key
+     * @param value the value
+     *
+     * @return the data loader for fluent coding
+     */
+    public DataLoader<K, V> prime(K key, CompletableFuture<V> value) {
         Object cacheKey = getCacheKey(key);
-        if (!futureCache.containsKey(cacheKey)) {
-            futureCache.set(cacheKey, CompletableFutureKit.failedFuture(error));
+        synchronized (this) {
+            if (!futureCache.containsKey(cacheKey)) {
+                futureCache.set(cacheKey, value);
+            }
         }
         return this;
     }
