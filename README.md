@@ -24,10 +24,10 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 ## Table of contents
 
 - [Features](#features)
-- [Examples](#examples)
-- [Let's get started!](#lets-get-started)
+- [Getting started!](#getting-started)
   - [Installing](#installing)
   - [Building](#building)
+- [Examples](#examples)
 - [Other information sources](#other-information-sources)
 - [Contributing](#contributing)
 - [Acknowledgements](#acknowledgements)
@@ -54,6 +54,31 @@ and Nicholas Schrock (@schrockn) from [Facebook](https://www.facebook.com/), the
 - Can supply your own `CacheMap<K, V>` implementations
 - Can supply your own `ValueCache<K, V>` implementations
 - Has very high test coverage 
+
+## Getting started!
+
+### Installing
+
+Gradle users configure the `java-dataloader` dependency in `build.gradle`:
+
+```
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile 'com.graphql-java:java-dataloader: 2.2.3'
+}
+```
+
+### Building
+
+To build from source use the Gradle wrapper:
+
+```
+./gradlew clean build
+```
+
 
 ## Examples
 
@@ -512,30 +537,6 @@ since it was last dispatched".
 
 The above acts as a kind of minimum batch depth, with a time overload. It won't dispatch if the loader depth is less
 than or equal to 10 but if 200ms pass it will dispatch.
-
-## Let's get started!
-
-### Installing
-
-Gradle users configure the `java-dataloader` dependency in `build.gradle`:
-
-```
-repositories {
-    jcenter()
-}
-
-dependencies {
-    compile 'com.graphql-java:java-dataloader: 2.2.3'
-}
-```
-
-### Building
-
-To build from source use the Gradle wrapper:
-
-```
-./gradlew clean build
-```
 
 
 ## Other information sources
