@@ -62,7 +62,7 @@ apply plugin: 'groovy'
 
 jar {
     manifest {
-        attributes('Automatic-Module-Name': 'com.graphql-java')
+        attributes('Automatic-Module-Name': 'com.graphqljava')
     }
 }
 
