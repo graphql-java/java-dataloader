@@ -1,5 +1,6 @@
 package org.dataloader;
 
+import org.dataloader.annotations.GuardedBy;
 import org.dataloader.annotations.Internal;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.StatisticsCollector;
@@ -287,6 +288,7 @@ class DataLoaderHelper<K, V> {
         }
     }
 
+    @GuardedBy("dataLoader")
     private CompletableFuture<V> loadFromCache(K key, Object loadContext, boolean batchingEnabled) {
         final Object cacheKey = loadContext == null ? getCacheKey(key) : getCacheKeyWithContext(key, loadContext);
 
@@ -296,15 +298,12 @@ class DataLoaderHelper<K, V> {
             return futureCache.get(cacheKey);
         }
 
-        CompletableFuture<V> loadCallFuture;
-        synchronized (dataLoader) {
-            loadCallFuture = queueOrInvokeLoader(key, loadContext, batchingEnabled, true);
-        }
-
+        CompletableFuture<V> loadCallFuture = queueOrInvokeLoader(key, loadContext, batchingEnabled, true);
         futureCache.set(cacheKey, loadCallFuture);
         return loadCallFuture;
     }
 
+    @GuardedBy("dataLoader")
     private CompletableFuture<V> queueOrInvokeLoader(K key, Object loadContext, boolean batchingEnabled, boolean cachingEnabled) {
         if (batchingEnabled) {
             CompletableFuture<V> loadCallFuture = new CompletableFuture<>();
