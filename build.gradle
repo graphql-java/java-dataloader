@@ -3,7 +3,6 @@ import java.text.SimpleDateFormat
 plugins {
     id 'java'
     id 'java-library'
-    id 'maven'
     id 'maven-publish'
     id 'signing'
     id "io.github.gradle-nexus.publish-plugin" version "1.0.0"
@@ -67,10 +66,10 @@ jar {
 }
 
 dependencies {
-    compile 'org.slf4j:slf4j-api:' + slf4jVersion
-    testCompile 'org.slf4j:slf4j-simple:' + slf4jVersion
-    testCompile "junit:junit:4.12"
-    testCompile 'org.awaitility:awaitility:2.0.0'
+    api 'org.slf4j:slf4j-api:' + slf4jVersion
+    testImplementation 'org.slf4j:slf4j-simple:' + slf4jVersion
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.awaitility:awaitility:2.0.0'
     testImplementation 'com.github.ben-manes.caffeine:caffeine:2.9.0'
 }
 
