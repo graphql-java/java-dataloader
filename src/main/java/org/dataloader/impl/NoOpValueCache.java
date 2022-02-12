@@ -20,14 +20,16 @@ import java.util.concurrent.CompletableFuture;
 @Internal
 public class NoOpValueCache<K, V> implements ValueCache<K, V> {
 
-    public static NoOpValueCache<?, ?> NOOP = new NoOpValueCache<>();
+    public static final NoOpValueCache<?, ?> NOOP = new NoOpValueCache<>();
+
+    private static final Exception NOOP_GET_FAILURE = new UnsupportedOperationException();
 
     /**
      * {@inheritDoc}
      */
     @Override
     public CompletableFuture<V> get(K key) {
-        return CompletableFutureKit.failedFuture(new UnsupportedOperationException());
+        return CompletableFutureKit.failedFuture(NOOP_GET_FAILURE);
     }
 
     /**
