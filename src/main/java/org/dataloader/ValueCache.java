@@ -154,7 +154,7 @@ public interface ValueCache<K, V> {
      */
     class ValueCachingNotSupported extends UnsupportedOperationException {
         @Override
-        public synchronized Throwable fillInStackTrace() {
+        public Throwable fillInStackTrace() {
             return this;
         }
     }
