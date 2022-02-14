@@ -74,13 +74,18 @@ public interface ValueCache<K, V> {
      * a successful Try contain the cached value is returned.
      * <p>
      * You MUST return a List that is the same size as the keys passed in.  The code will assert if you do not.
+     * <p>
+     * If your cache does not have anything in it at all, and you want to quickly short-circuit this method and avoid any object allocation
+     * then throw {@link ValueCachingNotSupported} and the code will know there is nothing in cache at this time.
      *
      * @param keys the list of keys to get cached values for.
      *
      * @return a future containing a list of {@link Try} cached values for each key passed in.
+     *
+     * @throws ValueCachingNotSupported if this cache wants to short-circuit this method completely
      */
-    default CompletableFuture<List<Try<V>>> getValues(List<K> keys) {
-        List<CompletableFuture<Try<V>>> cacheLookups = new ArrayList<>();
+    default CompletableFuture<List<Try<V>>> getValues(List<K> keys) throws ValueCachingNotSupported {
+        List<CompletableFuture<Try<V>>> cacheLookups = new ArrayList<>(keys.size());
         for (K key : keys) {
             CompletableFuture<Try<V>> cacheTry = Try.tryFuture(get(key));
             cacheLookups.add(cacheTry);
@@ -106,8 +111,10 @@ public interface ValueCache<K, V> {
      * @param values the values to store
      *
      * @return a future containing the stored values for fluent composition
+     *
+     * @throws ValueCachingNotSupported if this cache wants to short-circuit this method completely
      */
-    default CompletableFuture<List<V>> setValues(List<K> keys, List<V> values) {
+    default CompletableFuture<List<V>> setValues(List<K> keys, List<V> values) throws ValueCachingNotSupported {
         List<CompletableFuture<V>> cacheSets = new ArrayList<>();
         for (int i = 0; i < keys.size(); i++) {
             K k = keys.get(i);
@@ -140,4 +147,15 @@ public interface ValueCache<K, V> {
      * @return a void future for error handling and fluent composition
      */
     CompletableFuture<Void> clear();
+
+
+    /**
+     * This special exception can be used to short-circuit a caching method
+     */
+    class ValueCachingNotSupported extends UnsupportedOperationException {
+        @Override
+        public synchronized Throwable fillInStackTrace() {
+            return this;
+        }
+    }
 }
