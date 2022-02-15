@@ -331,21 +331,32 @@ class DataLoaderHelper<K, V> {
         CompletableFuture<List<Try<V>>> cacheCallCF = getFromValueCache(keys);
         return cacheCallCF.thenCompose(cachedValues -> {
 
-            assertState(keys.size() == cachedValues.size(), () -> "The size of the cached values MUST be the same size as the key list");
-
             // the following is NOT a Map because keys in data loader can repeat (by design)
             // and hence "a","b","c","b" is a valid set of keys
             List<Try<V>> valuesInKeyOrder = new ArrayList<>();
             List<Integer> missedKeyIndexes = new ArrayList<>();
             List<K> missedKeys = new ArrayList<>();
             List<Object> missedKeyContexts = new ArrayList<>();
-            for (int i = 0; i < keys.size(); i++) {
-                Try<V> cacheGet = cachedValues.get(i);
-                valuesInKeyOrder.add(cacheGet);
-                if (cacheGet.isFailure()) {
+
+            // if they return a ValueCachingNotSupported exception then we insert this special marker value, and it
+            // means it's a total miss, we need to get all these keys via the batch loader
+            if (cachedValues == NOT_SUPPORTED_LIST) {
+                for (int i = 0; i < keys.size(); i++) {
+                    valuesInKeyOrder.add(ALWAYS_FAILED);
                     missedKeyIndexes.add(i);
                     missedKeys.add(keys.get(i));
                     missedKeyContexts.add(keyContexts.get(i));
+                }
+            } else {
+                assertState(keys.size() == cachedValues.size(), () -> "The size of the cached values MUST be the same size as the key list");
+                for (int i = 0; i < keys.size(); i++) {
+                    Try<V> cacheGet = cachedValues.get(i);
+                    valuesInKeyOrder.add(cacheGet);
+                    if (cacheGet.isFailure()) {
+                        missedKeyIndexes.add(i);
+                        missedKeys.add(keys.get(i));
+                        missedKeyContexts.add(keyContexts.get(i));
+                    }
                 }
             }
             if (missedKeys.isEmpty()) {
@@ -442,9 +453,16 @@ class DataLoaderHelper<K, V> {
         }
     }
 
+    private final List<Try<V>> NOT_SUPPORTED_LIST = emptyList();
+    private final CompletableFuture<List<Try<V>>> NOT_SUPPORTED = CompletableFuture.completedFuture(NOT_SUPPORTED_LIST);
+    private final Try<V> ALWAYS_FAILED = Try.alwaysFailed();
+
     private CompletableFuture<List<Try<V>>> getFromValueCache(List<K> keys) {
         try {
             return nonNull(valueCache.getValues(keys), () -> "Your ValueCache.getValues function MUST return a non null CompletableFuture");
+        } catch (ValueCache.ValueCachingNotSupported ignored) {
+            // use of a final field prevents CF object allocation for this special purpose
+            return NOT_SUPPORTED;
         } catch (RuntimeException e) {
             return CompletableFutureKit.failedFuture(e);
         }
@@ -456,16 +474,18 @@ class DataLoaderHelper<K, V> {
             if (completeValueAfterCacheSet) {
                 return nonNull(valueCache
                         .setValues(missedKeys, missedValues), () -> "Your ValueCache.setValues function MUST return a non null CompletableFuture")
-                        // we dont trust the set cache to give us the values back - we have them - lets use them
-                        // if the cache set fails - then they wont be in cache and maybe next time they will
+                        // we don't trust the set cache to give us the values back - we have them - lets use them
+                        // if the cache set fails - then they won't be in cache and maybe next time they will
                         .handle((ignored, setExIgnored) -> assembledValues);
             } else {
                 // no one is waiting for the set to happen here so if its truly async
-                // it will happen eventually but no result will be dependant on it
+                // it will happen eventually but no result will be dependent on it
                 valueCache.setValues(missedKeys, missedValues);
             }
+        } catch (ValueCache.ValueCachingNotSupported ignored) {
+            // ok no set caching is fine if they say so
         } catch (RuntimeException ignored) {
-            // if we cant set values back into the cache - so be it - this must be a faulty
+            // if we can't set values back into the cache - so be it - this must be a faulty
             // ValueCache implementation
         }
         return CompletableFuture.completedFuture(assembledValues);
