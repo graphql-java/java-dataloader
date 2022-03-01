@@ -4,8 +4,6 @@ import org.dataloader.annotations.PublicApi;
 import org.dataloader.stats.Statistics;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
