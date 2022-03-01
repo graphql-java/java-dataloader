@@ -4,12 +4,15 @@ import org.dataloader.annotations.PublicApi;
 import org.dataloader.stats.Statistics;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
@@ -131,7 +134,13 @@ public class DataLoaderRegistry {
      * {@link org.dataloader.DataLoader}s
      */
     public void dispatchAll() {
-        getDataLoaders().forEach(DataLoader::dispatch);
+        CompletableFuture<?>[] futuresToDispatch = getDataLoaders().stream()
+            .filter(dataLoader -> dataLoader.dispatchDepth() > 0)
+            .map(DataLoader::dispatch)
+            .toArray(CompletableFuture[]::new);
+        if (futuresToDispatch.length > 0) {
+            CompletableFuture.allOf(futuresToDispatch).whenComplete((__, throwable) -> dispatchAll());
+        }
     }
 
     /**
@@ -142,8 +151,17 @@ public class DataLoaderRegistry {
      */
     public int dispatchAllWithCount() {
         int sum = 0;
+        List<CompletableFuture<?>> futuresToDispatch = new ArrayList<>();
         for (DataLoader<?, ?> dataLoader : getDataLoaders()) {
-            sum += dataLoader.dispatchWithCounts().getKeysCount();
+            if (dataLoader.dispatchDepth() > 0) {
+                DispatchResult<?> dispatchResult = dataLoader.dispatchWithCounts();
+                sum += dispatchResult.getKeysCount();
+                futuresToDispatch.add(dispatchResult.getPromisedResults());
+            }
+        }
+        if (futuresToDispatch.size() > 0) {
+            CompletableFuture.allOf(futuresToDispatch.toArray(new CompletableFuture[0])).join();
+            sum += dispatchAllWithCount();
         }
         return sum;
     }

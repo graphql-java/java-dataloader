@@ -4,6 +4,7 @@ import org.dataloader.stats.Statistics;
 import org.junit.Test;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
@@ -14,6 +15,8 @@ import static org.junit.Assert.assertThat;
 
 public class DataLoaderRegistryTest {
     final BatchLoader<Object, Object> identityBatchLoader = CompletableFuture::completedFuture;
+    final BatchLoader<Integer, Integer> incrementalBatchLoader =
+        v -> CompletableFuture.supplyAsync(() -> v.stream().map(i -> ++i).collect(Collectors.toList()));
 
     @Test
     public void registration_works() {
@@ -157,6 +160,81 @@ public class DataLoaderRegistryTest {
         dispatchDepth = registry.dispatchDepth();
         assertThat(dispatchedCount, equalTo(4));
         assertThat(dispatchDepth, equalTo(0));
+    }
+
+    @Test
+    public void composed_dispatch_counts_are_maintained() {
+
+        DataLoaderRegistry registry = new DataLoaderRegistry();
+
+        DataLoader<Integer, Integer> dlA = newDataLoader(incrementalBatchLoader);
+        DataLoader<Integer, Integer> dlB = newDataLoader(incrementalBatchLoader);
+
+        registry.register("a", dlA);
+        registry.register("b", dlB);
+
+        CompletableFuture<Integer> test1 = dlA.load(10)
+            .thenCompose(dlA::load)
+            .thenCompose(dlB::load)
+            .thenCompose(dlB::load);
+        CompletableFuture<Integer> test2 = dlB.load(20)
+            .thenCompose(dlB::load)
+            .thenCompose(dlA::load)
+            .thenCompose(dlA::load);
+
+        int dispatchDepth = registry.dispatchDepth();
+        assertThat(dispatchDepth, equalTo(2));
+
+        int dispatchedCount = registry.dispatchAllWithCount();
+        dispatchDepth = registry.dispatchDepth();
+        assertThat(dispatchedCount, equalTo(8));
+        assertThat(dispatchDepth, equalTo(0));
+        assertThat(test1.join(), equalTo(14));
+        assertThat(test2.join(), equalTo(24));
+    }
+
+    @Test
+    public void composed_stats_can_be_collected() {
+
+        DataLoaderRegistry registry = new DataLoaderRegistry();
+
+        DataLoader<Integer, Integer> dlA = newDataLoader(incrementalBatchLoader);
+        DataLoader<Integer, Integer> dlB = newDataLoader(incrementalBatchLoader);
+        DataLoader<Integer, Integer> dlC = newDataLoader(incrementalBatchLoader);
+
+        registry.register("a", dlA).register("b", dlB).register("c", dlC);
+
+        CompletableFuture<Integer> test1 = dlA.load(10)
+            .thenCompose(dlB::load)
+            .thenCompose(dlC::load);
+        CompletableFuture<Integer> test2 = dlC.load(20)
+            .thenCompose(dlB::load)
+            .thenCompose(dlA::load);
+
+        registry.dispatchAll();
+        CompletableFuture.allOf(test1, test2).join(); // wait for composed dispatches to settle
+
+        CompletableFuture<Integer> test3 = dlA.load(10)
+            .thenCompose(dlB::load)
+            .thenCompose(dlC::load);
+        CompletableFuture<Integer> test4 = dlC.load(20)
+            .thenCompose(dlB::load)
+            .thenCompose(dlA::load);
+
+        registry.dispatchAll();
+        CompletableFuture.allOf(test3, test4).join(); // wait for composed dispatches to settle
+
+        Statistics statistics = registry.getStatistics();
+
+        assertThat(statistics.getLoadCount(), equalTo(12L));
+        assertThat(statistics.getBatchLoadCount(), equalTo(6L));
+        assertThat(statistics.getCacheHitCount(), equalTo(6L));
+        assertThat(statistics.getLoadErrorCount(), equalTo(0L));
+        assertThat(statistics.getBatchLoadExceptionCount(), equalTo(0L));
+        assertThat(test1.join(), equalTo(13));
+        assertThat(test2.join(), equalTo(23));
+        assertThat(test3.join(), equalTo(13));
+        assertThat(test4.join(), equalTo(23));
     }
 
     @Test
