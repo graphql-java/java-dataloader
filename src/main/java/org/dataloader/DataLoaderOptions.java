@@ -18,7 +18,7 @@ package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
 import org.dataloader.impl.Assertions;
-import org.dataloader.stats.SimpleStatisticsCollector;
+import org.dataloader.stats.NoOpStatisticsCollector;
 import org.dataloader.stats.StatisticsCollector;
 
 import java.util.Optional;
@@ -55,7 +55,7 @@ public class DataLoaderOptions {
         cachingEnabled = true;
         cachingExceptionsEnabled = true;
         maxBatchSize = -1;
-        statisticsCollector = SimpleStatisticsCollector::new;
+        statisticsCollector = NoOpStatisticsCollector::new;
         environmentProvider = NULL_PROVIDER;
         valueCacheOptions = ValueCacheOptions.newOptions();
     }
