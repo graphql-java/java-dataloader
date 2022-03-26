@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 /**
@@ -128,17 +129,34 @@ public class DataLoaderRegistry {
     }
 
     /**
+     * This method will call {@link org.dataloader.DataLoader#dispatch()} on registered {@link org.dataloader.DataLoader}s
+     * repeatedly until there are no more calls to dispatch.
+     * @return the promise of total count of dispatched keys.
+     */
+    public CompletableFuture<Integer> dispatch() {
+        AtomicInteger count = new AtomicInteger();
+        CompletableFuture<?>[] futuresToDispatch = getDataLoaders().stream()
+            .filter(dataLoader -> dataLoader.dispatchDepth() > 0)
+            .map(DataLoader::dispatchWithCounts)
+            .map(dispatchResult -> {
+                count.addAndGet(dispatchResult.getKeysCount());
+                return dispatchResult.getPromisedResults();
+            })
+            .toArray(CompletableFuture[]::new);
+        if (futuresToDispatch.length > 0) {
+            return CompletableFuture.allOf(futuresToDispatch)
+                .thenCompose(__ -> dispatch())
+                .thenApply(count::addAndGet);
+        }
+        return CompletableFuture.completedFuture(count.get());
+    }
+
+    /**
      * This will called {@link org.dataloader.DataLoader#dispatch()} on each of the registered
      * {@link org.dataloader.DataLoader}s
      */
     public void dispatchAll() {
-        CompletableFuture<?>[] futuresToDispatch = getDataLoaders().stream()
-            .filter(dataLoader -> dataLoader.dispatchDepth() > 0)
-            .map(DataLoader::dispatch)
-            .toArray(CompletableFuture[]::new);
-        if (futuresToDispatch.length > 0) {
-            CompletableFuture.allOf(futuresToDispatch).whenComplete((__, throwable) -> dispatchAll());
-        }
+        getDataLoaders().forEach(DataLoader::dispatch);
     }
 
     /**
@@ -149,17 +167,8 @@ public class DataLoaderRegistry {
      */
     public int dispatchAllWithCount() {
         int sum = 0;
-        List<CompletableFuture<?>> futuresToDispatch = new ArrayList<>();
         for (DataLoader<?, ?> dataLoader : getDataLoaders()) {
-            if (dataLoader.dispatchDepth() > 0) {
-                DispatchResult<?> dispatchResult = dataLoader.dispatchWithCounts();
-                sum += dispatchResult.getKeysCount();
-                futuresToDispatch.add(dispatchResult.getPromisedResults());
-            }
-        }
-        if (futuresToDispatch.size() > 0) {
-            CompletableFuture.allOf(futuresToDispatch.toArray(new CompletableFuture[0])).join();
-            sum += dispatchAllWithCount();
+            sum += dataLoader.dispatchWithCounts().getKeysCount();
         }
         return sum;
     }

@@ -163,38 +163,7 @@ public class DataLoaderRegistryTest {
     }
 
     @Test
-    public void composed_dispatch_counts_are_maintained() {
-
-        DataLoaderRegistry registry = new DataLoaderRegistry();
-
-        DataLoader<Integer, Integer> dlA = newDataLoader(incrementalBatchLoader);
-        DataLoader<Integer, Integer> dlB = newDataLoader(incrementalBatchLoader);
-
-        registry.register("a", dlA);
-        registry.register("b", dlB);
-
-        CompletableFuture<Integer> test1 = dlA.load(10)
-            .thenCompose(dlA::load)
-            .thenCompose(dlB::load)
-            .thenCompose(dlB::load);
-        CompletableFuture<Integer> test2 = dlB.load(20)
-            .thenCompose(dlB::load)
-            .thenCompose(dlA::load)
-            .thenCompose(dlA::load);
-
-        int dispatchDepth = registry.dispatchDepth();
-        assertThat(dispatchDepth, equalTo(2));
-
-        int dispatchedCount = registry.dispatchAllWithCount();
-        dispatchDepth = registry.dispatchDepth();
-        assertThat(dispatchedCount, equalTo(8));
-        assertThat(dispatchDepth, equalTo(0));
-        assertThat(test1.join(), equalTo(14));
-        assertThat(test2.join(), equalTo(24));
-    }
-
-    @Test
-    public void composed_stats_can_be_collected() {
+    public void composed_dispatch_counts_and_stats_are_maintained() {
 
         DataLoaderRegistry registry = new DataLoaderRegistry();
 
@@ -203,26 +172,34 @@ public class DataLoaderRegistryTest {
         DataLoader<Integer, Integer> dlC = newDataLoader(incrementalBatchLoader);
 
         registry.register("a", dlA).register("b", dlB).register("c", dlC);
-
-        CompletableFuture<Integer> test1 = dlA.load(10)
+        
+        CompletableFuture<Integer> test1 = dlA.load(100)
             .thenCompose(dlB::load)
             .thenCompose(dlC::load);
-        CompletableFuture<Integer> test2 = dlC.load(20)
+        CompletableFuture<Integer> test2 = dlC.load(200)
             .thenCompose(dlB::load)
             .thenCompose(dlA::load);
 
-        registry.dispatchAll();
-        CompletableFuture.allOf(test1, test2).join(); // wait for composed dispatches to settle
+        assertThat("Initially dispatching only top level load calls", registry.dispatchDepth(), equalTo(2));
 
-        CompletableFuture<Integer> test3 = dlA.load(10)
+        CompletableFuture<Integer> dispatchedKeys1 = registry.dispatch();
+
+        assertThat("Total count of dispatched keys in first iteration", dispatchedKeys1.join(), equalTo(6));
+        assertThat("Zero dispatch depth after first iteration done", registry.dispatchDepth(), equalTo(0));
+
+        CompletableFuture<Integer> test3 = dlA.load(100)
             .thenCompose(dlB::load)
             .thenCompose(dlC::load);
-        CompletableFuture<Integer> test4 = dlC.load(20)
+        CompletableFuture<Integer> test4 = dlC.load(200)
             .thenCompose(dlB::load)
             .thenCompose(dlA::load);
 
-        registry.dispatchAll();
-        CompletableFuture.allOf(test3, test4).join(); // wait for composed dispatches to settle
+        assertThat("Not dispatching the same keys twice", registry.dispatchDepth(), equalTo(0));
+
+        CompletableFuture<Integer> dispatchedKeys2 = registry.dispatch();
+
+        assertThat("Zero dispatched keys in second iteration", dispatchedKeys2.join(), equalTo(0));
+        assertThat("Zero dispatch depth after second iteration done", registry.dispatchDepth(), equalTo(0));
 
         Statistics statistics = registry.getStatistics();
 
@@ -231,10 +208,11 @@ public class DataLoaderRegistryTest {
         assertThat(statistics.getCacheHitCount(), equalTo(6L));
         assertThat(statistics.getLoadErrorCount(), equalTo(0L));
         assertThat(statistics.getBatchLoadExceptionCount(), equalTo(0L));
-        assertThat(test1.join(), equalTo(13));
-        assertThat(test2.join(), equalTo(23));
-        assertThat(test3.join(), equalTo(13));
-        assertThat(test4.join(), equalTo(23));
+
+        assertThat(test1.join(), equalTo(103));
+        assertThat(test2.join(), equalTo(203));
+        assertThat(test3.join(), equalTo(103));
+        assertThat(test4.join(), equalTo(203));
     }
 
     @Test
