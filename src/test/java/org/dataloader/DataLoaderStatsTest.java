@@ -24,7 +24,9 @@ public class DataLoaderStatsTest {
     @Test
     public void stats_are_collected_by_default() {
         BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
-        DataLoader<String, String> loader = newDataLoader(batchLoader);
+        DataLoader<String, String> loader = newDataLoader(batchLoader,
+                DataLoaderOptions.newOptions().setStatisticsCollector(SimpleStatisticsCollector::new)
+        );
 
         loader.load("A");
         loader.load("B");
@@ -154,7 +156,9 @@ public class DataLoaderStatsTest {
 
     @Test
     public void stats_are_collected_on_exceptions() {
-        DataLoader<String, String> loader = DataLoaderFactory.newDataLoaderWithTry(batchLoaderThatBlows);
+        DataLoader<String, String> loader = DataLoaderFactory.newDataLoaderWithTry(batchLoaderThatBlows,
+                DataLoaderOptions.newOptions().setStatisticsCollector(SimpleStatisticsCollector::new)
+        );
 
         loader.load("A");
         loader.load("exception");
