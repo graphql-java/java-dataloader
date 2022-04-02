@@ -170,7 +170,7 @@ public class DataLoaderRegistryTest {
     }
 
     @Test
-    public void composed_dispatch_counts_and_stats_are_maintained() {
+    public void composed_dispatch_counts_are_maintained() {
 
         DataLoaderRegistry registry = new DataLoaderRegistry();
 
@@ -207,14 +207,6 @@ public class DataLoaderRegistryTest {
 
         assertThat("Zero dispatched keys in second iteration", dispatchedKeys2.join(), equalTo(0));
         assertThat("Zero dispatch depth after second iteration done", registry.dispatchDepth(), equalTo(0));
-
-        Statistics statistics = registry.getStatistics();
-
-        assertThat(statistics.getLoadCount(), equalTo(12L));
-        assertThat(statistics.getBatchLoadCount(), equalTo(6L));
-        assertThat(statistics.getCacheHitCount(), equalTo(6L));
-        assertThat(statistics.getLoadErrorCount(), equalTo(0L));
-        assertThat(statistics.getBatchLoadExceptionCount(), equalTo(0L));
 
         assertThat(test1.join(), equalTo(103));
         assertThat(test2.join(), equalTo(203));
