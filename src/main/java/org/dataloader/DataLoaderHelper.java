@@ -7,13 +7,7 @@ import org.dataloader.stats.StatisticsCollector;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -97,6 +91,10 @@ class DataLoaderHelper<K, V> {
 
     public Instant getLastDispatchTime() {
         return lastDispatchTime.get();
+    }
+
+    public Collection<CompletableFuture<V>> getCacheFutures() {
+        return Collections.unmodifiableCollection(futureCache.getAll());
     }
 
     Optional<CompletableFuture<V>> getIfPresent(K key) {

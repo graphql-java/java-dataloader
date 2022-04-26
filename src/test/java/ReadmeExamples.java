@@ -16,10 +16,7 @@ import org.dataloader.stats.Statistics;
 import org.dataloader.stats.ThreadLocalStatisticsCollector;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
@@ -218,6 +215,11 @@ public class ReadmeExamples {
 
         @Override
         public CompletableFuture<Object> get(Object key) {
+            return null;
+        }
+
+        @Override
+        public Collection<CompletableFuture<Object>> getAll() {
             return null;
         }
 

@@ -25,10 +25,7 @@ import org.dataloader.stats.StatisticsCollector;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
@@ -452,6 +449,13 @@ public class DataLoader<K, V> {
         return Duration.between(helper.getLastDispatchTime(), helper.now());
     }
 
+    /**
+     * This returns a read-only collection of CompletableFutures of the cache map.
+     * @return read-only collection of CompletableFutures
+     */
+    public Collection<CompletableFuture<V>> getCacheFutures() {
+        return helper.getCacheFutures();
+    }
 
     /**
      * Requests to load the data with the specified key asynchronously, and returns a future of the resulting value.

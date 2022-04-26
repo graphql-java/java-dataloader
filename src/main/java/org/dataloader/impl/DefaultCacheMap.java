@@ -19,8 +19,7 @@ package org.dataloader.impl;
 import org.dataloader.CacheMap;
 import org.dataloader.annotations.Internal;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -58,6 +57,14 @@ public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
     @Override
     public CompletableFuture<V> get(K key) {
         return cache.get(key);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Collection<CompletableFuture<V>> getAll() {
+        return cache.values();
     }
 
     /**
