@@ -9,7 +9,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -98,10 +97,6 @@ class DataLoaderHelper<K, V> {
 
     public Instant getLastDispatchTime() {
         return lastDispatchTime.get();
-    }
-
-    public Collection<CompletableFuture<V>> getCacheFutures() {
-        return Collections.unmodifiableCollection(futureCache.getAll());
     }
 
     Optional<CompletableFuture<V>> getIfPresent(K key) {

@@ -458,7 +458,7 @@ public class DataLoader<K, V> {
      * @return read-only collection of CompletableFutures
      */
     public Collection<CompletableFuture<V>> getCacheFutures() {
-        return helper.getCacheFutures();
+        return Collections.unmodifiableCollection(futureCache.getAll());
     }
 
     /**

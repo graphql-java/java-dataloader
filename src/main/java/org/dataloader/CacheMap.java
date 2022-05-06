@@ -20,6 +20,7 @@ import org.dataloader.annotations.PublicSpi;
 import org.dataloader.impl.DefaultCacheMap;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -75,7 +76,7 @@ public interface CacheMap<K, V> {
     CompletableFuture<V> get(K key);
 
     /**
-     * Gets a collection of CompletableFutures of the cache map.
+     * Gets a read-only collection of CompletableFutures of the cache map.
      * @return the collection of cached values
      */
     Collection<CompletableFuture<V>> getAll();
