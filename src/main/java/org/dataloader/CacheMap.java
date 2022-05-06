@@ -76,7 +76,7 @@ public interface CacheMap<K, V> {
     CompletableFuture<V> get(K key);
 
     /**
-     * Gets a read-only collection of CompletableFutures of the cache map.
+     * Gets a collection of CompletableFutures from the cache map.
      * @return the collection of cached values
      */
     Collection<CompletableFuture<V>> getAll();
