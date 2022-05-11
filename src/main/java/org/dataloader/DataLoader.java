@@ -26,7 +26,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -454,14 +453,6 @@ public class DataLoader<K, V> {
     }
 
     /**
-     * This returns a read-only collection of CompletableFutures of the cache map.
-     * @return read-only collection of CompletableFutures
-     */
-    public Collection<CompletableFuture<V>> getCacheFutures() {
-        return Collections.unmodifiableCollection(futureCache.getAll());
-    }
-
-    /**
      * Requests to load the data with the specified key asynchronously, and returns a future of the resulting value.
      * <p>
      * If batching is enabled (the default), you'll have to call {@link DataLoader#dispatch()} at a later stage to
@@ -758,6 +749,23 @@ public class DataLoader<K, V> {
      */
     public Statistics getStatistics() {
         return stats.getStatistics();
+    }
+
+    /**
+     * Gets the cacheMap associated with this data loader passed in via {@link DataLoaderOptions#cacheMap()}
+     * @return the cacheMap of this data loader
+     */
+    public CacheMap<Object, V> getCacheMap() {
+        return futureCache;
+    }
+
+
+    /**
+     * Gets the valueCache associated with this data loader passed in via {@link DataLoaderOptions#valueCache()}
+     * @return the valueCache of this data loader
+     */
+    public ValueCache<K, V> getValueCache() {
+        return valueCache;
     }
 
 }

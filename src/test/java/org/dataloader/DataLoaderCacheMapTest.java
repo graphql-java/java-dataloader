@@ -28,7 +28,7 @@ public class DataLoaderCacheMapTest {
         dataLoader.load(2);
         dataLoader.load(1);
 
-        Collection<CompletableFuture<Integer>> futures = dataLoader.getCacheFutures();
+        Collection<CompletableFuture<Integer>> futures = dataLoader.getCacheMap().getAll();
         assertThat(futures.size(), equalTo(2));
     }
 
@@ -40,21 +40,10 @@ public class DataLoaderCacheMapTest {
         dataLoader.load(2).handle((v, t) -> t);
         dataLoader.load(1).handle((v, t) -> t);
 
-        Collection<CompletableFuture<Integer>> futures = dataLoader.getCacheFutures();
+        Collection<CompletableFuture<Integer>> futures = dataLoader.getCacheMap().getAll();
 
         List<CompletableFuture<Integer>> futuresList = new ArrayList<>(futures);
         assertThat(futuresList.get(0).getNumberOfDependents(), equalTo(2));
         assertThat(futuresList.get(1).getNumberOfDependents(), equalTo(1));
-    }
-
-    @Test(expected = UnsupportedOperationException.class)
-    public void should_throw_exception__on_mutation_attempt() {
-        DataLoader<Integer, Integer> dataLoader = newDataLoader(keysAsValues());
-
-        dataLoader.load(1).handle((v, t) -> t);
-
-        Collection<CompletableFuture<Integer>> futures = dataLoader.getCacheFutures();
-
-        futures.add(CompletableFuture.completedFuture(2));
     }
 }

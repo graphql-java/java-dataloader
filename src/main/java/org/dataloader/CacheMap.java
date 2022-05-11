@@ -20,7 +20,6 @@ import org.dataloader.annotations.PublicSpi;
 import org.dataloader.impl.DefaultCacheMap;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 
 /**
