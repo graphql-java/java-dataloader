@@ -2,6 +2,7 @@ package org.dataloader.fixtures;
 
 import org.dataloader.CacheMap;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -22,6 +23,11 @@ public class CustomCacheMap implements CacheMap<String, Object> {
     @Override
     public CompletableFuture<Object> get(String key) {
         return stash.get(key);
+    }
+
+    @Override
+    public Collection<CompletableFuture<Object>> getAll() {
+        return stash.values();
     }
 
     @Override

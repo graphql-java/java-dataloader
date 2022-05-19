@@ -452,7 +452,6 @@ public class DataLoader<K, V> {
         return Duration.between(helper.getLastDispatchTime(), helper.now());
     }
 
-
     /**
      * Requests to load the data with the specified key asynchronously, and returns a future of the resulting value.
      * <p>
@@ -750,6 +749,23 @@ public class DataLoader<K, V> {
      */
     public Statistics getStatistics() {
         return stats.getStatistics();
+    }
+
+    /**
+     * Gets the cacheMap associated with this data loader passed in via {@link DataLoaderOptions#cacheMap()}
+     * @return the cacheMap of this data loader
+     */
+    public CacheMap<Object, V> getCacheMap() {
+        return futureCache;
+    }
+
+
+    /**
+     * Gets the valueCache associated with this data loader passed in via {@link DataLoaderOptions#valueCache()}
+     * @return the valueCache of this data loader
+     */
+    public ValueCache<K, V> getValueCache() {
+        return valueCache;
     }
 
 }
