@@ -62,7 +62,7 @@ apply plugin: 'groovy'
 
 jar {
     manifest {
-        attributes('Automatic-Module-Name': 'com.graphqljava',
+        attributes('Automatic-Module-Name': 'org.dataloader',
 		'-exportcontents': 'org.dataloader.*',
 		'-removeheaders': 'Private-Package')
     }
