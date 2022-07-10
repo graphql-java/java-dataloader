@@ -11,8 +11,7 @@ public class IncrementCacheHitCountStatisticsContext<K> {
     }
 
     public IncrementCacheHitCountStatisticsContext(K key) {
-        this.key = key;
-        this.callContext = null;
+        this(key, null);
     }
 
     public K getKey() {

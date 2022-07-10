@@ -14,8 +14,7 @@ public class IncrementBatchLoadCountByStatisticsContext<K> {
     }
 
     public IncrementBatchLoadCountByStatisticsContext(K key, Object callContext) {
-        this.keys = Collections.singletonList(key);
-        this.callContexts = Collections.singletonList(callContext);
+        this(Collections.singletonList(key), Collections.singletonList(callContext));
     }
 
     public List<K> getKeys() {
