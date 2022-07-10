@@ -1,9 +1,15 @@
 package org.dataloader.stats;
 
+import org.dataloader.stats.context.IncrementBatchLoadCountByStatisticsContext;
+import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsContext;
+import org.dataloader.stats.context.IncrementCacheHitCountStatisticsContext;
+import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
+import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
 import org.junit.Test;
 
 import java.util.concurrent.CompletableFuture;
 
+import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 
@@ -21,11 +27,11 @@ public class StatisticsCollectorTest {
         assertThat(collector.getStatistics().getLoadErrorCount(), equalTo(0L));
 
 
-        collector.incrementLoadCount();
-        collector.incrementBatchLoadCountBy(1);
-        collector.incrementCacheHitCount();
-        collector.incrementBatchLoadExceptionCount();
-        collector.incrementLoadErrorCount();
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(1, null));
+        collector.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(1, null));
+        collector.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(singletonList(1), singletonList(null)));
+        collector.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(1, null));
 
         assertThat(collector.getStatistics().getLoadCount(), equalTo(1L));
         assertThat(collector.getStatistics().getBatchLoadCount(), equalTo(1L));
@@ -40,46 +46,46 @@ public class StatisticsCollectorTest {
 
         StatisticsCollector collector = new SimpleStatisticsCollector();
 
-        collector.incrementLoadCount();
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
 
         Statistics stats = collector.getStatistics();
         assertThat(stats.getBatchLoadRatio(), equalTo(0d));
         assertThat(stats.getCacheHitRatio(), equalTo(0d));
 
 
-        collector.incrementLoadCount();
-        collector.incrementLoadCount();
-        collector.incrementLoadCount();
-        collector.incrementBatchLoadCountBy(1);
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(1, null));
 
         stats = collector.getStatistics();
         assertThat(stats.getBatchLoadRatio(), equalTo(1d / 4d));
 
 
-        collector.incrementLoadCount();
-        collector.incrementLoadCount();
-        collector.incrementLoadCount();
-        collector.incrementCacheHitCount();
-        collector.incrementCacheHitCount();
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(1, null));
+        collector.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(1, null));
 
         stats = collector.getStatistics();
         assertThat(stats.getCacheHitRatio(), equalTo(2d / 7d));
 
-        collector.incrementLoadCount();
-        collector.incrementLoadCount();
-        collector.incrementLoadCount();
-        collector.incrementBatchLoadExceptionCount();
-        collector.incrementBatchLoadExceptionCount();
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(singletonList(1), singletonList(null)));
+        collector.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(singletonList(1), singletonList(null)));
 
         stats = collector.getStatistics();
         assertThat(stats.getBatchLoadExceptionRatio(), equalTo(2d / 10d));
 
-        collector.incrementLoadCount();
-        collector.incrementLoadCount();
-        collector.incrementLoadCount();
-        collector.incrementLoadErrorCount();
-        collector.incrementLoadErrorCount();
-        collector.incrementLoadErrorCount();
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(1, null));
+        collector.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(1, null));
+        collector.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(1, null));
 
         stats = collector.getStatistics();
         assertThat(stats.getLoadErrorRatio(), equalTo(3d / 13d));
@@ -95,9 +101,9 @@ public class StatisticsCollectorTest {
         assertThat(collector.getStatistics().getCacheHitCount(), equalTo(0L));
 
 
-        collector.incrementLoadCount();
-        collector.incrementBatchLoadCountBy(1);
-        collector.incrementCacheHitCount();
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(1, null));
+        collector.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(1, null));
 
         assertThat(collector.getStatistics().getLoadCount(), equalTo(1L));
         assertThat(collector.getStatistics().getBatchLoadCount(), equalTo(1L));
@@ -109,9 +115,9 @@ public class StatisticsCollectorTest {
 
         CompletableFuture.supplyAsync(() -> {
 
-            collector.incrementLoadCount();
-            collector.incrementBatchLoadCountBy(1);
-            collector.incrementCacheHitCount();
+            collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+            collector.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(1, null));
+            collector.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(1, null));
 
             // per thread stats here
             assertThat(collector.getStatistics().getLoadCount(), equalTo(1L));
@@ -128,9 +134,9 @@ public class StatisticsCollectorTest {
 
         // back on this main thread
 
-        collector.incrementLoadCount();
-        collector.incrementBatchLoadCountBy(1);
-        collector.incrementCacheHitCount();
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(1, null));
+        collector.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(1, null));
 
         // per thread stats here
         assertThat(collector.getStatistics().getLoadCount(), equalTo(2L));
@@ -168,11 +174,11 @@ public class StatisticsCollectorTest {
         assertThat(collector.getStatistics().getCacheMissCount(), equalTo(0L));
 
 
-        collector.incrementLoadCount();
-        collector.incrementBatchLoadCountBy(1);
-        collector.incrementCacheHitCount();
-        collector.incrementBatchLoadExceptionCount();
-        collector.incrementLoadErrorCount();
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(1, null));
+        collector.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(1, null));
+        collector.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(singletonList(1), singletonList(null)));
+        collector.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(1, null));
 
         assertThat(collector.getStatistics().getLoadCount(), equalTo(1L));
         assertThat(collector.getStatistics().getBatchLoadCount(), equalTo(1L));
@@ -199,10 +205,10 @@ public class StatisticsCollectorTest {
     @Test
     public void noop_is_just_that() throws Exception {
         StatisticsCollector collector = new NoOpStatisticsCollector();
-        collector.incrementLoadErrorCount();
-        collector.incrementBatchLoadExceptionCount();
-        collector.incrementBatchLoadCountBy(1);
-        collector.incrementCacheHitCount();
+        collector.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(1, null));
+        collector.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(singletonList(1), singletonList(null)));
+        collector.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(1, null));
+        collector.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(1, null));
 
         assertThat(collector.getStatistics().getLoadCount(), equalTo(0L));
         assertThat(collector.getStatistics().getBatchLoadCount(), equalTo(0L));

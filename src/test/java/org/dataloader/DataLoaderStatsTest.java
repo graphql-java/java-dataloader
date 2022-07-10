@@ -4,6 +4,8 @@ import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.SimpleStatisticsCollector;
 import org.dataloader.stats.Statistics;
 import org.dataloader.stats.StatisticsCollector;
+import org.dataloader.stats.context.IncrementBatchLoadCountByStatisticsContext;
+import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -63,8 +65,8 @@ public class DataLoaderStatsTest {
     public void stats_are_collected_with_specified_collector() {
         // lets prime it with some numbers so we know its ours
         StatisticsCollector collector = new SimpleStatisticsCollector();
-        collector.incrementLoadCount();
-        collector.incrementBatchLoadCountBy(1);
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(1, null));
 
         BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
         DataLoaderOptions loaderOptions = DataLoaderOptions.newOptions().setStatisticsCollector(() -> collector);

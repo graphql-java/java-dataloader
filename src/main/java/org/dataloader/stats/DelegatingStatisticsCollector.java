@@ -1,5 +1,11 @@
 package org.dataloader.stats;
 
+import org.dataloader.stats.context.IncrementBatchLoadCountByStatisticsContext;
+import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsContext;
+import org.dataloader.stats.context.IncrementCacheHitCountStatisticsContext;
+import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
+import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
+
 import static org.dataloader.impl.Assertions.nonNull;
 
 /**
@@ -20,33 +26,63 @@ public class DelegatingStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
+    public <K> long incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
+        delegateCollector.incrementLoadCount(context);
+        return collector.incrementLoadCount(context);
+    }
+
+    @Deprecated
+    @Override
     public long incrementLoadCount() {
-        delegateCollector.incrementLoadCount();
-        return collector.incrementLoadCount();
+        return incrementLoadCount(null);
     }
 
     @Override
-    public long incrementBatchLoadCountBy(long delta) {
-        delegateCollector.incrementBatchLoadCountBy(delta);
-        return collector.incrementBatchLoadCountBy(delta);
+    public <K> long incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
+        delegateCollector.incrementLoadErrorCount(context);
+        return collector.incrementLoadErrorCount(context);
     }
 
-    @Override
-    public long incrementCacheHitCount() {
-        delegateCollector.incrementCacheHitCount();
-        return collector.incrementCacheHitCount();
-    }
-
+    @Deprecated
     @Override
     public long incrementLoadErrorCount() {
-        delegateCollector.incrementLoadErrorCount();
-        return collector.incrementLoadErrorCount();
+        return incrementLoadErrorCount(null);
     }
 
     @Override
+    public <K> long incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
+        delegateCollector.incrementBatchLoadCountBy(delta, context);
+        return collector.incrementBatchLoadCountBy(delta, context);
+    }
+
+    @Deprecated
+    @Override
+    public long incrementBatchLoadCountBy(long delta) {
+        return incrementBatchLoadCountBy(delta, null);
+    }
+
+    @Override
+    public <K> long incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
+        delegateCollector.incrementBatchLoadExceptionCount(context);
+        return collector.incrementBatchLoadExceptionCount(context);
+    }
+
+    @Deprecated
+    @Override
     public long incrementBatchLoadExceptionCount() {
-        delegateCollector.incrementBatchLoadExceptionCount();
-        return collector.incrementBatchLoadExceptionCount();
+        return incrementBatchLoadExceptionCount(null);
+    }
+
+    @Override
+    public <K> long incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
+        delegateCollector.incrementCacheHitCount(context);
+        return collector.incrementCacheHitCount(context);
+    }
+
+    @Deprecated
+    @Override
+    public long incrementCacheHitCount() {
+        return incrementCacheHitCount(null);
     }
 
     /**
