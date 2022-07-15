@@ -72,6 +72,7 @@ public class DataLoaderOptions {
         this.cachingExceptionsEnabled = other.cachingExceptionsEnabled;
         this.cacheKeyFunction = other.cacheKeyFunction;
         this.cacheMap = other.cacheMap;
+        this.valueCache = other.valueCache;
         this.maxBatchSize = other.maxBatchSize;
         this.statisticsCollector = other.statisticsCollector;
         this.environmentProvider = other.environmentProvider;
