@@ -4,6 +4,11 @@ import org.dataloader.annotations.GuardedBy;
 import org.dataloader.annotations.Internal;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.StatisticsCollector;
+import org.dataloader.stats.context.IncrementBatchLoadCountByStatisticsContext;
+import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsContext;
+import org.dataloader.stats.context.IncrementCacheHitCountStatisticsContext;
+import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
+import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -105,7 +110,7 @@ class DataLoaderHelper<K, V> {
             if (cachingEnabled) {
                 Object cacheKey = getCacheKey(nonNull(key));
                 if (futureCache.containsKey(cacheKey)) {
-                    stats.incrementCacheHitCount();
+                    stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key));
                     return Optional.of(futureCache.get(cacheKey));
                 }
             }
@@ -132,7 +137,7 @@ class DataLoaderHelper<K, V> {
             boolean batchingEnabled = loaderOptions.batchingEnabled();
             boolean cachingEnabled = loaderOptions.cachingEnabled();
 
-            stats.incrementLoadCount();
+            stats.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(key, loadContext));
 
             if (cachingEnabled) {
                 return loadFromCache(key, loadContext, batchingEnabled);
@@ -223,7 +228,7 @@ class DataLoaderHelper<K, V> {
 
     @SuppressWarnings("unchecked")
     private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<Object> callContexts, List<CompletableFuture<V>> queuedFutures) {
-        stats.incrementBatchLoadCountBy(keys.size());
+        stats.incrementBatchLoadCountBy(keys.size(), new IncrementBatchLoadCountByStatisticsContext<>(keys, callContexts));
         CompletableFuture<List<V>> batchLoad = invokeLoader(keys, callContexts, loaderOptions.cachingEnabled());
         return batchLoad
                 .thenApply(values -> {
@@ -231,10 +236,12 @@ class DataLoaderHelper<K, V> {
 
                     List<K> clearCacheKeys = new ArrayList<>();
                     for (int idx = 0; idx < queuedFutures.size(); idx++) {
+                        K key = keys.get(idx);
                         V value = values.get(idx);
+                        Object callContext = callContexts.get(idx);
                         CompletableFuture<V> future = queuedFutures.get(idx);
                         if (value instanceof Throwable) {
-                            stats.incrementLoadErrorCount();
+                            stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
                             future.completeExceptionally((Throwable) value);
                             clearCacheKeys.add(keys.get(idx));
                         } else if (value instanceof Try) {
@@ -244,7 +251,7 @@ class DataLoaderHelper<K, V> {
                             if (tryValue.isSuccess()) {
                                 future.complete(tryValue.get());
                             } else {
-                                stats.incrementLoadErrorCount();
+                                stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
                                 future.completeExceptionally(tryValue.getThrowable());
                                 clearCacheKeys.add(keys.get(idx));
                             }
@@ -255,7 +262,7 @@ class DataLoaderHelper<K, V> {
                     possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
                     return values;
                 }).exceptionally(ex -> {
-                    stats.incrementBatchLoadExceptionCount();
+                    stats.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(keys, callContexts));
                     if (ex instanceof CompletionException) {
                         ex = ex.getCause();
                     }
@@ -294,7 +301,7 @@ class DataLoaderHelper<K, V> {
 
         if (futureCache.containsKey(cacheKey)) {
             // We already have a promise for this key, no need to check value cache or queue up load
-            stats.incrementCacheHitCount();
+            stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key, loadContext));
             return futureCache.get(cacheKey);
         }
 
@@ -310,7 +317,7 @@ class DataLoaderHelper<K, V> {
             loaderQueue.add(new LoaderQueueEntry<>(key, loadCallFuture, loadContext));
             return loadCallFuture;
         } else {
-            stats.incrementBatchLoadCountBy(1);
+            stats.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(key, loadContext));
             // immediate execution of batch function
             return invokeLoaderImmediately(key, loadContext, cachingEnabled);
         }

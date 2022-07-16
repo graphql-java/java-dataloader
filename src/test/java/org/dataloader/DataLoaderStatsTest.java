@@ -4,6 +4,11 @@ import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.SimpleStatisticsCollector;
 import org.dataloader.stats.Statistics;
 import org.dataloader.stats.StatisticsCollector;
+import org.dataloader.stats.context.IncrementBatchLoadCountByStatisticsContext;
+import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsContext;
+import org.dataloader.stats.context.IncrementCacheHitCountStatisticsContext;
+import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
+import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -11,9 +16,11 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertThat;
 
 /**
@@ -63,8 +70,8 @@ public class DataLoaderStatsTest {
     public void stats_are_collected_with_specified_collector() {
         // lets prime it with some numbers so we know its ours
         StatisticsCollector collector = new SimpleStatisticsCollector();
-        collector.incrementLoadCount();
-        collector.incrementBatchLoadCountBy(1);
+        collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
+        collector.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(1, null));
 
         BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
         DataLoaderOptions loaderOptions = DataLoaderOptions.newOptions().setStatisticsCollector(() -> collector);
@@ -198,5 +205,117 @@ public class DataLoaderStatsTest {
         assertThat(stats.getBatchLoadCount(), equalTo(6L));
         assertThat(stats.getBatchLoadExceptionCount(), equalTo(2L));
         assertThat(stats.getLoadErrorCount(), equalTo(3L));
+    }
+
+    /**
+     * A simple {@link StatisticsCollector} that stores the contexts passed to it.
+     */
+    private static class ContextPassingStatisticsCollector implements StatisticsCollector {
+
+        public List<IncrementLoadCountStatisticsContext<?>> incrementLoadCountStatisticsContexts = new ArrayList<>();
+        public List<IncrementLoadErrorCountStatisticsContext<?>> incrementLoadErrorCountStatisticsContexts = new ArrayList<>();
+        public List<IncrementBatchLoadCountByStatisticsContext<?>> incrementBatchLoadCountByStatisticsContexts = new ArrayList<>();
+        public List<IncrementBatchLoadExceptionCountStatisticsContext<?>> incrementBatchLoadExceptionCountStatisticsContexts = new ArrayList<>();
+        public List<IncrementCacheHitCountStatisticsContext<?>> incrementCacheHitCountStatisticsContexts = new ArrayList<>();
+
+        @Override
+        public <K> long incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
+            incrementLoadCountStatisticsContexts.add(context);
+            return 0;
+        }
+
+        @Deprecated
+        @Override
+        public long incrementLoadCount() {
+            return 0;
+        }
+
+        @Override
+        public <K> long incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
+            incrementLoadErrorCountStatisticsContexts.add(context);
+            return 0;
+        }
+
+        @Deprecated
+        @Override
+        public long incrementLoadErrorCount() {
+            return 0;
+        }
+
+        @Override
+        public <K> long incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
+            incrementBatchLoadCountByStatisticsContexts.add(context);
+            return 0;
+        }
+
+        @Deprecated
+        @Override
+        public long incrementBatchLoadCountBy(long delta) {
+            return 0;
+        }
+
+        @Override
+        public <K> long incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
+            incrementBatchLoadExceptionCountStatisticsContexts.add(context);
+            return 0;
+        }
+
+        @Deprecated
+        @Override
+        public long incrementBatchLoadExceptionCount() {
+            return 0;
+        }
+
+        @Override
+        public <K> long incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
+            incrementCacheHitCountStatisticsContexts.add(context);
+            return 0;
+        }
+
+        @Deprecated
+        @Override
+        public long incrementCacheHitCount() {
+            return 0;
+        }
+
+        @Override
+        public Statistics getStatistics() {
+            return null;
+        }
+    }
+
+    @Test
+    public void context_is_passed_through_to_collector() {
+        ContextPassingStatisticsCollector statisticsCollector = new ContextPassingStatisticsCollector();
+        DataLoader<String, Try<String>> loader = newDataLoader(batchLoaderThatBlows,
+                DataLoaderOptions.newOptions().setStatisticsCollector(() -> statisticsCollector)
+        );
+
+        loader.load("key", "keyContext");
+        assertThat(statisticsCollector.incrementLoadCountStatisticsContexts, hasSize(1));
+        assertThat(statisticsCollector.incrementLoadCountStatisticsContexts.get(0).getKey(), equalTo("key"));
+        assertThat(statisticsCollector.incrementLoadCountStatisticsContexts.get(0).getCallContext(), equalTo("keyContext"));
+
+        loader.load("key", "keyContext");
+        assertThat(statisticsCollector.incrementCacheHitCountStatisticsContexts, hasSize(1));
+        assertThat(statisticsCollector.incrementCacheHitCountStatisticsContexts.get(0).getKey(), equalTo("key"));
+        assertThat(statisticsCollector.incrementCacheHitCountStatisticsContexts.get(0).getCallContext(), equalTo("keyContext"));
+
+        loader.dispatch();
+        assertThat(statisticsCollector.incrementBatchLoadCountByStatisticsContexts, hasSize(1));
+        assertThat(statisticsCollector.incrementBatchLoadCountByStatisticsContexts.get(0).getKeys(), equalTo(singletonList("key")));
+        assertThat(statisticsCollector.incrementBatchLoadCountByStatisticsContexts.get(0).getCallContexts(), equalTo(singletonList("keyContext")));
+
+        loader.load("exception", "exceptionKeyContext");
+        loader.dispatch();
+        assertThat(statisticsCollector.incrementBatchLoadExceptionCountStatisticsContexts, hasSize(1));
+        assertThat(statisticsCollector.incrementBatchLoadExceptionCountStatisticsContexts.get(0).getKeys(), equalTo(singletonList("exception")));
+        assertThat(statisticsCollector.incrementBatchLoadExceptionCountStatisticsContexts.get(0).getCallContexts(), equalTo(singletonList("exceptionKeyContext")));
+
+        loader.load("error", "errorKeyContext");
+        loader.dispatch();
+        assertThat(statisticsCollector.incrementLoadErrorCountStatisticsContexts, hasSize(1));
+        assertThat(statisticsCollector.incrementLoadErrorCountStatisticsContexts.get(0).getKey(), equalTo("error"));
+        assertThat(statisticsCollector.incrementLoadErrorCountStatisticsContexts.get(0).getCallContext(), equalTo("errorKeyContext"));
     }
 }
