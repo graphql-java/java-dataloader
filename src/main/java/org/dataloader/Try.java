@@ -167,7 +167,7 @@ public class Try<V> {
      */
     public Throwable getThrowable() {
         if (isSuccess()) {
-            throw new UnsupportedOperationException("You have called Try.getThrowable() with a failed Try", throwable);
+            throw new UnsupportedOperationException("You have called Try.getThrowable() with a successful Try");
         }
         return throwable;
     }
