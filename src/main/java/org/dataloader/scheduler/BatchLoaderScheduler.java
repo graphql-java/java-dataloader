@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.concurrent.CompletionStage;
 
 /**
- * By default, when  {@link DataLoader#dispatch()} is called the {@link BatchLoader} / {@link MappedBatchLoader} function will be invoked
+ * By default, when  {@link DataLoader#dispatch()} is called, the {@link BatchLoader} / {@link MappedBatchLoader} function will be invoked
  * immediately.  However, you can provide your own {@link BatchLoaderScheduler} that allows this call to be done some time into
  * the future.  You will be passed a callback ({@link ScheduledBatchLoaderCall} / {@link ScheduledMappedBatchLoaderCall} and you are expected
  * to eventually call this callback method to make the batch loading happen.

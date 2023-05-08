@@ -512,7 +512,7 @@ in the load request queue will never be batched, and thus _will never complete_!
 
 ## The BatchLoader Scheduler
 
-By default, when `dataLoader.dispatch()` is called the `BatchLoader` / `MappedBatchLoader` function will be invoked
+By default, when `dataLoader.dispatch()` is called, the `BatchLoader` / `MappedBatchLoader` function will be invoked
 immediately.  
 
 However, you can provide your own `BatchLoaderScheduler` that allows this call to be done some time into
@@ -552,6 +552,8 @@ call.  The total set of keys will be sliced into batches themselves and then the
 each batch of keys.  
 
 Do not assume that a single call to `dispatch()` results in a single call to `BatchLoaderScheduler`.
+
+This code is inspired from the scheduling code in the [reference JS implementation](https://github.com/graphql/dataloader#batch-scheduling)
 
 ## Scheduled Registry Dispatching
 
