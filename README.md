@@ -510,7 +510,50 @@ and there are also gains to this different mode of operation:
 However, with batch execution control comes responsibility! If you forget to make the call to `dispatch()` then the futures
 in the load request queue will never be batched, and thus _will never complete_! So be careful when crafting your loader designs.
 
-## Scheduled Dispatching
+## The BatchLoader Scheduler
+
+By default, when `dataLoader.dispatch()` is called the `BatchLoader` / `MappedBatchLoader` function will be invoked
+immediately.  
+
+However, you can provide your own `BatchLoaderScheduler` that allows this call to be done some time into
+the future.  
+
+You will be passed a callback (`ScheduledBatchLoaderCall` / `ScheduledMapBatchLoaderCall`) and you are expected
+to eventually call this callback method to make the batch loading happen.
+
+The following is a `BatchLoaderScheduler` that waits 10 milliseconds before invoking the batch loading functions.
+
+```java
+        new BatchLoaderScheduler() {
+
+            @Override
+            public <K, V> CompletionStage<List<V>> scheduleBatchLoader(ScheduledBatchLoaderCall<V> scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+                return CompletableFuture.supplyAsync(() -> {
+                    snooze(10);
+                    return scheduledCall.invoke();
+                }).thenCompose(Function.identity());
+            }
+
+            @Override
+            public <K, V> CompletionStage<Map<K, V>> scheduleMappedBatchLoader(ScheduledMappedBatchLoaderCall<K, V> scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+                return CompletableFuture.supplyAsync(() -> {
+                    snooze(10);
+                    return scheduledCall.invoke();
+                }).thenCompose(Function.identity());
+            }
+        };
+```
+
+You are given the keys to be loaded and an optional `BatchLoaderEnvironment` for informative purposes.  You can't change the list of 
+keys that will be loaded via this mechanism say.
+
+Also note, because there is a max batch size, it is possible for this scheduling to happen N times for a given `dispatch()`
+call.  The total set of keys will be sliced into batches themselves and then the `BatchLoaderScheduler` will be called for
+each batch of keys.  
+
+Do not assume that a single call to `dispatch()` results in a single call to `BatchLoaderScheduler`.
+
+## Scheduled Registry Dispatching
 
 `ScheduledDataLoaderRegistry` is a registry that allows for dispatching to be done on a schedule. It contains a
 predicate that is evaluated (per data loader contained within) when `dispatchAll` is invoked.
