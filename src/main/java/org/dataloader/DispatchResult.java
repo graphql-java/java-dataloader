@@ -38,6 +38,8 @@ public class DispatchResult<T> {
     /**
      * If the {@link org.dataloader.registries.DispatchPredicate} associated with the dataloader
      * returns false, then the call to dispatch was not performed and this will return false.
+     * <p>
+     * Similarly, if the set the loaded keys was empty or the batching is not enabled them this will return  false
      *
      * @return true of the dispatch call was actually made or false if it was not
      */
