@@ -161,6 +161,9 @@ class DataLoaderHelper<K, V> {
 
     DispatchResult<V> dispatch() {
         boolean batchingEnabled = loaderOptions.batchingEnabled();
+        if (!loaderOptions.getDispatchPredicate().test(null, dataLoader)) {
+            return new DispatchResult<>(CompletableFuture.completedFuture(emptyList()), loaderQueue.size(), false);
+        }
         //
         // we copy the pre-loaded set of futures ready for dispatch
         final List<K> keys = new ArrayList<>();
@@ -176,7 +179,7 @@ class DataLoaderHelper<K, V> {
             lastDispatchTime.set(now());
         }
         if (!batchingEnabled || keys.isEmpty()) {
-            return new DispatchResult<>(completedFuture(emptyList()), 0);
+            return new DispatchResult<>(completedFuture(emptyList()), 0, false);
         }
         final int totalEntriesHandled = keys.size();
         //
@@ -197,7 +200,7 @@ class DataLoaderHelper<K, V> {
         } else {
             futureList = dispatchQueueBatch(keys, callContexts, queuedFutures);
         }
-        return new DispatchResult<>(futureList, totalEntriesHandled);
+        return new DispatchResult<>(futureList, totalEntriesHandled, true);
     }
 
     private CompletableFuture<List<V>> sliceIntoBatchesOfBatches(List<K> keys, List<CompletableFuture<V>> queuedFutures, List<Object> callContexts, int maxBatchSize) {

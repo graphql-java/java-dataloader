@@ -18,6 +18,7 @@ package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
 import org.dataloader.impl.Assertions;
+import org.dataloader.registries.DispatchPredicate;
 import org.dataloader.stats.NoOpStatisticsCollector;
 import org.dataloader.stats.StatisticsCollector;
 
@@ -42,6 +43,7 @@ public class DataLoaderOptions {
     private CacheKey<?> cacheKeyFunction;
     private CacheMap<?, ?> cacheMap;
     private ValueCache<?, ?> valueCache;
+    private DispatchPredicate dispatchPredicate;
     private int maxBatchSize;
     private Supplier<StatisticsCollector> statisticsCollector;
     private BatchLoaderContextProvider environmentProvider;
@@ -58,6 +60,7 @@ public class DataLoaderOptions {
         statisticsCollector = NoOpStatisticsCollector::new;
         environmentProvider = NULL_PROVIDER;
         valueCacheOptions = ValueCacheOptions.newOptions();
+        dispatchPredicate = DispatchPredicate.dispatchAlways();
     }
 
     /**
@@ -283,6 +286,25 @@ public class DataLoaderOptions {
      */
     public DataLoaderOptions setValueCache(ValueCache<?, ?> valueCache) {
         this.valueCache = valueCache;
+        return this;
+    }
+
+    /**
+     * @return the dispatch predicate of these options
+     */
+    public DispatchPredicate getDispatchPredicate() {
+        return dispatchPredicate;
+    }
+
+    /**
+     * Sets the {@link DispatchPredicate} to use for.
+     *
+     * @param dispatchPredicate the non-null DispatchPredicate to use
+     *
+     * @return the data loader options for fluent coding
+     */
+    public DataLoaderOptions dispatchPredicate(DispatchPredicate dispatchPredicate) {
+        this.dispatchPredicate = nonNull(dispatchPredicate);
         return this;
     }
 

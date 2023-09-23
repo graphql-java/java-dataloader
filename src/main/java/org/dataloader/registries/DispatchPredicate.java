@@ -6,14 +6,16 @@ import java.time.Duration;
 import java.util.Objects;
 
 /**
- * A predicate class used by {@link ScheduledDataLoaderRegistry} to decide whether to dispatch or not
+ * A predicate class used by {@link ScheduledDataLoaderRegistry}s as well as by individual
+ * {@link DataLoader}s to decide whether to dispatch or not.
  */
 @FunctionalInterface
 public interface DispatchPredicate {
     /**
-     * This predicate tests whether the data loader should be dispatched or not.
+     * This predicate tests whether the data loader should be dispatched or not.  If the predicate is associated direct to a {@link DataLoader}
+     * then the dataLoaderKey parameter will be null.
      *
-     * @param dataLoaderKey the key of the data loader when registered
+     * @param dataLoaderKey the key of the data loader when registered or null if this is a predicate associated direct with a {@link DataLoader}
      * @param dataLoader    the dataloader to dispatch
      *
      * @return true if the data loader SHOULD be dispatched
@@ -68,7 +70,7 @@ public interface DispatchPredicate {
      *
      * @param duration the length of time to check
      *
-     * @return true if the data loader has not been dispatched in duration time
+     * @return a predicate that returns true if the data loader has not been dispatched in duration time
      */
     static DispatchPredicate dispatchIfLongerThan(Duration duration) {
         return (dataLoaderKey, dataLoader) -> {
@@ -79,14 +81,32 @@ public interface DispatchPredicate {
 
     /**
      * This predicate will return true if the {@link DataLoader#dispatchDepth()} is greater than the specified depth.
-     *
+     * <p>
      * This will act as minimum batch size.  There must be more than `depth` items queued for the predicate to return true.
      *
      * @param depth the value to be greater than
      *
-     * @return true if the {@link DataLoader#dispatchDepth()} is greater than the specified depth.
+     * @return a predicate that returns true if the {@link DataLoader#dispatchDepth()} is greater than the specified depth.
      */
     static DispatchPredicate dispatchIfDepthGreaterThan(int depth) {
         return (dataLoaderKey, dataLoader) -> dataLoader.dispatchDepth() > depth;
+    }
+
+    /**
+     * This predicate will return true always
+     *
+     * @return a predicate that returns true always
+     */
+    static DispatchPredicate dispatchAlways() {
+        return (dataLoaderKey, dataLoader) -> true;
+    }
+
+    /**
+     * This predicate will never return true
+     *
+     * @return a predicate that never returns true
+     */
+    static DispatchPredicate dispatchNever() {
+        return (dataLoaderKey, dataLoader) -> false;
     }
 }
