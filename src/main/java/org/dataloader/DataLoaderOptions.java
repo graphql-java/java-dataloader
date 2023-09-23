@@ -297,9 +297,9 @@ public class DataLoaderOptions {
     }
 
     /**
-     * Sets the {@link DispatchPredicate} to use for.
+     * Sets the {@link DispatchPredicate} to use.
      *
-     * @param dispatchPredicate the non-null DispatchPredicate to use
+     * @param dispatchPredicate a non-null DispatchPredicate to use
      *
      * @return the data loader options for fluent coding
      */
