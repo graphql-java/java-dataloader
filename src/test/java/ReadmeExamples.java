@@ -12,6 +12,7 @@ import org.dataloader.fixtures.User;
 import org.dataloader.fixtures.UserManager;
 import org.dataloader.registries.DispatchPredicate;
 import org.dataloader.registries.ScheduledDataLoaderRegistry;
+import org.dataloader.scheduler.BatchLoaderScheduler;
 import org.dataloader.stats.Statistics;
 import org.dataloader.stats.ThreadLocalStatisticsCollector;
 
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -276,6 +278,30 @@ public class ReadmeExamples {
 
         DataLoaderOptions options = DataLoaderOptions.newOptions().setStatisticsCollector(() -> new ThreadLocalStatisticsCollector());
         DataLoader<String, User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader, options);
+    }
+
+    private void snooze(int i) {
+    }
+
+    private void BatchLoaderSchedulerExample() {
+        new BatchLoaderScheduler() {
+
+            @Override
+            public <K, V> CompletionStage<List<V>> scheduleBatchLoader(ScheduledBatchLoaderCall<V> scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+                return CompletableFuture.supplyAsync(() -> {
+                    snooze(10);
+                    return scheduledCall.invoke();
+                }).thenCompose(Function.identity());
+            }
+
+            @Override
+            public <K, V> CompletionStage<Map<K, V>> scheduleMappedBatchLoader(ScheduledMappedBatchLoaderCall<K, V> scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+                return CompletableFuture.supplyAsync(() -> {
+                    snooze(10);
+                    return scheduledCall.invoke();
+                }).thenCompose(Function.identity());
+            }
+        };
     }
 
     private void ScheduledDispatche() {

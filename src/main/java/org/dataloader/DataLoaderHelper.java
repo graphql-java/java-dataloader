@@ -3,6 +3,7 @@ package org.dataloader;
 import org.dataloader.annotations.GuardedBy;
 import org.dataloader.annotations.Internal;
 import org.dataloader.impl.CompletableFutureKit;
+import org.dataloader.scheduler.BatchLoaderScheduler;
 import org.dataloader.stats.StatisticsCollector;
 import org.dataloader.stats.context.IncrementBatchLoadCountByStatisticsContext;
 import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsContext;
@@ -420,10 +421,23 @@ class DataLoaderHelper<K, V> {
     @SuppressWarnings("unchecked")
     private CompletableFuture<List<V>> invokeListBatchLoader(List<K> keys, BatchLoaderEnvironment environment) {
         CompletionStage<List<V>> loadResult;
+        BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
         if (batchLoadFunction instanceof BatchLoaderWithContext) {
-            loadResult = ((BatchLoaderWithContext<K, V>) batchLoadFunction).load(keys, environment);
+            BatchLoaderWithContext<K, V> loadFunction = (BatchLoaderWithContext<K, V>) batchLoadFunction;
+            if (batchLoaderScheduler != null) {
+                BatchLoaderScheduler.ScheduledBatchLoaderCall<V> loadCall = () -> loadFunction.load(keys, environment);
+                loadResult = batchLoaderScheduler.scheduleBatchLoader(loadCall, keys, environment);
+            } else {
+                loadResult = loadFunction.load(keys, environment);
+            }
         } else {
-            loadResult = ((BatchLoader<K, V>) batchLoadFunction).load(keys);
+            BatchLoader<K, V> loadFunction = (BatchLoader<K, V>) batchLoadFunction;
+            if (batchLoaderScheduler != null) {
+                BatchLoaderScheduler.ScheduledBatchLoaderCall<V> loadCall = () -> loadFunction.load(keys);
+                loadResult = batchLoaderScheduler.scheduleBatchLoader(loadCall, keys, null);
+            } else {
+                loadResult = loadFunction.load(keys);
+            }
         }
         return nonNull(loadResult, () -> "Your batch loader function MUST return a non null CompletionStage").toCompletableFuture();
     }
@@ -437,10 +451,23 @@ class DataLoaderHelper<K, V> {
     private CompletableFuture<List<V>> invokeMapBatchLoader(List<K> keys, BatchLoaderEnvironment environment) {
         CompletionStage<Map<K, V>> loadResult;
         Set<K> setOfKeys = new LinkedHashSet<>(keys);
+        BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
         if (batchLoadFunction instanceof MappedBatchLoaderWithContext) {
-            loadResult = ((MappedBatchLoaderWithContext<K, V>) batchLoadFunction).load(setOfKeys, environment);
+            MappedBatchLoaderWithContext<K, V> loadFunction = (MappedBatchLoaderWithContext<K, V>) batchLoadFunction;
+            if (batchLoaderScheduler != null) {
+                BatchLoaderScheduler.ScheduledMappedBatchLoaderCall<K, V> loadCall = () -> loadFunction.load(setOfKeys, environment);
+                loadResult = batchLoaderScheduler.scheduleMappedBatchLoader(loadCall, keys, environment);
+            } else {
+                loadResult = loadFunction.load(setOfKeys, environment);
+            }
         } else {
-            loadResult = ((MappedBatchLoader<K, V>) batchLoadFunction).load(setOfKeys);
+            MappedBatchLoader<K, V> loadFunction = (MappedBatchLoader<K, V>) batchLoadFunction;
+            if (batchLoaderScheduler != null) {
+                BatchLoaderScheduler.ScheduledMappedBatchLoaderCall<K, V> loadCall = () -> loadFunction.load(setOfKeys);
+                loadResult = batchLoaderScheduler.scheduleMappedBatchLoader(loadCall, keys, null);
+            } else {
+                loadResult = loadFunction.load(setOfKeys);
+            }
         }
         CompletableFuture<Map<K, V>> mapBatchLoad = nonNull(loadResult, () -> "Your batch loader function MUST return a non null CompletionStage").toCompletableFuture();
         return mapBatchLoad.thenApply(map -> {

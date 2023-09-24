@@ -19,6 +19,7 @@ package org.dataloader;
 import org.dataloader.annotations.PublicApi;
 import org.dataloader.impl.Assertions;
 import org.dataloader.registries.DispatchPredicate;
+import org.dataloader.scheduler.BatchLoaderScheduler;
 import org.dataloader.stats.NoOpStatisticsCollector;
 import org.dataloader.stats.StatisticsCollector;
 
@@ -48,6 +49,7 @@ public class DataLoaderOptions {
     private Supplier<StatisticsCollector> statisticsCollector;
     private BatchLoaderContextProvider environmentProvider;
     private ValueCacheOptions valueCacheOptions;
+    private BatchLoaderScheduler batchLoaderScheduler;
 
     /**
      * Creates a new data loader options with default settings.
@@ -61,6 +63,7 @@ public class DataLoaderOptions {
         environmentProvider = NULL_PROVIDER;
         valueCacheOptions = ValueCacheOptions.newOptions();
         dispatchPredicate = DispatchPredicate.dispatchAlways();
+        batchLoaderScheduler = null;
     }
 
     /**
@@ -80,6 +83,7 @@ public class DataLoaderOptions {
         this.statisticsCollector = other.statisticsCollector;
         this.environmentProvider = other.environmentProvider;
         this.valueCacheOptions = other.valueCacheOptions;
+        batchLoaderScheduler = other.batchLoaderScheduler;
     }
 
     /**
@@ -324,6 +328,26 @@ public class DataLoaderOptions {
      */
     public DataLoaderOptions setValueCacheOptions(ValueCacheOptions valueCacheOptions) {
         this.valueCacheOptions = Assertions.nonNull(valueCacheOptions);
+        return this;
+    }
+
+    /**
+     * @return the {@link BatchLoaderScheduler} to use, which can be null
+     */
+    public BatchLoaderScheduler getBatchLoaderScheduler() {
+        return batchLoaderScheduler;
+    }
+
+    /**
+     * Sets in a new {@link BatchLoaderScheduler} that allows the call to a {@link BatchLoader} function to be scheduled
+     * to some future time.
+     *
+     * @param batchLoaderScheduler the scheduler
+     *
+     * @return the data loader options for fluent coding
+     */
+    public DataLoaderOptions setBatchLoaderScheduler(BatchLoaderScheduler batchLoaderScheduler) {
+        this.batchLoaderScheduler = batchLoaderScheduler;
         return this;
     }
 }
