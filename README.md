@@ -653,6 +653,26 @@ You will want to look at sharing the `ScheduledExecutorService` in some way betw
 otherwise you will be creating a thread per `ScheduledDataLoaderRegistry` instance created and with enough concurrent requests
 you may create too many threads.
 
+### ScheduledDataLoaderRegistry dispatching algorithm
+
+When ticker mode is **false** the `ScheduledDataLoaderRegistry` algorithm is as follows :
+
+* Nothing starts scheduled - some code must call `registry.dispatchAll()` a first time
+* Then for every `DataLoader` in the registry
+  * The `DispatchPredicate` is called to test if the data loader should be dispatched
+    * if it returns **false** then a task is scheduled to re-evaluate this specific dataloader in the near future 
+    * If it returns **true**, then `dataLoader.dispatch()` is called and the dataloader is not rescheduled again
+* The re-evaluation tasks are run periodically according to the `registry.getScheduleDuration()`
+
+When ticker mode is **true** the `ScheduledDataLoaderRegistry` algorithm is as follows:
+
+* Nothing starts scheduled - some code must call `registry.dispatchAll()` a first time
+* Then for every `DataLoader` in the registry
+    * The `DispatchPredicate` is called to test if the data loader should be dispatched
+        * if it returns **false** then a task is scheduled to re-evaluate this specific dataloader in the near future
+        * If it returns **true**, then `dataLoader.dispatch()` is called **and** a task is scheduled to re-evaluate this specific dataloader in the near future
+* The re-evaluation tasks are run periodically according to the `registry.getScheduleDuration()`
+
 ## Other information sources
 
 - [Facebook DataLoader Github repo](https://github.com/facebook/dataloader)
