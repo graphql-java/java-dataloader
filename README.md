@@ -538,6 +538,75 @@ since it was last dispatched".
 The above acts as a kind of minimum batch depth, with a time overload. It won't dispatch if the loader depth is less
 than or equal to 10 but if 200ms pass it will dispatch.
 
+## Chaining DataLoader calls
+
+It's natural to want to have chained `DataLoader` calls.
+
+```java
+        CompletableFuture<Object> chainedCalls = dataLoaderA.load("user1")
+        .thenCompose(userAsKey -> dataLoaderB.load(userAsKey));
+```
+
+However, the challenge here is how to be efficient in batching terms.
+
+This is discussed in detail in the  https://github.com/graphql-java/java-dataloader/issues/54 issue.
+
+Since CompletableFuture's are async and can complete at some time in the future, when is the best time to call
+`dispatch` again when a load call has completed to maximize batching?
+
+The most naive approach is to immediately dispatch the second chained call as follows :
+
+```java
+        CompletableFuture<Object> chainedWithImmediateDispatch = dataLoaderA.load("user1")
+                .thenCompose(userAsKey -> {
+                    CompletableFuture<Object> loadB = dataLoaderB.load(userAsKey);
+                    dataLoaderB.dispatch();
+                    return loadB;
+                });
+```
+
+The above will work however the window of batching together multiple calls to `dataLoaderB` will be very small and since
+it will likely result in batch sizes of 1.
+
+This is a very difficult problem to solve because you have to balance two competing design ideals which is to maximize the 
+batching window of secondary calls in a small window of time so you customer requests don't take longer than necessary.
+
+* If the batching window is wide you will maximize the number of keys presented to a `BatchLoader` but your request latency will increase.
+
+* If the batching window is narrow you will reduce your request latency, but also you will reduce the number of keys presented to a `BatchLoader`.
+
+
+### ScheduledDataLoaderRegistry ticker mode
+
+The `ScheduledDataLoaderRegistry` offers one solution to this called "ticker mode" where it will continually reschedule secondary
+`DataLoader` calls after the initial `dispatch()` call is made.
+
+The batch window of time is controlled by the schedule duration setup at when the `ScheduledDataLoaderRegistry` is created.
+
+```java
+        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
+        .register("a", dataLoaderA)
+        .register("b", dataLoaderB)
+        .scheduledExecutorService(executorService)
+        .schedule(Duration.ofMillis(10))
+        .tickerMode(true) // ticker mode is on
+        .build();
+
+        CompletableFuture<Object> chainedCalls = dataLoaderA.load("user1")
+        .thenCompose(userAsKey -> dataLoaderB.load(userAsKey));
+
+```
+When ticker mode is on the chained dataloader calls will complete but the batching window size will depend on how quickly
+the first level of `DataLoader` calls returned compared to the `schedule` of the `ScheduledDataLoaderRegistry`.
+
+If you use ticker mode, then you MUST `registry.close()` on the `ScheduledDataLoaderRegistry` at the end of the request (say) otherwise
+it will continue to reschedule tasks to the `ScheduledExecutorService` associated with the registry.
+
+You will want to look at sharing the `ScheduledExecutorService` in some way between requests when creating the `ScheduledDataLoaderRegistry`
+otherwise you will be creating a thread per `ScheduledDataLoaderRegistry` instance created and with enough concurrent requests
+you may create too many threads.
 
 ## Other information sources
 
