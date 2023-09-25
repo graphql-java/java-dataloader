@@ -96,7 +96,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         for (Map.Entry<String, DataLoader<?, ?>> entry : dataLoaders.entrySet()) {
             DataLoader<?, ?> dataLoader = entry.getValue();
             String key = entry.getKey();
-            dispatchOrReschedule(key, dataLoader);
+            sum += dispatchOrReschedule(key, dataLoader);
         }
         return sum;
     }
@@ -134,14 +134,16 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         }
     }
 
-    private void dispatchOrReschedule(String key, DataLoader<?, ?> dataLoader) {
+    private int dispatchOrReschedule(String key, DataLoader<?, ?> dataLoader) {
+        int sum = 0;
         boolean shouldDispatch = dispatchPredicate.test(key, dataLoader);
         if (shouldDispatch) {
-            dataLoader.dispatch();
+            sum = dataLoader.dispatchWithCounts().getKeysCount();
         }
         if (tickerMode || !shouldDispatch) {
             reschedule(key, dataLoader);
         }
+        return sum;
     }
 
     /**

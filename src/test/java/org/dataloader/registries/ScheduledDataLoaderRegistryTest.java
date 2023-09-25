@@ -284,7 +284,8 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
 
         assertThat(registry.isTickerMode(), equalTo(true));
 
-        registry.dispatchAll();
+        int count = registry.dispatchAllWithCount();
+        assertThat(count,equalTo(1));
 
         await().atMost(TWO_SECONDS).untilAtomic(done, is(true));
 
@@ -312,7 +313,8 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
 
         assertThat(registry.isTickerMode(), equalTo(false));
 
-        registry.dispatchAll();
+        int count = registry.dispatchAllWithCount();
+        assertThat(count,equalTo(1));
 
         try {
             await().atMost(TWO_SECONDS).untilAtomic(done, is(true));
