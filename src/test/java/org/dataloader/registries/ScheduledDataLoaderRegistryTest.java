@@ -1,6 +1,7 @@
 package org.dataloader.registries;
 
 import junit.framework.TestCase;
+import org.awaitility.core.ConditionTimeoutException;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderFactory;
 import org.dataloader.DataLoaderRegistry;
@@ -11,13 +12,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.awaitility.Awaitility.await;
+import static org.awaitility.Duration.TWO_SECONDS;
 import static org.dataloader.fixtures.TestKit.keysAsValues;
 import static org.dataloader.fixtures.TestKit.snooze;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 public class ScheduledDataLoaderRegistryTest extends TestCase {
@@ -256,5 +261,64 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
 
         snooze(200);
         assertEquals(counter.get(), countThen + 1);
+    }
+
+    public void test_can_tick_after_first_dispatch_for_chain_data_loaders() {
+
+        // delays much bigger than the tick rate will mean multiple calls to dispatch
+        DataLoader<String, String> dlA = TestKit.idLoaderAsync(Duration.ofMillis(100));
+        DataLoader<String, String> dlB = TestKit.idLoaderAsync(Duration.ofMillis(200));
+
+        CompletableFuture<String> chainedCF = dlA.load("AK1").thenCompose(dlB::load);
+
+        AtomicBoolean done = new AtomicBoolean();
+        chainedCF.whenComplete((v, t) -> done.set(true));
+
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
+                .register("a", dlA)
+                .register("b", dlB)
+                .dispatchPredicate(alwaysDispatch)
+                .schedule(Duration.ofMillis(10))
+                .tickerMode(true)
+                .build();
+
+        assertThat(registry.isTickerMode(), equalTo(true));
+
+        registry.dispatchAll();
+
+        await().atMost(TWO_SECONDS).untilAtomic(done, is(true));
+
+        registry.close();
+    }
+
+    public void test_chain_data_loaders_will_hang_if_not_in_ticker_mode() {
+
+        // delays much bigger than the tick rate will mean multiple calls to dispatch
+        DataLoader<String, String> dlA = TestKit.idLoaderAsync(Duration.ofMillis(100));
+        DataLoader<String, String> dlB = TestKit.idLoaderAsync(Duration.ofMillis(200));
+
+        CompletableFuture<String> chainedCF = dlA.load("AK1").thenCompose(dlB::load);
+
+        AtomicBoolean done = new AtomicBoolean();
+        chainedCF.whenComplete((v, t) -> done.set(true));
+
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
+                .register("a", dlA)
+                .register("b", dlB)
+                .dispatchPredicate(alwaysDispatch)
+                .schedule(Duration.ofMillis(10))
+                .tickerMode(false)
+                .build();
+
+        assertThat(registry.isTickerMode(), equalTo(false));
+
+        registry.dispatchAll();
+
+        try {
+            await().atMost(TWO_SECONDS).untilAtomic(done, is(true));
+            fail("This should not have completed but rather timed out");
+        } catch (ConditionTimeoutException expected) {
+        }
+        registry.close();
     }
 }
