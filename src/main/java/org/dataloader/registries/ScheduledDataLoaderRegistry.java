@@ -5,7 +5,6 @@ import org.dataloader.DataLoaderRegistry;
 import org.dataloader.annotations.ExperimentalApi;
 
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -30,14 +29,12 @@ import static org.dataloader.impl.Assertions.nonNull;
 public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements AutoCloseable {
 
     private final ScheduledExecutorService scheduledExecutorService;
-    private final DispatchPredicate dispatchPredicate;
     private final Duration schedule;
     private volatile boolean closed;
 
     private ScheduledDataLoaderRegistry(Builder builder) {
-        this.dataLoaders.putAll(builder.dataLoaders);
+        super(builder);
         this.scheduledExecutorService = builder.scheduledExecutorService;
-        this.dispatchPredicate = builder.dispatchPredicate;
         this.schedule = builder.schedule;
         this.closed = false;
     }
@@ -78,24 +75,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     }
 
     /**
-     * This will immediately dispatch the {@link DataLoader}s in the registry
-     * without testing the predicate
-     */
-    public void dispatchAllImmediately() {
-        super.dispatchAll();
-    }
-
-    /**
-     * This will immediately dispatch the {@link DataLoader}s in the registry
-     * without testing the predicate
-     *
-     * @return total number of entries that were dispatched from registered {@link org.dataloader.DataLoader}s.
-     */
-    public int dispatchAllWithCountImmediately() {
-        return super.dispatchAllWithCount();
-    }
-
-    /**
      * This will schedule a task to check the predicate and dispatch if true right now.  It will not do
      * a pre check of the preodicate like {@link #dispatchAll()} would
      */
@@ -111,7 +90,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     }
 
     private void dispatchOrReschedule(String key, DataLoader<?, ?> dataLoader) {
-        if (dispatchPredicate.test(key, dataLoader)) {
+        if (shouldDispatch(key, dataLoader)) {
             dataLoader.dispatch();
         } else {
             reschedule(key, dataLoader);
@@ -128,12 +107,10 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         return new Builder();
     }
 
-    public static class Builder {
+    public static class Builder extends DataLoaderRegistry.Builder<ScheduledDataLoaderRegistry.Builder> {
 
         private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-        private DispatchPredicate dispatchPredicate = (key, dl) -> true;
         private Duration schedule = Duration.ofMillis(10);
-        private final Map<String, DataLoader<?, ?>> dataLoaders = new HashMap<>();
 
         public Builder scheduledExecutorService(ScheduledExecutorService executorService) {
             this.scheduledExecutorService = nonNull(executorService);
@@ -142,37 +119,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
 
         public Builder schedule(Duration schedule) {
             this.schedule = schedule;
-            return this;
-        }
-
-        public Builder dispatchPredicate(DispatchPredicate dispatchPredicate) {
-            this.dispatchPredicate = nonNull(dispatchPredicate);
-            return this;
-        }
-
-        /**
-         * This will register a new dataloader
-         *
-         * @param key        the key to put the data loader under
-         * @param dataLoader the data loader to register
-         *
-         * @return this builder for a fluent pattern
-         */
-        public Builder register(String key, DataLoader<?, ?> dataLoader) {
-            dataLoaders.put(key, dataLoader);
-            return this;
-        }
-
-        /**
-         * This will combine together the data loaders in this builder with the ones
-         * from a previous {@link DataLoaderRegistry}
-         *
-         * @param otherRegistry the previous {@link DataLoaderRegistry}
-         *
-         * @return this builder for a fluent pattern
-         */
-        public Builder registerAll(DataLoaderRegistry otherRegistry) {
-            dataLoaders.putAll(otherRegistry.getDataLoadersMap());
             return this;
         }
 

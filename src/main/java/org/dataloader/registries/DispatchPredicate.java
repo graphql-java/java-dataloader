@@ -10,6 +10,16 @@ import java.util.Objects;
  */
 @FunctionalInterface
 public interface DispatchPredicate {
+
+    /**
+     * A predicate that always returns true
+     */
+    DispatchPredicate DISPATCH_ALWAYS = (dataLoaderKey, dataLoader) -> true;
+    /**
+     * A predicate that always returns false
+     */
+    DispatchPredicate DISPATCH_NEVER = (dataLoaderKey, dataLoader) -> true;
+
     /**
      * This predicate tests whether the data loader should be dispatched or not.
      *
