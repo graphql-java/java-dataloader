@@ -133,13 +133,13 @@ public class DataLoaderRegistryPredicateTest {
         DataLoader<Object, Object> dlB = newDataLoader(identityBatchLoader);
         DataLoader<Object, Object> dlC = newDataLoader(identityBatchLoader);
 
-        DispatchPredicate predicateOverAllOnThree = new CountingDispatchPredicate(3);
+        DispatchPredicate predicateOnSix = new CountingDispatchPredicate(6);
 
         DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
                 .register("a", dlA, DISPATCH_NEVER)
                 .register("b", dlB, DISPATCH_NEVER)
                 .register("c", dlC, DISPATCH_NEVER)
-                .dispatchPredicate(predicateOverAllOnThree)
+                .dispatchPredicate(predicateOnSix)
                 .build();
 
 
@@ -148,13 +148,18 @@ public class DataLoaderRegistryPredicateTest {
         CompletableFuture<Object> cfC = dlC.load("C");
 
         int count = registry.dispatchAllWithCount(); // first firing
-        // none should fire
         assertThat(count, equalTo(0));
         assertThat(cfA.isDone(), equalTo(false));
         assertThat(cfB.isDone(), equalTo(false));
         assertThat(cfC.isDone(), equalTo(false));
 
-        count = registry.dispatchAllWithCount(); // second firing but the overall been asked 3 times already
+        count = registry.dispatchAllWithCount(); // second firing but the overall been asked 6 times already
+        assertThat(count, equalTo(0));
+        assertThat(cfA.isDone(), equalTo(false));
+        assertThat(cfB.isDone(), equalTo(false));
+        assertThat(cfC.isDone(), equalTo(false));
+
+        count = registry.dispatchAllWithCount(); // third firing but the overall been asked 9 times already
         assertThat(count, equalTo(3));
         assertThat(cfA.isDone(), equalTo(true));
         assertThat(cfB.isDone(), equalTo(true));
