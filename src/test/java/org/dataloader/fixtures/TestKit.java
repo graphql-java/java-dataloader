@@ -6,8 +6,11 @@ import org.dataloader.DataLoaderFactory;
 import org.dataloader.DataLoaderOptions;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static java.util.stream.Collectors.toList;
@@ -66,5 +69,13 @@ public class TestKit {
 
     public static <T> List<T> sort(Collection<? extends T> collection) {
         return collection.stream().sorted().collect(toList());
+    }
+
+    public static <T> Set<T> asSet(T... elements) {
+        return new LinkedHashSet<>(Arrays.asList(elements));
+    }
+
+    public static <T> Set<T> asSet(Collection<T> elements) {
+        return new LinkedHashSet<>(elements);
     }
 }

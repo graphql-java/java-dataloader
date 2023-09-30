@@ -18,7 +18,7 @@ public interface DispatchPredicate {
     /**
      * A predicate that always returns false
      */
-    DispatchPredicate DISPATCH_NEVER = (dataLoaderKey, dataLoader) -> true;
+    DispatchPredicate DISPATCH_NEVER = (dataLoaderKey, dataLoader) -> false;
 
     /**
      * This predicate tests whether the data loader should be dispatched or not.

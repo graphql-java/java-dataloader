@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 /**
- * This allows data loaders to be registered together into a single place so
+ * This allows data loaders to be registered together into a single place, so
  * they can be dispatched as one.  It also allows you to retrieve data loaders by
  * name from a central place
  */
@@ -32,6 +32,7 @@ public class DataLoaderRegistry {
 
     protected DataLoaderRegistry(Builder<?> builder) {
         this.dataLoaders.putAll(builder.dataLoaders);
+        this.dataLoaderPredicates.putAll(builder.dataLoaderPredicates);
         this.dispatchPredicate = builder.dispatchPredicate;
     }
 
@@ -117,6 +118,20 @@ public class DataLoaderRegistry {
     }
 
     /**
+     * @return the current dispatch predicate
+     */
+    public DispatchPredicate getDispatchPredicate() {
+        return dispatchPredicate;
+    }
+
+    /**
+     * @return a map of data loaders to specific dispatch predicates
+     */
+    public Map<DataLoader<?, ?>, DispatchPredicate> getDataLoaderPredicates() {
+        return new LinkedHashMap<>(dataLoaderPredicates);
+    }
+
+    /**
      * This will unregister a new dataloader
      *
      * @param key the key of the data loader to unregister
@@ -153,7 +168,7 @@ public class DataLoaderRegistry {
     }
 
     /**
-     * This will called {@link org.dataloader.DataLoader#dispatch()} on each of the registered
+     * This will be called {@link org.dataloader.DataLoader#dispatch()} on each of the registered
      * {@link org.dataloader.DataLoader}s
      */
     public void dispatchAll() {
@@ -183,20 +198,12 @@ public class DataLoaderRegistry {
      * {@link org.dataloader.DataLoader}s
      */
     public int dispatchDepth() {
-        int totalDispatchDepth = 0;
-        for (Map.Entry<String, DataLoader<?, ?>> entry : dataLoaders.entrySet()) {
-            DataLoader<?, ?> dataLoader = entry.getValue();
-            String key = entry.getKey();
-            if (shouldDispatch(key, dataLoader)) {
-                totalDispatchDepth += dataLoader.dispatchDepth();
-            }
-        }
-        return totalDispatchDepth;
+        return dataLoaders.values().stream().mapToInt(DataLoader::dispatchDepth).sum();
     }
 
     /**
      * This will immediately dispatch the {@link DataLoader}s in the registry
-     * without testing the predicate
+     * without testing the predicates
      */
     public void dispatchAllImmediately() {
         dispatchAllWithCountImmediately();
@@ -204,17 +211,14 @@ public class DataLoaderRegistry {
 
     /**
      * This will immediately dispatch the {@link DataLoader}s in the registry
-     * without testing the predicate
+     * without testing the predicates
      *
      * @return total number of entries that were dispatched from registered {@link org.dataloader.DataLoader}s.
      */
     public int dispatchAllWithCountImmediately() {
-        int sum = 0;
-        for (Map.Entry<String, DataLoader<?, ?>> entry : dataLoaders.entrySet()) {
-            DataLoader<?, ?> dataLoader = entry.getValue();
-            sum += dataLoader.dispatchWithCounts().getKeysCount();
-        }
-        return sum;
+        return dataLoaders.values().stream()
+                .mapToInt(dataLoader -> dataLoader.dispatchWithCounts().getKeysCount())
+                .sum();
     }
 
 
