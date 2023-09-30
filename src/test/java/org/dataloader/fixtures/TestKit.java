@@ -1,15 +1,21 @@
 package org.dataloader.fixtures;
 
 import org.dataloader.BatchLoader;
+import org.dataloader.BatchLoaderWithContext;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderFactory;
 import org.dataloader.DataLoaderOptions;
+import org.dataloader.MappedBatchLoader;
+import org.dataloader.MappedBatchLoaderWithContext;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -20,6 +26,27 @@ public class TestKit {
 
     public static <T> BatchLoader<T, T> keysAsValues() {
         return CompletableFuture::completedFuture;
+    }
+
+    public static <T> BatchLoaderWithContext<T, T> keysAsValuesWithContext() {
+        return (keys, env) -> CompletableFuture.completedFuture(keys);
+    }
+
+    public static <K, V> MappedBatchLoader<K, V> keysAsMapOfValues() {
+        return keys -> mapOfKeys(keys);
+    }
+
+    public static <K, V> MappedBatchLoaderWithContext<K, V> keysAsMapOfValuesWithContext() {
+        return (keys, env) -> mapOfKeys(keys);
+    }
+
+    private static <K, V> CompletableFuture<Map<K, V>> mapOfKeys(Set<K> keys) {
+        Map<K, V> map = new HashMap<>();
+        for (K key : keys) {
+            //noinspection unchecked
+            map.put(key, (V) key);
+        }
+        return CompletableFuture.completedFuture(map);
     }
 
     public static <K, V> BatchLoader<K, V> keysAsValues(List<List<K>> loadCalls) {
