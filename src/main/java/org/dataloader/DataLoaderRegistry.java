@@ -1,7 +1,6 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
-import org.dataloader.registries.DispatchPredicate;
 import org.dataloader.stats.Statistics;
 
 import java.util.ArrayList;
@@ -22,18 +21,12 @@ import java.util.function.Function;
 @PublicApi
 public class DataLoaderRegistry {
     protected final Map<String, DataLoader<?, ?>> dataLoaders = new ConcurrentHashMap<>();
-    protected final Map<DataLoader<?, ?>, DispatchPredicate> dataLoaderPredicates = new ConcurrentHashMap<>();
-    protected final DispatchPredicate dispatchPredicate;
-
 
     public DataLoaderRegistry() {
-        this.dispatchPredicate = DispatchPredicate.DISPATCH_ALWAYS;
     }
 
     protected DataLoaderRegistry(Builder<?> builder) {
         this.dataLoaders.putAll(builder.dataLoaders);
-        this.dataLoaderPredicates.putAll(builder.dataLoaderPredicates);
-        this.dispatchPredicate = builder.dispatchPredicate;
     }
 
 
@@ -47,21 +40,6 @@ public class DataLoaderRegistry {
      */
     public DataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader) {
         dataLoaders.put(key, dataLoader);
-        return this;
-    }
-
-    /**
-     * This will register a new dataloader and dispatch predicate associated with that data loader
-     *
-     * @param key               the key to put the data loader under
-     * @param dataLoader        the data loader to register
-     * @param dispatchPredicate the dispatch predicate to associate with this data loader
-     *
-     * @return this registry
-     */
-    public DataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader, DispatchPredicate dispatchPredicate) {
-        dataLoaders.put(key, dataLoader);
-        dataLoaderPredicates.put(dataLoader, dispatchPredicate);
         return this;
     }
 
@@ -98,8 +76,6 @@ public class DataLoaderRegistry {
 
         this.dataLoaders.forEach(combined::register);
         registry.dataLoaders.forEach(combined::register);
-        combined.dataLoaderPredicates.putAll(this.dataLoaderPredicates);
-        combined.dataLoaderPredicates.putAll(registry.dataLoaderPredicates);
         return combined;
     }
 
@@ -118,20 +94,6 @@ public class DataLoaderRegistry {
     }
 
     /**
-     * @return the current dispatch predicate
-     */
-    public DispatchPredicate getDispatchPredicate() {
-        return dispatchPredicate;
-    }
-
-    /**
-     * @return a map of data loaders to specific dispatch predicates
-     */
-    public Map<DataLoader<?, ?>, DispatchPredicate> getDataLoaderPredicates() {
-        return new LinkedHashMap<>(dataLoaderPredicates);
-    }
-
-    /**
      * This will unregister a new dataloader
      *
      * @param key the key of the data loader to unregister
@@ -139,10 +101,7 @@ public class DataLoaderRegistry {
      * @return this registry
      */
     public DataLoaderRegistry unregister(String key) {
-        DataLoader<?, ?> dataLoader = dataLoaders.remove(key);
-        if (dataLoader != null) {
-            dataLoaderPredicates.remove(dataLoader);
-        }
+        dataLoaders.remove(key);
         return this;
     }
 
@@ -168,11 +127,11 @@ public class DataLoaderRegistry {
     }
 
     /**
-     * This will be called {@link org.dataloader.DataLoader#dispatch()} on each of the registered
+     * This will called {@link org.dataloader.DataLoader#dispatch()} on each of the registered
      * {@link org.dataloader.DataLoader}s
      */
     public void dispatchAll() {
-        dispatchAllWithCount();
+        getDataLoaders().forEach(DataLoader::dispatch);
     }
 
     /**
@@ -183,12 +142,8 @@ public class DataLoaderRegistry {
      */
     public int dispatchAllWithCount() {
         int sum = 0;
-        for (Map.Entry<String, DataLoader<?, ?>> entry : dataLoaders.entrySet()) {
-            DataLoader<?, ?> dataLoader = entry.getValue();
-            String key = entry.getKey();
-            if (shouldDispatch(key, dataLoader)) {
-                sum += dataLoader.dispatchWithCounts().getKeysCount();
-            }
+        for (DataLoader<?, ?> dataLoader : getDataLoaders()) {
+            sum += dataLoader.dispatchWithCounts().getKeysCount();
         }
         return sum;
     }
@@ -198,47 +153,11 @@ public class DataLoaderRegistry {
      * {@link org.dataloader.DataLoader}s
      */
     public int dispatchDepth() {
-        return dataLoaders.values().stream().mapToInt(DataLoader::dispatchDepth).sum();
-    }
-
-    /**
-     * This will immediately dispatch the {@link DataLoader}s in the registry
-     * without testing the predicates
-     */
-    public void dispatchAllImmediately() {
-        dispatchAllWithCountImmediately();
-    }
-
-    /**
-     * This will immediately dispatch the {@link DataLoader}s in the registry
-     * without testing the predicates
-     *
-     * @return total number of entries that were dispatched from registered {@link org.dataloader.DataLoader}s.
-     */
-    public int dispatchAllWithCountImmediately() {
-        return dataLoaders.values().stream()
-                .mapToInt(dataLoader -> dataLoader.dispatchWithCounts().getKeysCount())
-                .sum();
-    }
-
-
-    /**
-     * Returns true if the dataloader has a predicate which returned true, OR the overall
-     * registry predicate returned true.
-     *
-     * @param dataLoaderKey the key in the dataloader map
-     * @param dataLoader    the dataloader
-     *
-     * @return true if it should dispatch
-     */
-    protected boolean shouldDispatch(String dataLoaderKey, DataLoader<?, ?> dataLoader) {
-        DispatchPredicate dispatchPredicate = dataLoaderPredicates.get(dataLoader);
-        if (dispatchPredicate != null) {
-            if (dispatchPredicate.test(dataLoaderKey, dataLoader)) {
-                return true;
-            }
+        int totalDispatchDepth = 0;
+        for (DataLoader<?, ?> dataLoader : getDataLoaders()) {
+            totalDispatchDepth += dataLoader.dispatchDepth();
         }
-        return this.dispatchPredicate.test(dataLoaderKey, dataLoader);
+        return totalDispatchDepth;
     }
 
     /**
@@ -256,19 +175,15 @@ public class DataLoaderRegistry {
     /**
      * @return A builder of {@link DataLoaderRegistry}s
      */
-    public static Builder<?> newRegistry() {
-        //noinspection rawtypes
+    public static Builder newRegistry() {
         return new Builder();
     }
 
     public static class Builder<B extends Builder<B>> {
 
         private final Map<String, DataLoader<?, ?>> dataLoaders = new HashMap<>();
-        private final Map<DataLoader<?, ?>, DispatchPredicate> dataLoaderPredicates = new ConcurrentHashMap<>();
 
-        private DispatchPredicate dispatchPredicate = DispatchPredicate.DISPATCH_ALWAYS;
-
-        private B self() {
+        protected B self() {
             //noinspection unchecked
             return (B) this;
         }
@@ -287,22 +202,7 @@ public class DataLoaderRegistry {
         }
 
         /**
-         * This will register a new dataloader with a specific {@link DispatchPredicate}
-         *
-         * @param key               the key to put the data loader under
-         * @param dataLoader        the data loader to register
-         * @param dispatchPredicate the dispatch predicate
-         *
-         * @return this builder for a fluent pattern
-         */
-        public B register(String key, DataLoader<?, ?> dataLoader, DispatchPredicate dispatchPredicate) {
-            register(key, dataLoader);
-            dataLoaderPredicates.put(dataLoader, dispatchPredicate);
-            return self();
-        }
-
-        /**
-         * This will combine the data loaders in this builder with the ones
+         * This will combine together the data loaders in this builder with the ones
          * from a previous {@link DataLoaderRegistry}
          *
          * @param otherRegistry the previous {@link DataLoaderRegistry}
@@ -311,20 +211,6 @@ public class DataLoaderRegistry {
          */
         public B registerAll(DataLoaderRegistry otherRegistry) {
             dataLoaders.putAll(otherRegistry.dataLoaders);
-            dataLoaderPredicates.putAll(otherRegistry.dataLoaderPredicates);
-            return self();
-        }
-
-        /**
-         * This sets a predicate on the {@link DataLoaderRegistry} that will control
-         * whether all {@link DataLoader}s in the {@link DataLoaderRegistry }should be dispatched.
-         *
-         * @param dispatchPredicate the predicate
-         *
-         * @return this builder for a fluent pattern
-         */
-        public B dispatchPredicate(DispatchPredicate dispatchPredicate) {
-            this.dispatchPredicate = dispatchPredicate;
             return self();
         }
 

@@ -1,18 +1,23 @@
-package org.dataloader;
+package org.dataloader.registries;
 
-import org.dataloader.registries.DispatchPredicate;
+import org.dataloader.BatchLoader;
+import org.dataloader.DataLoader;
+import org.dataloader.DataLoaderRegistry;
 import org.junit.Test;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 import static java.util.Arrays.asList;
+import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.dataloader.fixtures.TestKit.asSet;
 import static org.dataloader.registries.DispatchPredicate.DISPATCH_NEVER;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
-public class DataLoaderRegistryPredicateTest {
+public class ScheduledDataLoaderRegistryPredicateTest {
     final BatchLoader<Object, Object> identityBatchLoader = CompletableFuture::completedFuture;
 
     static class CountingDispatchPredicate implements DispatchPredicate {
@@ -43,7 +48,7 @@ public class DataLoaderRegistryPredicateTest {
 
         DispatchPredicate predicateOverAll = new CountingDispatchPredicate(10);
 
-        DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
                 .register("a", dlA, predicateA)
                 .register("b", dlB, predicateB)
                 .register("c", dlC, predicateC)
@@ -82,13 +87,14 @@ public class DataLoaderRegistryPredicateTest {
         DispatchPredicate predicateB = new CountingDispatchPredicate(2);
         DispatchPredicate predicateC = new CountingDispatchPredicate(3);
 
-        DispatchPredicate predicateOverAll = new CountingDispatchPredicate(10);
+        DispatchPredicate predicateOnTen = new CountingDispatchPredicate(10);
 
-        DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
                 .register("a", dlA, predicateA)
                 .register("b", dlB, predicateB)
                 .register("c", dlC, predicateC)
-                .dispatchPredicate(predicateOverAll)
+                .dispatchPredicate(predicateOnTen)
+                .schedule(Duration.ofHours(1000)) // make this so long its never rescheduled
                 .build();
 
 
@@ -135,11 +141,12 @@ public class DataLoaderRegistryPredicateTest {
 
         DispatchPredicate predicateOnSix = new CountingDispatchPredicate(6);
 
-        DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
                 .register("a", dlA, DISPATCH_NEVER)
                 .register("b", dlB, DISPATCH_NEVER)
                 .register("c", dlC, DISPATCH_NEVER)
                 .dispatchPredicate(predicateOnSix)
+                .schedule(Duration.ofHours(1000))
                 .build();
 
 
@@ -178,11 +185,12 @@ public class DataLoaderRegistryPredicateTest {
 
         DispatchPredicate predicateOverAll = new CountingDispatchPredicate(10);
 
-        DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
                 .register("a", dlA, predicateA)
                 .register("b", dlB, predicateB)
                 .register("c", dlC, predicateC)
                 .dispatchPredicate(predicateOverAll)
+                .schedule(Duration.ofHours(1000))
                 .build();
 
 
@@ -200,4 +208,35 @@ public class DataLoaderRegistryPredicateTest {
         assertThat(cfC.join(), equalTo("C"));
     }
 
+    @Test
+    public void test_the_registry_overall_predicate_firing_works_when_on_schedule() {
+        DataLoader<Object, Object> dlA = newDataLoader(identityBatchLoader);
+        DataLoader<Object, Object> dlB = newDataLoader(identityBatchLoader);
+        DataLoader<Object, Object> dlC = newDataLoader(identityBatchLoader);
+
+        DispatchPredicate predicateOnTwenty = new CountingDispatchPredicate(20);
+
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
+                .register("a", dlA, DISPATCH_NEVER)
+                .register("b", dlB, DISPATCH_NEVER)
+                .register("c", dlC, DISPATCH_NEVER)
+                .dispatchPredicate(predicateOnTwenty)
+                .schedule(Duration.ofMillis(5))
+                .build();
+
+
+        CompletableFuture<Object> cfA = dlA.load("A");
+        CompletableFuture<Object> cfB = dlB.load("B");
+        CompletableFuture<Object> cfC = dlC.load("C");
+
+        int count = registry.dispatchAllWithCount(); // first firing
+        assertThat(count, equalTo(0));
+
+        // the calls will be rescheduled until eventually the counting predicate returns true
+        await().until(cfA::isDone, is(true));
+
+        assertThat(cfA.isDone(), equalTo(true));
+        assertThat(cfB.isDone(), equalTo(true));
+        assertThat(cfC.isDone(), equalTo(true));
+    }
 }
