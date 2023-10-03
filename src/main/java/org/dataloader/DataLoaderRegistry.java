@@ -25,7 +25,7 @@ public class DataLoaderRegistry {
     public DataLoaderRegistry() {
     }
 
-    protected DataLoaderRegistry(Builder<?> builder) {
+    private DataLoaderRegistry(Builder builder) {
         this.dataLoaders.putAll(builder.dataLoaders);
     }
 
@@ -179,14 +179,9 @@ public class DataLoaderRegistry {
         return new Builder();
     }
 
-    public static class Builder<B extends Builder<B>> {
+    public static class Builder {
 
         private final Map<String, DataLoader<?, ?>> dataLoaders = new HashMap<>();
-
-        protected B self() {
-            //noinspection unchecked
-            return (B) this;
-        }
 
         /**
          * This will register a new dataloader
@@ -196,9 +191,9 @@ public class DataLoaderRegistry {
          *
          * @return this builder for a fluent pattern
          */
-        public B register(String key, DataLoader<?, ?> dataLoader) {
+        public Builder register(String key, DataLoader<?, ?> dataLoader) {
             dataLoaders.put(key, dataLoader);
-            return self();
+            return this;
         }
 
         /**
@@ -209,9 +204,9 @@ public class DataLoaderRegistry {
          *
          * @return this builder for a fluent pattern
          */
-        public B registerAll(DataLoaderRegistry otherRegistry) {
+        public Builder registerAll(DataLoaderRegistry otherRegistry) {
             dataLoaders.putAll(otherRegistry.dataLoaders);
-            return self();
+            return this;
         }
 
         /**

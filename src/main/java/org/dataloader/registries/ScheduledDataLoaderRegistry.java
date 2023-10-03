@@ -37,7 +37,8 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     private volatile boolean closed;
 
     private ScheduledDataLoaderRegistry(Builder builder) {
-        super(builder);
+        super();
+        this.dataLoaders.putAll(builder.dataLoaders);
         this.scheduledExecutorService = builder.scheduledExecutorService;
         this.schedule = builder.schedule;
         this.closed = false;
@@ -215,23 +216,35 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         return new Builder();
     }
 
-    public static class Builder extends DataLoaderRegistry.Builder<ScheduledDataLoaderRegistry.Builder> {
+    public static class Builder {
 
+        private final Map<String, DataLoader<?, ?>> dataLoaders = new LinkedHashMap<>();
+        private final Map<DataLoader<?, ?>, DispatchPredicate> dataLoaderPredicates = new LinkedHashMap<>();
+        private DispatchPredicate dispatchPredicate = DispatchPredicate.DISPATCH_ALWAYS;
         private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
         private Duration schedule = Duration.ofMillis(10);
 
-        private final Map<DataLoader<?, ?>, DispatchPredicate> dataLoaderPredicates = new ConcurrentHashMap<>();
-
-        private DispatchPredicate dispatchPredicate = DispatchPredicate.DISPATCH_ALWAYS;
-
         public Builder scheduledExecutorService(ScheduledExecutorService executorService) {
             this.scheduledExecutorService = nonNull(executorService);
-            return self();
+            return this;
         }
 
         public Builder schedule(Duration schedule) {
             this.schedule = schedule;
-            return self();
+            return this;
+        }
+
+        /**
+         * This will register a new dataloader
+         *
+         * @param key        the key to put the data loader under
+         * @param dataLoader the data loader to register
+         *
+         * @return this builder for a fluent pattern
+         */
+        public Builder register(String key, DataLoader<?, ?> dataLoader) {
+            dataLoaders.put(key, dataLoader);
+            return this;
         }
 
 
@@ -247,7 +260,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         public Builder register(String key, DataLoader<?, ?> dataLoader, DispatchPredicate dispatchPredicate) {
             register(key, dataLoader);
             dataLoaderPredicates.put(dataLoader, dispatchPredicate);
-            return self();
+            return this;
         }
 
         /**
@@ -259,12 +272,12 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
          * @return this builder for a fluent pattern
          */
         public Builder registerAll(DataLoaderRegistry otherRegistry) {
-            super.registerAll(otherRegistry);
+            dataLoaders.putAll(otherRegistry.getDataLoadersMap());
             if (otherRegistry instanceof ScheduledDataLoaderRegistry) {
                 ScheduledDataLoaderRegistry other = (ScheduledDataLoaderRegistry) otherRegistry;
                 dataLoaderPredicates.putAll(other.dataLoaderPredicates);
             }
-            return self();
+            return this;
         }
 
         /**
@@ -277,7 +290,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
          */
         public Builder dispatchPredicate(DispatchPredicate dispatchPredicate) {
             this.dispatchPredicate = dispatchPredicate;
-            return self();
+            return this;
         }
 
         /**
