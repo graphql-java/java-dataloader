@@ -68,7 +68,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
      *
      * @return a new combined registry
      */
-    public DataLoaderRegistry combine(DataLoaderRegistry registry) {
+    public ScheduledDataLoaderRegistry combine(DataLoaderRegistry registry) {
         Builder combinedBuilder = ScheduledDataLoaderRegistry.newScheduledRegistry()
                 .dispatchPredicate(this.dispatchPredicate);
         combinedBuilder.registerAll(this);
@@ -115,7 +115,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
      *
      * @return this registry
      */
-    public DataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader, DispatchPredicate dispatchPredicate) {
+    public ScheduledDataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader, DispatchPredicate dispatchPredicate) {
         dataLoaders.put(key, dataLoader);
         dataLoaderPredicates.put(dataLoader, dispatchPredicate);
         return this;
@@ -206,8 +206,8 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     }
 
     /**
-     * By default this will create use a {@link Executors#newSingleThreadScheduledExecutor()}
-     * and a schedule duration of 10 milli seconds.
+     * By default, this will create use a {@link Executors#newSingleThreadScheduledExecutor()}
+     * and a schedule duration of 10 milliseconds.
      *
      * @return A builder of {@link ScheduledDataLoaderRegistry}s
      */
