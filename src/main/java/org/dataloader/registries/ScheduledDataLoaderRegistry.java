@@ -15,12 +15,15 @@ import java.util.concurrent.TimeUnit;
 import static org.dataloader.impl.Assertions.nonNull;
 
 /**
- * This {@link DataLoaderRegistry} will use a {@link DispatchPredicate} when {@link #dispatchAll()} is called
+ * This {@link DataLoaderRegistry} will use {@link DispatchPredicate}s when {@link #dispatchAll()} is called
  * to test (for each {@link DataLoader} in the registry) if a dispatch should proceed.  If the predicate returns false, then a task is scheduled
  * to perform that predicate dispatch again via the {@link ScheduledExecutorService}.
  * <p>
+ * It;s possible to have a {@link DispatchPredicate} per dataloader as well as a default {@link DispatchPredicate} for the
+ * whole {@link ScheduledDataLoaderRegistry}.
+ * <p>
  * This will continue to loop (test false and reschedule) until such time as the predicate returns true, in which case
- * no rescheduling will occur and you will need to call dispatch again to restart the process.
+ * no rescheduling will occur, and you will need to call dispatch again to restart the process.
  * <p>
  * If you wanted to create a ScheduledDataLoaderRegistry that started a rescheduling immediately, just create one and
  * call {@link #rescheduleNow()}.
@@ -94,17 +97,19 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     }
 
     /**
-     * @return the current dispatch predicate
-     */
-    public DispatchPredicate getDispatchPredicate() {
-        return dispatchPredicate;
-    }
-
-    /**
      * @return a map of data loaders to specific dispatch predicates
      */
     public Map<DataLoader<?, ?>, DispatchPredicate> getDataLoaderPredicates() {
         return new LinkedHashMap<>(dataLoaderPredicates);
+    }
+
+    /**
+     * There is a default predicate that applies to the whole {@link ScheduledDataLoaderRegistry}
+     *
+     * @return the default dispatch predicate
+     */
+    public DispatchPredicate getDispatchPredicate() {
+        return dispatchPredicate;
     }
 
     /**
@@ -281,7 +286,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         }
 
         /**
-         * This sets a predicate on the {@link DataLoaderRegistry} that will control
+         * This sets a default predicate on the {@link DataLoaderRegistry} that will control
          * whether all {@link DataLoader}s in the {@link DataLoaderRegistry }should be dispatched.
          *
          * @param dispatchPredicate the predicate
