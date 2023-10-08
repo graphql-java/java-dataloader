@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
 public @interface GuardedBy {
 
   /**
-   * The lock that should be held.
+   * @return The lock that should be held.
    */
   String value();
 }
