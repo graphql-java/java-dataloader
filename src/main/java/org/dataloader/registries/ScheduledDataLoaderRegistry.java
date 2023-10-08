@@ -42,7 +42,8 @@ import static org.dataloader.impl.Assertions.nonNull;
  * <p>
  * When {@link #tickerMode} is true, you really SHOULD close the registry say at the end of a request otherwise you will leave a job
  * on the {@link ScheduledExecutorService} that is continuously dispatching.
- * <p> * If you wanted to create a ScheduledDataLoaderRegistry that started a rescheduling immediately, just create one and
+ * <p>
+ * If you wanted to create a ScheduledDataLoaderRegistry that started a rescheduling immediately, just create one and
  * call {@link #rescheduleNow()}.
  * <p>
  * By default, it uses a {@link Executors#newSingleThreadScheduledExecutor()}} to schedule the tasks.  However, if you
