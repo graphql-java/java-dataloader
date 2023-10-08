@@ -10,9 +10,12 @@ import org.dataloader.MappedBatchLoaderWithContext;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -119,5 +122,13 @@ public class TestKit {
 
     public static <T> List<T> sort(Collection<? extends T> collection) {
         return collection.stream().sorted().collect(toList());
+    }
+
+    public static <T> Set<T> asSet(T... elements) {
+        return new LinkedHashSet<>(Arrays.asList(elements));
+    }
+
+    public static <T> Set<T> asSet(Collection<T> elements) {
+        return new LinkedHashSet<>(elements);
     }
 }

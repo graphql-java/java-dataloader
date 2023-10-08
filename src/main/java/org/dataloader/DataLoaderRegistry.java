@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 /**
- * This allows data loaders to be registered together into a single place so
+ * This allows data loaders to be registered together into a single place, so
  * they can be dispatched as one.  It also allows you to retrieve data loaders by
  * name from a central place
  */
