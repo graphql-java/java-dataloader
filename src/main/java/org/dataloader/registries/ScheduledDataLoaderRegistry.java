@@ -157,25 +157,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         return this;
     }
 
-    /**
-     * Returns true if the dataloader has a predicate which returned true, OR the overall
-     * registry predicate returned true.
-     *
-     * @param dataLoaderKey the key in the dataloader map
-     * @param dataLoader    the dataloader
-     *
-     * @return true if it should dispatch
-     */
-    private boolean shouldDispatch(String dataLoaderKey, DataLoader<?, ?> dataLoader) {
-        DispatchPredicate dispatchPredicate = dataLoaderPredicates.get(dataLoader);
-        if (dispatchPredicate != null) {
-            if (dispatchPredicate.test(dataLoaderKey, dataLoader)) {
-                return true;
-            }
-        }
-        return this.dispatchPredicate.test(dataLoaderKey, dataLoader);
-    }
-
     @Override
     public void dispatchAll() {
         dispatchAllWithCount();
@@ -220,6 +201,25 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
      */
     public void rescheduleNow() {
         dataLoaders.forEach(this::reschedule);
+    }
+
+    /**
+     * Returns true if the dataloader has a predicate which returned true, OR the overall
+     * registry predicate returned true.
+     *
+     * @param dataLoaderKey the key in the dataloader map
+     * @param dataLoader    the dataloader
+     *
+     * @return true if it should dispatch
+     */
+    private boolean shouldDispatch(String dataLoaderKey, DataLoader<?, ?> dataLoader) {
+        DispatchPredicate dispatchPredicate = dataLoaderPredicates.get(dataLoader);
+        if (dispatchPredicate != null) {
+            if (dispatchPredicate.test(dataLoaderKey, dataLoader)) {
+                return true;
+            }
+        }
+        return this.dispatchPredicate.test(dataLoaderKey, dataLoader);
     }
 
     private void reschedule(String key, DataLoader<?, ?> dataLoader) {
