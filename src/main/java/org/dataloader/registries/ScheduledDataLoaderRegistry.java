@@ -25,8 +25,30 @@ import static org.dataloader.impl.Assertions.nonNull;
  * This will continue to loop (test false and reschedule) until such time as the predicate returns true, in which case
  * no rescheduling will occur, and you will need to call dispatch again to restart the process.
  * <p>
+ * In the default mode, when {@link #tickerMode} is false, the registry will continue to loop (test false and reschedule) until such time as the predicate returns true, in which case
+ * no rescheduling will occur, and you will need to call dispatch again to restart the process.
+ * <p>
+ * However, when {@link #tickerMode} is true, the registry will always reschedule continuously after the first ever call to {@link #dispatchAll()}.
+ * <p>
+ * This will allow you to chain together {@link DataLoader} load calls like this :
+ * <pre>{@code
+ *   CompletableFuture<String> future = dataLoaderA.load("A")
+ *                                          .thenCompose(value -> dataLoaderB.load(value));
+ * }</pre>
+ * <p>
+ * However, it may mean your batching will not be as efficient as it might be. In environments
+ * like graphql this might mean you are too eager in fetching.  The {@link DispatchPredicate} still runs to decide if
+ * dispatch should happen however in ticker mode it will be continuously rescheduled.
+ * <p>
+ * When {@link #tickerMode} is true, you really SHOULD close the registry say at the end of a request otherwise you will leave a job
+ * on the {@link ScheduledExecutorService} that is continuously dispatching.
+ * <p>
  * If you wanted to create a ScheduledDataLoaderRegistry that started a rescheduling immediately, just create one and
  * call {@link #rescheduleNow()}.
+ * <p>
+ * By default, it uses a {@link Executors#newSingleThreadScheduledExecutor()}} to schedule the tasks.  However, if you
+ * are creating a {@link ScheduledDataLoaderRegistry} per request you will want to look at sharing this {@link ScheduledExecutorService}
+ * to avoid creating a new thread per registry created.
  * <p>
  * This code is currently marked as {@link ExperimentalApi}
  */
@@ -37,6 +59,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     private final DispatchPredicate dispatchPredicate;
     private final ScheduledExecutorService scheduledExecutorService;
     private final Duration schedule;
+    private final boolean tickerMode;
     private volatile boolean closed;
 
     private ScheduledDataLoaderRegistry(Builder builder) {
@@ -44,6 +67,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         this.dataLoaders.putAll(builder.dataLoaders);
         this.scheduledExecutorService = builder.scheduledExecutorService;
         this.schedule = builder.schedule;
+        this.tickerMode = builder.tickerMode;
         this.closed = false;
         this.dispatchPredicate = builder.dispatchPredicate;
         this.dataLoaderPredicates.putAll(builder.dataLoaderPredicates);
@@ -62,6 +86,13 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
      */
     public Duration getScheduleDuration() {
         return schedule;
+    }
+
+    /**
+     * @return true of the registry is in ticker mode or false otherwise
+     */
+    public boolean isTickerMode() {
+        return tickerMode;
     }
 
     /**
@@ -127,25 +158,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         return this;
     }
 
-    /**
-     * Returns true if the dataloader has a predicate which returned true, OR the overall
-     * registry predicate returned true.
-     *
-     * @param dataLoaderKey the key in the dataloader map
-     * @param dataLoader    the dataloader
-     *
-     * @return true if it should dispatch
-     */
-    private boolean shouldDispatch(String dataLoaderKey, DataLoader<?, ?> dataLoader) {
-        DispatchPredicate dispatchPredicate = dataLoaderPredicates.get(dataLoader);
-        if (dispatchPredicate != null) {
-            if (dispatchPredicate.test(dataLoaderKey, dataLoader)) {
-                return true;
-            }
-        }
-        return this.dispatchPredicate.test(dataLoaderKey, dataLoader);
-    }
-
     @Override
     public void dispatchAll() {
         dispatchAllWithCount();
@@ -157,11 +169,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         for (Map.Entry<String, DataLoader<?, ?>> entry : dataLoaders.entrySet()) {
             DataLoader<?, ?> dataLoader = entry.getValue();
             String key = entry.getKey();
-            if (shouldDispatch(key, dataLoader)) {
-                sum += dataLoader.dispatchWithCounts().getKeysCount();
-            } else {
-                reschedule(key, dataLoader);
-            }
+            sum += dispatchOrReschedule(key, dataLoader);
         }
         return sum;
     }
@@ -196,6 +204,25 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         dataLoaders.forEach(this::reschedule);
     }
 
+    /**
+     * Returns true if the dataloader has a predicate which returned true, OR the overall
+     * registry predicate returned true.
+     *
+     * @param dataLoaderKey the key in the dataloader map
+     * @param dataLoader    the dataloader
+     *
+     * @return true if it should dispatch
+     */
+    private boolean shouldDispatch(String dataLoaderKey, DataLoader<?, ?> dataLoader) {
+        DispatchPredicate dispatchPredicate = dataLoaderPredicates.get(dataLoader);
+        if (dispatchPredicate != null) {
+            if (dispatchPredicate.test(dataLoaderKey, dataLoader)) {
+                return true;
+            }
+        }
+        return this.dispatchPredicate.test(dataLoaderKey, dataLoader);
+    }
+
     private void reschedule(String key, DataLoader<?, ?> dataLoader) {
         if (!closed) {
             Runnable runThis = () -> dispatchOrReschedule(key, dataLoader);
@@ -203,12 +230,16 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         }
     }
 
-    private void dispatchOrReschedule(String key, DataLoader<?, ?> dataLoader) {
-        if (shouldDispatch(key, dataLoader)) {
-            dataLoader.dispatch();
-        } else {
+    private int dispatchOrReschedule(String key, DataLoader<?, ?> dataLoader) {
+        int sum = 0;
+        boolean shouldDispatch = shouldDispatch(key, dataLoader);
+        if (shouldDispatch) {
+            sum = dataLoader.dispatchWithCounts().getKeysCount();
+        }
+        if (tickerMode || !shouldDispatch) {
             reschedule(key, dataLoader);
         }
+        return sum;
     }
 
     /**
@@ -228,6 +259,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         private DispatchPredicate dispatchPredicate = DispatchPredicate.DISPATCH_ALWAYS;
         private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
         private Duration schedule = Duration.ofMillis(10);
+        private boolean tickerMode = false;
 
         public Builder scheduledExecutorService(ScheduledExecutorService executorService) {
             this.scheduledExecutorService = nonNull(executorService);
@@ -295,6 +327,20 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
          */
         public Builder dispatchPredicate(DispatchPredicate dispatchPredicate) {
             this.dispatchPredicate = dispatchPredicate;
+            return this;
+        }
+
+        /**
+         * This sets ticker mode on the registry.  When ticker mode is true the registry will
+         * continuously reschedule the data loaders for possible dispatching after the first call
+         * to dispatchAll.
+         *
+         * @param tickerMode true or false
+         *
+         * @return this builder for a fluent pattern
+         */
+        public Builder tickerMode(boolean tickerMode) {
+            this.tickerMode = tickerMode;
             return this;
         }
 

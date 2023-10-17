@@ -19,11 +19,14 @@ import org.dataloader.stats.ThreadLocalStatisticsCollector;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -304,7 +307,7 @@ public class ReadmeExamples {
         };
     }
 
-    private void ScheduledDispatche() {
+    private void ScheduledDispatcher() {
         DispatchPredicate depthOrTimePredicate = DispatchPredicate.dispatchIfDepthGreaterThan(10)
                 .or(DispatchPredicate.dispatchIfLongerThan(Duration.ofMillis(200)));
 
@@ -313,5 +316,36 @@ public class ReadmeExamples {
                 .schedule(Duration.ofMillis(10))
                 .register("users", userDataLoader)
                 .build();
+    }
+
+
+    DataLoader<String, User> dataLoaderA = DataLoaderFactory.newDataLoader(userBatchLoader);
+    DataLoader<User, Object> dataLoaderB = DataLoaderFactory.newDataLoader(keys -> {
+        return CompletableFuture.completedFuture(Collections.singletonList(1L));
+    });
+
+    private void ScheduledDispatcherChained() {
+        CompletableFuture<Object> chainedCalls = dataLoaderA.load("user1")
+                .thenCompose(userAsKey -> dataLoaderB.load(userAsKey));
+
+
+        CompletableFuture<Object> chainedWithImmediateDispatch = dataLoaderA.load("user1")
+                .thenCompose(userAsKey -> {
+                    CompletableFuture<Object> loadB = dataLoaderB.load(userAsKey);
+                    dataLoaderB.dispatch();
+                    return loadB;
+                });
+
+
+        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
+                .register("a", dataLoaderA)
+                .register("b", dataLoaderB)
+                .scheduledExecutorService(executorService)
+                .schedule(Duration.ofMillis(10))
+                .tickerMode(true) // ticker mode is on
+                .build();
+
     }
 }

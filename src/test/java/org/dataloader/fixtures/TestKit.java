@@ -8,6 +8,7 @@ import org.dataloader.DataLoaderOptions;
 import org.dataloader.MappedBatchLoader;
 import org.dataloader.MappedBatchLoaderWithContext;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -61,6 +62,23 @@ public class TestKit {
         };
     }
 
+    public static <K, V> BatchLoader<K, V> keysAsValuesAsync(Duration delay) {
+        return keysAsValuesAsync(new ArrayList<>(), delay);
+    }
+
+    public static <K, V> BatchLoader<K, V> keysAsValuesAsync(List<List<K>> loadCalls, Duration delay) {
+        return keys -> CompletableFuture.supplyAsync(() -> {
+            snooze(delay.toMillis());
+            List<K> ks = new ArrayList<>(keys);
+            loadCalls.add(ks);
+            @SuppressWarnings("unchecked")
+            List<V> values = keys.stream()
+                    .map(k -> (V) k)
+                    .collect(toList());
+            return values;
+        });
+    }
+
     public static <K, V> DataLoader<K, V> idLoader() {
         return idLoader(null, new ArrayList<>());
     }
@@ -71,6 +89,14 @@ public class TestKit {
 
     public static <K, V> DataLoader<K, V> idLoader(DataLoaderOptions options, List<List<K>> loadCalls) {
         return DataLoaderFactory.newDataLoader(keysAsValues(loadCalls), options);
+    }
+
+    public static <K, V> DataLoader<K, V> idLoaderAsync(Duration delay) {
+        return idLoaderAsync(null, new ArrayList<>(), delay);
+    }
+
+    public static <K, V> DataLoader<K, V> idLoaderAsync(DataLoaderOptions options, List<List<K>> loadCalls, Duration delay) {
+        return DataLoaderFactory.newDataLoader(keysAsValuesAsync(loadCalls, delay), options);
     }
 
     public static Collection<Integer> listFrom(int i, int max) {
@@ -85,7 +111,7 @@ public class TestKit {
         return failedFuture(new IllegalStateException("Error"));
     }
 
-    public static void snooze(int millis) {
+    public static void snooze(long millis) {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException e) {
