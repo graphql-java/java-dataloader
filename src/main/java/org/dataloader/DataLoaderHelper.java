@@ -162,12 +162,21 @@ class DataLoaderHelper<K, V> {
 
     DispatchResult<V> dispatch() {
         boolean batchingEnabled = loaderOptions.batchingEnabled();
-        //
-        // we copy the pre-loaded set of futures ready for dispatch
-        final List<K> keys = new ArrayList<>();
-        final List<Object> callContexts = new ArrayList<>();
-        final List<CompletableFuture<V>> queuedFutures = new ArrayList<>();
+        final List<K> keys;
+        final List<Object> callContexts;
+        final List<CompletableFuture<V>> queuedFutures;
         synchronized (dataLoader) {
+            int queueSize = loaderQueue.size();
+            if (queueSize == 0) {
+                lastDispatchTime.set(now());
+                return emptyDispatchResult();
+            }
+
+            // we copy the pre-loaded set of futures ready for dispatch
+            keys = new ArrayList<>(queueSize);
+            callContexts = new ArrayList<>(queueSize);
+            queuedFutures = new ArrayList<>(queueSize);
+
             loaderQueue.forEach(entry -> {
                 keys.add(entry.getKey());
                 queuedFutures.add(entry.getValue());
@@ -176,8 +185,8 @@ class DataLoaderHelper<K, V> {
             loaderQueue.clear();
             lastDispatchTime.set(now());
         }
-        if (!batchingEnabled || keys.isEmpty()) {
-            return new DispatchResult<>(completedFuture(emptyList()), 0);
+        if (!batchingEnabled) {
+            return emptyDispatchResult();
         }
         final int totalEntriesHandled = keys.size();
         //
@@ -523,5 +532,12 @@ class DataLoaderHelper<K, V> {
             // ValueCache implementation
         }
         return CompletableFuture.completedFuture(assembledValues);
+    }
+
+    private static final DispatchResult<?> EMPTY_DISPATCH_RESULT = new DispatchResult<>(completedFuture(emptyList()), 0);
+
+    @SuppressWarnings("unchecked") // Casting to any type is safe since the underlying list is empty
+    private static <T> DispatchResult<T> emptyDispatchResult() {
+        return (DispatchResult<T>) EMPTY_DISPATCH_RESULT;
     }
 }
