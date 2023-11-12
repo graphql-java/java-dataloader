@@ -257,7 +257,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         private final Map<String, DataLoader<?, ?>> dataLoaders = new LinkedHashMap<>();
         private final Map<DataLoader<?, ?>, DispatchPredicate> dataLoaderPredicates = new LinkedHashMap<>();
         private DispatchPredicate dispatchPredicate = DispatchPredicate.DISPATCH_ALWAYS;
-        private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+        private ScheduledExecutorService scheduledExecutorService;
         private Duration schedule = Duration.ofMillis(10);
         private boolean tickerMode = false;
 
@@ -348,6 +348,9 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
          * @return the newly built {@link ScheduledDataLoaderRegistry}
          */
         public ScheduledDataLoaderRegistry build() {
+            if (scheduledExecutorService == null) {
+                scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+            }
             return new ScheduledDataLoaderRegistry(this);
         }
     }
