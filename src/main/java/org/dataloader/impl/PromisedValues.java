@@ -12,11 +12,11 @@ import java.util.function.Consumer;
 import static java.util.Arrays.asList;
 
 /**
- * This allows multiple {@link CompletionStage}s to be combined together and completed
+ * This allows multiple {@link CompletionStage}s to be combined and completed
  * as one and should something go wrong, instead of throwing {@link CompletionException}s it captures the cause and returns null for that
- * data value, other wise it allows you to access them as a list of values.
+ * data value, otherwise it allows you to access them as a list of values.
  * <p>
- * This class really encapsulate a list of promised values.  It is considered finished when all of the underlying futures
+ * This class really encapsulate a list of promised values.  It is considered finished when all the underlying futures
  * are finished.
  * <p>
  * You can get that list of values via {@link #toList()}.  You can also compose a {@link CompletableFuture} of that
@@ -28,7 +28,7 @@ import static java.util.Arrays.asList;
 public interface PromisedValues<T> {
 
     /**
-     * Returns a new {@link PromisedValues} that is completed when all of
+     * Returns a new {@link PromisedValues} that is completed when all
      * the given {@link CompletionStage}s complete.  If any of the given
      * {@link CompletionStage}s complete exceptionally, then the returned
      * {@link PromisedValues} also does so.
@@ -43,7 +43,7 @@ public interface PromisedValues<T> {
     }
 
     /**
-     * Returns a new {@link PromisedValues} that is completed when all of
+     * Returns a new {@link PromisedValues} that is completed when all
      * the given {@link CompletionStage}s complete.  If any of the given
      * {@link CompletionStage}s complete exceptionally, then the returned
      * {@link PromisedValues} also does so.
@@ -59,7 +59,7 @@ public interface PromisedValues<T> {
     }
 
     /**
-     * Returns a new {@link PromisedValues} that is completed when all of
+     * Returns a new {@link PromisedValues} that is completed when all
      * the given {@link CompletionStage}s complete.  If any of the given
      * {@link CompletionStage}s complete exceptionally, then the returned
      * {@link PromisedValues} also does so.
@@ -77,7 +77,7 @@ public interface PromisedValues<T> {
 
 
     /**
-     * Returns a new {@link PromisedValues} that is completed when all of
+     * Returns a new {@link PromisedValues} that is completed when all
      * the given {@link CompletionStage}s complete.  If any of the given
      * {@link CompletionStage}s complete exceptionally, then the returned
      * {@link PromisedValues} also does so.
@@ -96,7 +96,7 @@ public interface PromisedValues<T> {
 
 
     /**
-     * Returns a new {@link PromisedValues} that is completed when all of
+     * Returns a new {@link PromisedValues} that is completed when all
      * the given {@link PromisedValues}s complete.  If any of the given
      * {@link PromisedValues}s complete exceptionally, then the returned
      * {@link PromisedValues} also does so.
@@ -111,7 +111,7 @@ public interface PromisedValues<T> {
     }
 
     /**
-     * Returns a new {@link PromisedValues} that is completed when all of
+     * Returns a new {@link PromisedValues} that is completed when all
      * the given {@link PromisedValues}s complete.  If any of the given
      * {@link PromisedValues}s complete exceptionally, then the returned
      * {@link PromisedValues} also does so.
@@ -127,7 +127,7 @@ public interface PromisedValues<T> {
     }
 
     /**
-     * Returns a new {@link PromisedValues} that is completed when all of
+     * Returns a new {@link PromisedValues} that is completed when all
      * the given {@link PromisedValues}s complete.  If any of the given
      * {@link PromisedValues}s complete exceptionally, then the returned
      * {@link PromisedValues} also does so.
@@ -144,7 +144,7 @@ public interface PromisedValues<T> {
     }
 
     /**
-     * Returns a new {@link PromisedValues} that is completed when all of
+     * Returns a new {@link PromisedValues} that is completed when all
      * the given {@link PromisedValues}s complete.  If any of the given
      * {@link PromisedValues}s complete exceptionally, then the returned
      * {@link PromisedValues} also does so.
@@ -177,7 +177,7 @@ public interface PromisedValues<T> {
     boolean succeeded();
 
     /**
-     * @return true if any of the the futures completed unsuccessfully
+     * @return true if any of the futures completed unsuccessfully
      */
     boolean failed();
 
@@ -220,7 +220,6 @@ public interface PromisedValues<T> {
      *
      * @return the value of the future
      */
-    @SuppressWarnings("unchecked")
     T get(int index);
 
     /**

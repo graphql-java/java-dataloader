@@ -15,7 +15,6 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -34,7 +33,7 @@ public class TestKit {
     }
 
     public static <K, V> MappedBatchLoader<K, V> keysAsMapOfValues() {
-        return keys -> mapOfKeys(keys);
+        return TestKit::mapOfKeys;
     }
 
     public static <K, V> MappedBatchLoaderWithContext<K, V> keysAsMapOfValuesWithContext() {
@@ -124,6 +123,7 @@ public class TestKit {
         return collection.stream().sorted().collect(toList());
     }
 
+    @SafeVarargs
     public static <T> Set<T> asSet(T... elements) {
         return new LinkedHashSet<>(Arrays.asList(elements));
     }

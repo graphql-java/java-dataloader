@@ -54,7 +54,7 @@ import java.util.concurrent.CompletionStage;
  * The back-end service returned results in a different order than we requested, likely because it was more efficient for it to
  * do so. Also, it omitted a result for key 6, which we may interpret as no value existing for that key.
  * <p>
- * To uphold the constraints of the batch function, it must return an List of values the same length as
+ * To uphold the constraints of the batch function, it must return a List of values the same length as
  * the List of keys, and re-order them to ensure each index aligns with the original keys [ 2, 9, 6, 1 ]:
  *
  * <pre>

@@ -54,7 +54,7 @@ public class BatchLoaderEnvironment {
      * {@link org.dataloader.DataLoader#loadMany(java.util.List, java.util.List)} can be given
      * a context object when it is invoked.  A list of them is present by this method.
      *
-     * @return a list of key context objects in the order they where encountered
+     * @return a list of key context objects in the order they were encountered
      */
     public List<Object> getKeyContextsList() {
         return keyContextsList;

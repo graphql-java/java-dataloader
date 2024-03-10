@@ -122,7 +122,7 @@ public interface StatisticsCollector {
     long incrementCacheHitCount();
 
     /**
-     * @return the statistics that have been gathered up to this point in time
+     * @return the statistics that have been gathered to this point in time
      */
     Statistics getStatistics();
 }

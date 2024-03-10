@@ -186,7 +186,7 @@ public class PromisedValuesImplTest {
     @Test
     public void type_generics_compile_as_expected() throws Exception {
 
-        PromisedValues<String> pvList = PromisedValues.allOf(Collections.singletonList(new CompletableFuture<String>()));
+        PromisedValues<String> pvList = PromisedValues.allOf(Collections.singletonList(new CompletableFuture<>()));
         PromisedValues<String> pvList2 = PromisedValues.allOf(Collections.<CompletionStage<String>>singletonList(new CompletableFuture<>()));
 
         assertThat(pvList, notNullValue());

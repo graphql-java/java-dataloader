@@ -9,7 +9,7 @@ import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 
 /**
- * Marks fields, methods etc as more visible than actually needed for testing purposes.
+ * Marks fields, methods etc. as more visible than actually needed for testing purposes.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = {CONSTRUCTOR, METHOD, FIELD})

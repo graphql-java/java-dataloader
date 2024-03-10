@@ -68,7 +68,7 @@ public class DataLoaderStatsTest {
 
     @Test
     public void stats_are_collected_with_specified_collector() {
-        // lets prime it with some numbers so we know its ours
+        // let's prime it with some numbers, so we know it's ours
         StatisticsCollector collector = new SimpleStatisticsCollector();
         collector.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(1, null));
         collector.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(1, null));

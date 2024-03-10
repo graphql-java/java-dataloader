@@ -65,7 +65,7 @@ public interface CacheMap<K, V> {
     /**
      * Gets the specified key from the cache map.
      * <p>
-     * May throw an exception if the key does not exists, depending on the cache map implementation that is used,
+     * May throw an exception if the key does not exist, depending on the cache map implementation that is used,
      * so be sure to check {@link CacheMap#containsKey(Object)} first.
      *
      * @param key the key to retrieve

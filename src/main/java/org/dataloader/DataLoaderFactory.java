@@ -42,7 +42,7 @@ public class DataLoaderFactory {
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
      * <p>
-     * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
+     * If it's important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
      * <p>
      * Using Try objects allows you to capture a value returned or an exception that might
@@ -109,7 +109,7 @@ public class DataLoaderFactory {
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
      * <p>
-     * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
+     * If it's important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
      * <p>
      * Using Try objects allows you to capture a value returned or an exception that might
@@ -176,7 +176,7 @@ public class DataLoaderFactory {
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
      * <p>
-     * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
+     * If it's important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
      * <p>
      * Using Try objects allows you to capture a value returned or an exception that might
@@ -244,7 +244,7 @@ public class DataLoaderFactory {
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
      * <p>
-     * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
+     * If it's important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
      * <p>
      * Using Try objects allows you to capture a value returned or an exception that might

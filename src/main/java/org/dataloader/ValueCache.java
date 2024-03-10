@@ -15,11 +15,11 @@ import java.util.concurrent.CompletableFuture;
  * <p>
  * It differs from {@link CacheMap} which is in fact a cache of promised values aka {@link CompletableFuture}&lt;V&gt;'s.
  * <p>
- * {@link ValueCache} is more suited to be a wrapper of a long-lived or externallly cached values.  {@link CompletableFuture}s cant
+ * {@link ValueCache} is more suited to be a wrapper of a long-lived or externally cached values.  {@link CompletableFuture}s can't
  * be easily placed in an external cache outside the JVM say, hence the need for the {@link ValueCache}.
  * <p>
  * {@link DataLoader}s use a two stage cache strategy if caching is enabled.  If the {@link CacheMap} already has the promise to a value
- * that is used.  If not then the {@link ValueCache} is asked for a value, if it has one then that is returned (and cached as a promise in the {@link CacheMap}.
+ * that is used.  If not then the {@link ValueCache} is asked for a value, if it has one then that is returned (and cached as a promise in the {@link CacheMap}).
  * <p>
  * If there is no value then the key is queued and loaded via the {@link BatchLoader} calls.  The returned values will then be stored in
  * the {@link ValueCache} and the promises to those values are also stored in the {@link CacheMap}.
@@ -29,7 +29,7 @@ import java.util.concurrent.CompletableFuture;
  * out of the box.
  * <p>
  * The API signature uses {@link CompletableFuture}s because the backing implementation MAY be a remote external cache
- * and hence exceptions may happen in retrieving values and they may take time to complete.
+ * and hence exceptions may happen in retrieving values, and they may take time to complete.
  *
  * @param <K> the type of cache keys
  * @param <V> the type of cache values
@@ -67,8 +67,8 @@ public interface ValueCache<K, V> {
     CompletableFuture<V> get(K key);
 
     /**
-     * Gets the specified keys from the value cache, in a batch call.  If your underlying cache cant do batch caching retrieval
-     * then do not implement this method and it will delegate back to {@link #get(Object)} for you
+     * Gets the specified keys from the value cache, in a batch call.  If your underlying cache cannot do batch caching retrieval
+     * then do not implement this method, and it will delegate back to {@link #get(Object)} for you
      * <p>
      * Each item in the returned list of values is a {@link Try}.  If the key could not be found then a failed Try just be returned otherwise
      * a successful Try contain the cached value is returned.
@@ -104,8 +104,8 @@ public interface ValueCache<K, V> {
     CompletableFuture<V> set(K key, V value);
 
     /**
-     * Stores the value with the specified keys, or updates it if the keys if they already exist.  If your underlying cache cant do batch caching setting
-     * then do not implement this method and it will delegate back to {@link #set(Object, Object)} for you
+     * Stores the value with the specified keys, or updates it if the keys if they already exist.  If your underlying cache can't do batch caching setting
+     * then do not implement this method, and it will delegate back to {@link #set(Object, Object)} for you
      *
      * @param keys   the keys to store
      * @param values the values to store

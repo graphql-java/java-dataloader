@@ -47,7 +47,7 @@ public interface BatchLoaderScheduler {
      *
      * @param scheduledCall the callback that needs to be invoked to allow the {@link BatchLoader} to proceed.
      * @param keys          this is the list of keys that will be passed to the {@link BatchLoader}.
-     *                      This is provided only for informative reasons and you cant change the keys that are used
+     *                      This is provided only for informative reasons, and you can't change the keys that are used
      * @param environment   this is the {@link BatchLoaderEnvironment} in place,
      *                      which can be null if it's a simple {@link BatchLoader} call
      * @param <K>           the key type
@@ -62,7 +62,7 @@ public interface BatchLoaderScheduler {
      *
      * @param scheduledCall the callback that needs to be invoked to allow the {@link MappedBatchLoader} to proceed.
      * @param keys          this is the list of keys that will be passed to the {@link MappedBatchLoader}.
-     *                      This is provided only for informative reasons and you cant change the keys that are used
+     *                      This is provided only for informative reasons and, you can't change the keys that are used
      * @param environment   this is the {@link BatchLoaderEnvironment} in place,
      *                      which can be null if it's a simple {@link MappedBatchLoader} call
      * @param <K>           the key type

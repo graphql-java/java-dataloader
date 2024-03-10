@@ -144,7 +144,7 @@ public class DataLoaderTest {
         DispatchResult<?> dispatchResult = identityLoader.dispatchWithCounts();
 
         await().until(() -> future1.isDone() && future2.isDone());
-        assertThat(dispatchResult.getKeysCount(), equalTo(2)); // its two because its the number dispatched (by key) not the load calls
+        assertThat(dispatchResult.getKeysCount(), equalTo(2)); // its two because it's the number dispatched (by key) not the load calls
         assertThat(dispatchResult.getPromisedResults().isDone(), equalTo(true));
     }
 

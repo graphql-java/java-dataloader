@@ -34,8 +34,8 @@ import static org.dataloader.impl.Assertions.assertState;
 import static org.dataloader.impl.Assertions.nonNull;
 
 /**
- * This helps break up the large DataLoader class functionality and it contains the logic to dispatch the
- * promises on behalf of its peer dataloader
+ * This helps break up the large DataLoader class functionality, and it contains the logic to dispatch the
+ * promises on behalf of its peer dataloader.
  *
  * @param <K> the type of keys
  * @param <V> the type of values
@@ -148,13 +148,11 @@ class DataLoaderHelper<K, V> {
         }
     }
 
-    @SuppressWarnings("unchecked")
     Object getCacheKey(K key) {
         return loaderOptions.cacheKeyFunction().isPresent() ?
                 loaderOptions.cacheKeyFunction().get().getKey(key) : key;
     }
 
-    @SuppressWarnings("unchecked")
     Object getCacheKeyWithContext(K key, Object context) {
         return loaderOptions.cacheKeyFunction().isPresent() ?
                 loaderOptions.cacheKeyFunction().get().getKeyWithContext(key, context) : key;
@@ -296,9 +294,9 @@ class DataLoaderHelper<K, V> {
         if (keys.isEmpty()) {
             return;
         }
-        // by default we don't clear the cached view of this entry to avoid
-        // frequently loading the same error.  This works for short lived request caches
-        // but might work against long lived caches.  Hence we have an option that allows
+        // by default, we don't clear the cached view of this entry to avoid
+        // frequently loading the same error.  This works for short-lived request caches
+        // but might work against long-lived caches. Hence, we have an option that allows
         // it to be cleared
         if (!loaderOptions.cachingExceptionsEnabled()) {
             keys.forEach(dataLoader::clear);
@@ -384,7 +382,7 @@ class DataLoaderHelper<K, V> {
                 return completedFuture(assembledValues);
             } else {
                 //
-                // we missed some of the keys from cache, so send them to the batch loader
+                // we missed some keys from cache, so send them to the batch loader
                 // and then fill in their values
                 //
                 CompletableFuture<List<V>> batchLoad = invokeLoader(missedKeys, missedKeyContexts);

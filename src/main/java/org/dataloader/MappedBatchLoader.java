@@ -16,13 +16,12 @@
 
 package org.dataloader;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
 
 /**
- * A function that is invoked for batch loading a map of of data values indicated by the provided set of keys. The
+ * A function that is invoked for batch loading a map of data values indicated by the provided set of keys. The
  * function returns a promise of a map of results of individual load requests.
  * <p>
  * There are a few constraints that must be upheld:

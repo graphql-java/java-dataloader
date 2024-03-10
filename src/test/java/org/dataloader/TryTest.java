@@ -15,7 +15,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-@SuppressWarnings("ConstantConditions")
 public class TryTest {
 
     interface RunThatCanThrow {
@@ -33,6 +32,7 @@ public class TryTest {
         Assert.fail("Expected throwable :  " + throwableClass.getName());
     }
 
+    @SuppressWarnings("SameParameterValue")
     private void assertFailure(Try<String> sTry, String expectedString) {
         assertThat(sTry.isSuccess(), equalTo(false));
         assertThat(sTry.isFailure(), equalTo(true));
@@ -51,21 +51,21 @@ public class TryTest {
     }
 
     @Test
-    public void tryFailed() throws Exception {
+    public void tryFailed() {
         Try<String> sTry = Try.failed(new RuntimeException("Goodbye Cruel World"));
 
         assertFailure(sTry, "Goodbye Cruel World");
     }
 
     @Test
-    public void trySucceeded() throws Exception {
+    public void trySucceeded() {
         Try<String> sTry = Try.succeeded("Hello World");
 
         assertSuccess(sTry, "Hello World");
     }
 
     @Test
-    public void tryCallable() throws Exception {
+    public void tryCallable() {
         Try<String> sTry = Try.tryCall(() -> "Hello World");
 
         assertSuccess(sTry, "Hello World");
@@ -78,7 +78,7 @@ public class TryTest {
     }
 
     @Test
-    public void triedStage() throws Exception {
+    public void triedStage() {
         CompletionStage<Try<String>> sTry = Try.tryStage(CompletableFuture.completedFuture("Hello World"));
 
         sTry.thenAccept(stageTry -> assertSuccess(stageTry, "Hello World"));
@@ -93,7 +93,7 @@ public class TryTest {
     }
 
     @Test
-    public void map() throws Exception {
+    public void map() {
         Try<Integer> iTry = Try.succeeded(666);
 
         Try<String> sTry = iTry.map(Object::toString);
@@ -106,7 +106,7 @@ public class TryTest {
     }
 
     @Test
-    public void flatMap() throws Exception {
+    public void flatMap() {
         Function<Integer, Try<String>> intToStringFunc = i -> Try.succeeded(i.toString());
 
         Try<Integer> iTry = Try.succeeded(666);
@@ -123,7 +123,7 @@ public class TryTest {
     }
 
     @Test
-    public void toOptional() throws Exception {
+    public void toOptional() {
         Try<Integer> iTry = Try.succeeded(666);
         Optional<Integer> optional = iTry.toOptional();
         assertThat(optional.isPresent(), equalTo(true));
@@ -135,7 +135,7 @@ public class TryTest {
     }
 
     @Test
-    public void orElse() throws Exception {
+    public void orElse() {
         Try<String> sTry = Try.tryCall(() -> "Hello World");
 
         String result = sTry.orElse("other");
@@ -147,7 +147,7 @@ public class TryTest {
     }
 
     @Test
-    public void orElseGet() throws Exception {
+    public void orElseGet() {
         Try<String> sTry = Try.tryCall(() -> "Hello World");
 
         String result = sTry.orElseGet(() -> "other");
@@ -159,7 +159,7 @@ public class TryTest {
     }
 
     @Test
-    public void reThrow() throws Exception {
+    public void reThrow() {
         Try<String> sTry = Try.failed(new RuntimeException("Goodbye Cruel World"));
         expectThrowable(sTry::reThrow, RuntimeException.class);
 
@@ -169,7 +169,7 @@ public class TryTest {
     }
 
     @Test
-    public void forEach() throws Exception {
+    public void forEach() {
         AtomicReference<String> sRef = new AtomicReference<>();
         Try<String> sTry = Try.tryCall(() -> "Hello World");
         sTry.forEach(sRef::set);
@@ -183,7 +183,7 @@ public class TryTest {
     }
 
     @Test
-    public void recover() throws Exception {
+    public void recover() {
 
         Try<String> sTry = Try.failed(new RuntimeException("Goodbye Cruel World"));
         sTry = sTry.recover(t -> "Hello World");

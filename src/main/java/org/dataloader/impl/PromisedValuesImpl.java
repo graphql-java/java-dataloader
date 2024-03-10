@@ -25,7 +25,7 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
     private PromisedValuesImpl(List<? extends CompletionStage<T>> cs) {
         this.futures = nonNull(cs);
         this.cause = new AtomicReference<>();
-        CompletableFuture[] futuresArray = cs.stream().map(CompletionStage::toCompletableFuture).toArray(CompletableFuture[]::new);
+        CompletableFuture<?>[] futuresArray = cs.stream().map(CompletionStage::toCompletableFuture).toArray(CompletableFuture[]::new);
         this.controller = CompletableFuture.allOf(futuresArray).handle((result, throwable) -> {
             setCause(throwable);
             return null;

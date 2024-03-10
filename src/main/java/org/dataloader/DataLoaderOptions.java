@@ -135,8 +135,8 @@ public class DataLoaderOptions {
     /**
      * Option that determines whether to cache exceptional values (the default), or not.
      *
-     * For short lived caches (that is request caches) it makes sense to cache exceptions since
-     * its likely the key is still poisoned.  However if you have long lived caches, then it may make
+     * For short-lived caches (that is request caches) it makes sense to cache exceptions since
+     * it's likely the key is still poisoned.  However, if you have long-lived caches, then it may make
      * sense to set this to false since the downstream system may have recovered from its failure
      * mode.
      *
@@ -147,7 +147,7 @@ public class DataLoaderOptions {
     }
 
     /**
-     * Sets the option that determines whether exceptional values are cachedis enabled.
+     * Sets the option that determines whether exceptional values are cache enabled.
      *
      * @param cachingExceptionsEnabled {@code true} to enable caching exceptional values, {@code false} otherwise
      *
@@ -236,7 +236,7 @@ public class DataLoaderOptions {
 
     /**
      * Sets the statistics collector supplier that will be used with these data loader options.  Since it uses
-     * the supplier pattern, you can create a new statistics collector on each call or you can reuse
+     * the supplier pattern, you can create a new statistics collector on each call, or you can reuse
      * a common value
      *
      * @param statisticsCollector the statistics collector to use
