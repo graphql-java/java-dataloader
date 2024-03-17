@@ -213,9 +213,9 @@ class DataLoaderHelper<K, V> {
     private CompletableFuture<List<V>> sliceIntoBatchesOfBatches(List<K> keys, List<CompletableFuture<V>> queuedFutures, List<Object> callContexts, int maxBatchSize) {
         // the number of keys is > than what the batch loader function can accept
         // so make multiple calls to the loader
-        List<CompletableFuture<List<V>>> allBatches = new ArrayList<>();
         int len = keys.size();
         int batchCount = (int) Math.ceil(len / (double) maxBatchSize);
+        List<CompletableFuture<List<V>>> allBatches = new ArrayList<>(batchCount);
         for (int i = 0; i < batchCount; i++) {
 
             int fromIndex = i * maxBatchSize;
@@ -477,7 +477,7 @@ class DataLoaderHelper<K, V> {
         }
         CompletableFuture<Map<K, V>> mapBatchLoad = nonNull(loadResult, () -> "Your batch loader function MUST return a non null CompletionStage").toCompletableFuture();
         return mapBatchLoad.thenApply(map -> {
-            List<V> values = new ArrayList<>();
+            List<V> values = new ArrayList<>(keys.size());
             for (K key : keys) {
                 V value = map.get(key);
                 values.add(value);

@@ -115,7 +115,7 @@ public interface ValueCache<K, V> {
      * @throws ValueCachingNotSupported if this cache wants to short-circuit this method completely
      */
     default CompletableFuture<List<V>> setValues(List<K> keys, List<V> values) throws ValueCachingNotSupported {
-        List<CompletableFuture<V>> cacheSets = new ArrayList<>();
+        List<CompletableFuture<V>> cacheSets = new ArrayList<>(keys.size());
         for (int i = 0; i < keys.size(); i++) {
             K k = keys.get(i);
             V v = values.get(i);
