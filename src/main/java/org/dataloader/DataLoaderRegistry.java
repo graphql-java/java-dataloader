@@ -127,7 +127,7 @@ public class DataLoaderRegistry {
     }
 
     /**
-     * This will called {@link org.dataloader.DataLoader#dispatch()} on each of the registered
+     * This will be called {@link org.dataloader.DataLoader#dispatch()} on each of the registered
      * {@link org.dataloader.DataLoader}s
      */
     public void dispatchAll() {
@@ -197,7 +197,7 @@ public class DataLoaderRegistry {
         }
 
         /**
-         * This will combine together the data loaders in this builder with the ones
+         * This will combine the data loaders in this builder with the ones
          * from a previous {@link DataLoaderRegistry}
          *
          * @param otherRegistry the previous {@link DataLoaderRegistry}

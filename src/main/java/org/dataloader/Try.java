@@ -15,7 +15,7 @@ import static org.dataloader.impl.Assertions.nonNull;
 /**
  * Try is class that allows you to hold the result of computation or the throwable it produced.
  *
- * This class is useful in {@link org.dataloader.BatchLoader}s so you can mix a batch of calls where some of
+ * This class is useful in {@link org.dataloader.BatchLoader}s so you can mix a batch of calls where some
  * the calls succeeded and some of them failed.  You would make your batch loader declaration like :
  *
  * <pre>
@@ -89,8 +89,8 @@ public class Try<V> {
     }
 
     /**
-     * This returns a Try that has always failed with an consistent exception.  Use this when
-     * yiu dont care about the exception but only that the Try failed.
+     * This returns a Try that has always failed with a consistent exception.  Use this when
+     * you don't care about the exception but only that the Try failed.
      *
      * @param <V> the type of value
      *

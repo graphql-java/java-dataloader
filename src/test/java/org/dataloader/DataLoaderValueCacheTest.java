@@ -174,7 +174,7 @@ public class DataLoaderValueCacheTest {
         assertThat(fA.join(), equalTo("a"));
         assertThat(fB.join(), equalTo("From Cache"));
 
-        // a was not in cache (according to get) and hence needed to be loaded
+        // "a" was not in cache (according to get) and hence needed to be loaded
         assertThat(loadCalls, equalTo(singletonList(singletonList("a"))));
     }
 
@@ -201,7 +201,7 @@ public class DataLoaderValueCacheTest {
         assertThat(fA.join(), equalTo("a"));
         assertThat(fB.join(), equalTo("b"));
 
-        // a was not in cache (according to get) and hence needed to be loaded
+        // "a" was not in cache (according to get) and hence needed to be loaded
         assertThat(loadCalls, equalTo(singletonList(asList("a", "b"))));
         assertArrayEquals(customValueCache.store.keySet().toArray(), singletonList("b").toArray());
     }
@@ -288,7 +288,7 @@ public class DataLoaderValueCacheTest {
         assertThat(loadCalls, equalTo(singletonList(asList("missC", "missD"))));
 
         List<Object> values = new ArrayList<>(customValueCache.asMap().values());
-        // it will only set back in values that are missed - it wont set in values that successfully
+        // it will only set back in values that are missed - it won't set in values that successfully
         // came out of the cache
         assertThat(values, equalTo(asList("missC", "missD")));
     }

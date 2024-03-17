@@ -108,7 +108,7 @@ public class DataLoader<K, V> {
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
      * <p>
-     * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
+     * If it's important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
      * <p>
      * Using Try objects allows you to capture a value returned or an exception that might
@@ -186,7 +186,7 @@ public class DataLoader<K, V> {
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
      * <p>
-     * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
+     * If it's important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
      * <p>
      * Using Try objects allows you to capture a value returned or an exception that might
@@ -264,7 +264,7 @@ public class DataLoader<K, V> {
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
      * <p>
-     * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
+     * If it's important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
      * <p>
      * Using Try objects allows you to capture a value returned or an exception that might
@@ -343,7 +343,7 @@ public class DataLoader<K, V> {
      * (batching, caching and unlimited batch size) where the batch loader function returns a list of
      * {@link org.dataloader.Try} objects.
      * <p>
-     * If its important you to know the exact status of each item in a batch call and whether it threw exceptions then
+     * If it's important you to know the exact status of each item in a batch call and whether it threw exceptions then
      * you can use this form to create the data loader.
      * <p>
      * Using Try objects allows you to capture a value returned or an exception that might
@@ -471,11 +471,11 @@ public class DataLoader<K, V> {
      * This will return an optional promise to a value previously loaded via a {@link #load(Object)} call or empty if not call has been made for that key.
      * <p>
      * If you do get a present CompletableFuture it does not mean it has been dispatched and completed yet.  It just means
-     * its at least pending and in cache.
+     * it's at least pending and in cache.
      * <p>
      * If caching is disabled there will never be a present Optional returned.
      * <p>
-     * NOTE : This will NOT cause a data load to happen.  You must called {@link #load(Object)} for that to happen.
+     * NOTE : This will NOT cause a data load to happen. You must call {@link #load(Object)} for that to happen.
      *
      * @param key the key to check
      *
@@ -494,7 +494,7 @@ public class DataLoader<K, V> {
      * <p>
      * If caching is disabled there will never be a present Optional returned.
      * <p>
-     * NOTE : This will NOT cause a data load to happen.  You must called {@link #load(Object)} for that to happen.
+     * NOTE : This will NOT cause a data load to happen.  You must call {@link #load(Object)} for that to happen.
      *
      * @param key the key to check
      *

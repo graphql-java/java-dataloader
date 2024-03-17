@@ -198,7 +198,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
 
     /**
      * This will schedule a task to check the predicate and dispatch if true right now.  It will not do
-     * a pre check of the preodicate like {@link #dispatchAll()} would
+     * a pre-check of the predicate like {@link #dispatchAll()} would
      */
     public void rescheduleNow() {
         dataLoaders.forEach(this::reschedule);

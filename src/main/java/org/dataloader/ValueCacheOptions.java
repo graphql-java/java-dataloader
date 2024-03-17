@@ -22,7 +22,7 @@ public class ValueCacheOptions {
 
     /**
      * This controls whether the {@link DataLoader} will wait for the {@link ValueCache#set(Object, Object)} call
-     * to complete before it completes the returned value.  By default this is false and hence
+     * to complete before it completes the returned value.  By default, this is false and hence
      * the {@link ValueCache#set(Object, Object)} call may complete some time AFTER the data loader
      * value has been returned.
      *

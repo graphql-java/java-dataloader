@@ -13,7 +13,7 @@ import static java.lang.annotation.ElementType.TYPE;
  * This represents code that the java-dataloader project considers internal code that MAY not be stable within
  * major releases.
  *
- * In general unnecessary changes will be avoided but you should not depend on internal classes being stable
+ * In general unnecessary changes will be avoided, but you should not depend on internal classes being stable
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = {CONSTRUCTOR, METHOD, TYPE, FIELD})

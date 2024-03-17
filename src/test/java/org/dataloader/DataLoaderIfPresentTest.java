@@ -34,10 +34,10 @@ public class DataLoaderIfPresentTest {
 
         assertThat(cachedPromise.get(), sameInstance(future1));
 
-        // but its not done!
+        // but it's not done!
         assertThat(cachedPromise.get().isDone(), equalTo(false));
         //
-        // and hence it cant be loaded as complete
+        // and hence it can't be loaded as complete
         cachedPromise = dataLoader.getIfCompleted(1);
         assertThat(cachedPromise.isPresent(), equalTo(false));
     }

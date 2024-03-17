@@ -54,7 +54,7 @@ public class Statistics {
     }
 
     /**
-     * @return the number of times the {@link org.dataloader.DataLoader} batch loader function return an specific object that was in error
+     * @return the number of times the {@link org.dataloader.DataLoader} batch loader function return a specific object that was in error
      */
     public long getLoadErrorCount() {
         return loadErrorCount;

@@ -73,7 +73,7 @@ public interface DispatchPredicate {
     }
 
     /**
-     * This predicate will return true if the {@link DataLoader} has not be dispatched
+     * This predicate will return true if the {@link DataLoader} has not been dispatched
      * for at least the duration length of time.
      *
      * @param duration the length of time to check

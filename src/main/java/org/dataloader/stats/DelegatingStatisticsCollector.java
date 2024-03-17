@@ -86,7 +86,7 @@ public class DelegatingStatisticsCollector implements StatisticsCollector {
     }
 
     /**
-     * @return the statistics of the this collector (and not its delegate)
+     * @return the statistics of the collector (and not its delegate)
      */
     @Override
     public Statistics getStatistics() {
