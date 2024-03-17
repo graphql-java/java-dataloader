@@ -561,7 +561,7 @@ public class DataLoader<K, V> {
         nonNull(keyContexts);
 
         synchronized (this) {
-            List<CompletableFuture<V>> collect = new ArrayList<>();
+            List<CompletableFuture<V>> collect = new ArrayList<>(keys.size());
             for (int i = 0; i < keys.size(); i++) {
                 K key = keys.get(i);
                 Object keyContext = null;

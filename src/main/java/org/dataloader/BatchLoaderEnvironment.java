@@ -83,7 +83,7 @@ public class BatchLoaderEnvironment {
             Assertions.nonNull(keyContexts);
 
             Map<Object, Object> map = new HashMap<>();
-            List<Object> list = new ArrayList<>();
+            List<Object> list = new ArrayList<>(keys.size());
             for (int i = 0; i < keys.size(); i++) {
                 K key = keys.get(i);
                 Object keyContext = null;
