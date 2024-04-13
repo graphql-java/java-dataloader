@@ -139,13 +139,13 @@ public class ScheduledDataLoaderRegistryPredicateTest {
         DataLoader<Object, Object> dlB = newDataLoader(identityBatchLoader);
         DataLoader<Object, Object> dlC = newDataLoader(identityBatchLoader);
 
-        DispatchPredicate predicateOnSix = new CountingDispatchPredicate(6);
+        DispatchPredicate predicateOnThree = new CountingDispatchPredicate(3);
 
         ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
-                .register("a", dlA, DISPATCH_NEVER)
-                .register("b", dlB, DISPATCH_NEVER)
-                .register("c", dlC, DISPATCH_NEVER)
-                .dispatchPredicate(predicateOnSix)
+                .register("a", dlA, new CountingDispatchPredicate(99))
+                .register("b", dlB, new CountingDispatchPredicate(99))
+                .register("c", dlC) // has none
+                .dispatchPredicate(predicateOnThree)
                 .schedule(Duration.ofHours(1000))
                 .build();
 
@@ -160,16 +160,22 @@ public class ScheduledDataLoaderRegistryPredicateTest {
         assertThat(cfB.isDone(), equalTo(false));
         assertThat(cfC.isDone(), equalTo(false));
 
-        count = registry.dispatchAllWithCount(); // second firing but the overall been asked 6 times already
+        count = registry.dispatchAllWithCount(); // second firing
         assertThat(count, equalTo(0));
         assertThat(cfA.isDone(), equalTo(false));
         assertThat(cfB.isDone(), equalTo(false));
         assertThat(cfC.isDone(), equalTo(false));
 
-        count = registry.dispatchAllWithCount(); // third firing but the overall been asked 9 times already
-        assertThat(count, equalTo(3));
-        assertThat(cfA.isDone(), equalTo(true));
-        assertThat(cfB.isDone(), equalTo(true));
+        count = registry.dispatchAllWithCount(); // third firing
+        assertThat(count, equalTo(0));
+        assertThat(cfA.isDone(), equalTo(false));
+        assertThat(cfB.isDone(), equalTo(false));
+        assertThat(cfC.isDone(), equalTo(false));
+
+        count = registry.dispatchAllWithCount(); // fourth firing
+        assertThat(count, equalTo(1));
+        assertThat(cfA.isDone(), equalTo(false));
+        assertThat(cfB.isDone(), equalTo(false)); // they wont ever finish until 99 calls
         assertThat(cfC.isDone(), equalTo(true));
     }
 
@@ -217,9 +223,9 @@ public class ScheduledDataLoaderRegistryPredicateTest {
         DispatchPredicate predicateOnTwenty = new CountingDispatchPredicate(20);
 
         ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
-                .register("a", dlA, DISPATCH_NEVER)
-                .register("b", dlB, DISPATCH_NEVER)
-                .register("c", dlC, DISPATCH_NEVER)
+                .register("a", dlA)
+                .register("b", dlB)
+                .register("c", dlC)
                 .dispatchPredicate(predicateOnTwenty)
                 .schedule(Duration.ofMillis(5))
                 .build();
