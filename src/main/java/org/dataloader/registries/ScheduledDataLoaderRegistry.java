@@ -58,6 +58,8 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     private final Map<DataLoader<?, ?>, DispatchPredicate> dataLoaderPredicates = new ConcurrentHashMap<>();
     private final DispatchPredicate dispatchPredicate;
     private final ScheduledExecutorService scheduledExecutorService;
+    private final boolean defaultExecutorUsed;
+
     private final Duration schedule;
     private final boolean tickerMode;
     private volatile boolean closed;
@@ -66,6 +68,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         super();
         this.dataLoaders.putAll(builder.dataLoaders);
         this.scheduledExecutorService = builder.scheduledExecutorService;
+        this.defaultExecutorUsed = builder.defaultExecutorUsed;
         this.schedule = builder.schedule;
         this.tickerMode = builder.tickerMode;
         this.closed = false;
@@ -79,6 +82,16 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     @Override
     public void close() {
         closed = true;
+        if (defaultExecutorUsed) {
+            scheduledExecutorService.shutdown();
+        }
+    }
+
+    /**
+     * @return executor being used by this registry
+     */
+    public ScheduledExecutorService getScheduledExecutorService() {
+        return scheduledExecutorService;
     }
 
     /**
@@ -258,9 +271,18 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         private final Map<DataLoader<?, ?>, DispatchPredicate> dataLoaderPredicates = new LinkedHashMap<>();
         private DispatchPredicate dispatchPredicate = DispatchPredicate.DISPATCH_ALWAYS;
         private ScheduledExecutorService scheduledExecutorService;
+        private boolean defaultExecutorUsed = false;
         private Duration schedule = Duration.ofMillis(10);
         private boolean tickerMode = false;
 
+        /**
+         * If you provide a {@link ScheduledExecutorService} then it will NOT be shutdown when
+         * {@link ScheduledDataLoaderRegistry#close()} is called.  This is left to the code that made this setup code
+         *
+         * @param executorService the executor service to run the ticker on
+         *
+         * @return this builder for a fluent pattern
+         */
         public Builder scheduledExecutorService(ScheduledExecutorService executorService) {
             this.scheduledExecutorService = nonNull(executorService);
             return this;
@@ -350,6 +372,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         public ScheduledDataLoaderRegistry build() {
             if (scheduledExecutorService == null) {
                 scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+                defaultExecutorUsed = true;
             }
             return new ScheduledDataLoaderRegistry(this);
         }
