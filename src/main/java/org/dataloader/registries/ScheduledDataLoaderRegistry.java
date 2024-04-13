@@ -217,8 +217,8 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     }
 
     /**
-     * Returns true if the dataloader has a predicate which returned true, OR the overall
-     * registry predicate returned true.
+     * If a specific {@link DispatchPredicate} is registered for this dataloader then it uses it values
+     * otherwise the overall registry predicate is used.
      *
      * @param dataLoaderKey the key in the dataloader map
      * @param dataLoader    the dataloader
@@ -228,9 +228,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     private boolean shouldDispatch(String dataLoaderKey, DataLoader<?, ?> dataLoader) {
         DispatchPredicate dispatchPredicate = dataLoaderPredicates.get(dataLoader);
         if (dispatchPredicate != null) {
-            if (dispatchPredicate.test(dataLoaderKey, dataLoader)) {
-                return true;
-            }
+            return dispatchPredicate.test(dataLoaderKey, dataLoader);
         }
         return this.dispatchPredicate.test(dataLoaderKey, dataLoader);
     }
