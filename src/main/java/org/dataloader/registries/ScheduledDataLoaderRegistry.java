@@ -59,7 +59,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     private final DispatchPredicate dispatchPredicate;
     private final ScheduledExecutorService scheduledExecutorService;
     private final boolean defaultExecutorUsed;
-
     private final Duration schedule;
     private final boolean tickerMode;
     private volatile boolean closed;
