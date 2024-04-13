@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -285,7 +286,7 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         assertThat(registry.isTickerMode(), equalTo(true));
 
         int count = registry.dispatchAllWithCount();
-        assertThat(count,equalTo(1));
+        assertThat(count, equalTo(1));
 
         await().atMost(TWO_SECONDS).untilAtomic(done, is(true));
 
@@ -314,7 +315,7 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         assertThat(registry.isTickerMode(), equalTo(false));
 
         int count = registry.dispatchAllWithCount();
-        assertThat(count,equalTo(1));
+        assertThat(count, equalTo(1));
 
         try {
             await().atMost(TWO_SECONDS).untilAtomic(done, is(true));
@@ -322,5 +323,26 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         } catch (ConditionTimeoutException expected) {
         }
         registry.close();
+    }
+
+    public void test_executors_are_shutdown() {
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry().build();
+
+        ScheduledExecutorService executorService = registry.getScheduledExecutorService();
+        assertThat(executorService.isShutdown(), equalTo(false));
+        registry.close();
+        assertThat(executorService.isShutdown(), equalTo(true));
+
+        executorService = Executors.newSingleThreadScheduledExecutor();
+        registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
+                .scheduledExecutorService(executorService).build();
+
+        executorService = registry.getScheduledExecutorService();
+        assertThat(executorService.isShutdown(), equalTo(false));
+        registry.close();
+        // if they provide the executor, we don't close it down
+        assertThat(executorService.isShutdown(), equalTo(false));
+
+
     }
 }
