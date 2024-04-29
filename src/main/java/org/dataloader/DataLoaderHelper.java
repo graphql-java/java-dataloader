@@ -110,9 +110,13 @@ class DataLoaderHelper<K, V> {
             boolean cachingEnabled = loaderOptions.cachingEnabled();
             if (cachingEnabled) {
                 Object cacheKey = getCacheKey(nonNull(key));
-                if (futureCache.containsKey(cacheKey)) {
-                    stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key));
-                    return Optional.of(futureCache.get(cacheKey));
+                try {
+                    CompletableFuture<V> cacheValue = futureCache.get(cacheKey);
+                    if (cacheValue != null) {
+                        stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key));
+                        return Optional.of(cacheValue);
+                    }
+                } catch (Exception ignored) {
                 }
             }
         }
@@ -307,10 +311,14 @@ class DataLoaderHelper<K, V> {
     private CompletableFuture<V> loadFromCache(K key, Object loadContext, boolean batchingEnabled) {
         final Object cacheKey = loadContext == null ? getCacheKey(key) : getCacheKeyWithContext(key, loadContext);
 
-        if (futureCache.containsKey(cacheKey)) {
-            // We already have a promise for this key, no need to check value cache or queue up load
-            stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key, loadContext));
-            return futureCache.get(cacheKey);
+        try {
+            CompletableFuture<V> cacheValue = futureCache.get(cacheKey);
+            if (cacheValue != null) {
+                // We already have a promise for this key, no need to check value cache or queue up load
+                stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key, loadContext));
+                return cacheValue;
+            }
+        } catch (Exception ignored) {
         }
 
         CompletableFuture<V> loadCallFuture = queueOrInvokeLoader(key, loadContext, batchingEnabled, true);
