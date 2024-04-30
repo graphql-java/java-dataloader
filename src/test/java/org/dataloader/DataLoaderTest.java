@@ -27,6 +27,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
@@ -827,6 +828,20 @@ public class DataLoaderTest {
     }
 
     @Test
+    public void should_degrade_gracefully_if_cache_get_throws() {
+        CacheMap<String, Object> cache = new ThrowingCacheMap();
+        DataLoaderOptions options = newOptions().setCachingEnabled(true).setCacheMap(cache);
+        List<Collection<String>> loadCalls = new ArrayList<>();
+        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+
+        assertThat(identityLoader.getIfPresent("a"), equalTo(Optional.empty()));
+
+        CompletableFuture<String> future = identityLoader.load("a");
+        identityLoader.dispatch();
+        assertThat(future.join(), equalTo("a"));
+    }
+
+    @Test
     public void batching_disabled_should_dispatch_immediately() {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setBatchingEnabled(false);
@@ -1097,10 +1112,15 @@ public class DataLoaderTest {
         }, options);
     }
 
-
     private <T> BatchLoader<T, T> keysAsValues() {
         return CompletableFuture::completedFuture;
     }
 
+    private static class ThrowingCacheMap extends CustomCacheMap {
+        @Override
+        public CompletableFuture<Object> get(String key) {
+            throw new RuntimeException("Cache implementation failed.");
+        }
+    }
 }
 
