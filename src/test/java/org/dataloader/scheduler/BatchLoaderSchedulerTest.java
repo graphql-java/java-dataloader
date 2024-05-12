@@ -36,6 +36,11 @@ public class BatchLoaderSchedulerTest {
         public <K, V> CompletionStage<Map<K, V>> scheduleMappedBatchLoader(ScheduledMappedBatchLoaderCall<K, V> scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
             return scheduledCall.invoke();
         }
+
+        @Override
+        public <K> void scheduleObserverBatchLoader(ScheduledObserverBatchLoaderCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+            scheduledCall.invoke();
+        }
     };
 
     private BatchLoaderScheduler delayedScheduling(int ms) {
@@ -55,6 +60,12 @@ public class BatchLoaderSchedulerTest {
                     snooze(ms);
                     return scheduledCall.invoke();
                 }).thenCompose(Function.identity());
+            }
+
+            @Override
+            public <K> void scheduleObserverBatchLoader(ScheduledObserverBatchLoaderCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+                snooze(ms);
+                scheduledCall.invoke();
             }
         };
     }
@@ -138,6 +149,15 @@ public class BatchLoaderSchedulerTest {
                     }
                     return scheduledCall.invoke();
                 }).thenCompose(Function.identity());
+            }
+
+            @Override
+            public <K> void scheduleObserverBatchLoader(ScheduledObserverBatchLoaderCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+                CompletableFuture.supplyAsync(() -> {
+                    snooze(10);
+                    scheduledCall.invoke();
+                    return null;
+                });
             }
         };
         DataLoaderOptions options = DataLoaderOptions.newOptions().setBatchLoaderScheduler(funkyScheduler);

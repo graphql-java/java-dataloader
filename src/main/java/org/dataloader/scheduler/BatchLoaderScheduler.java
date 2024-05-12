@@ -5,6 +5,8 @@ import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.MappedBatchLoader;
+import org.dataloader.MappedObserverBatchLoader;
+import org.dataloader.ObserverBatchLoader;
 
 import java.util.List;
 import java.util.Map;
@@ -43,6 +45,13 @@ public interface BatchLoaderScheduler {
     }
 
     /**
+     * This represents a callback that will invoke a {@link ObserverBatchLoader} or {@link MappedObserverBatchLoader} function under the covers
+     */
+    interface ScheduledObserverBatchLoaderCall {
+        void invoke();
+    }
+
+    /**
      * This is called to schedule a {@link BatchLoader} call.
      *
      * @param scheduledCall the callback that needs to be invoked to allow the {@link BatchLoader} to proceed.
@@ -71,4 +80,16 @@ public interface BatchLoaderScheduler {
      * @return a promise to the values that come from the {@link BatchLoader}
      */
     <K, V> CompletionStage<Map<K, V>> scheduleMappedBatchLoader(ScheduledMappedBatchLoaderCall<K, V> scheduledCall, List<K> keys, BatchLoaderEnvironment environment);
+
+    /**
+     * This is called to schedule a {@link ObserverBatchLoader} call.
+     *
+     * @param scheduledCall the callback that needs to be invoked to allow the {@link ObserverBatchLoader} to proceed.
+     * @param keys          this is the list of keys that will be passed to the {@link ObserverBatchLoader}.
+     *                      This is provided only for informative reasons and, you can't change the keys that are used
+     * @param environment   this is the {@link BatchLoaderEnvironment} in place,
+     *                      which can be null if it's a simple {@link ObserverBatchLoader} call
+     * @param <K>           the key type
+     */
+    <K> void scheduleObserverBatchLoader(ScheduledObserverBatchLoaderCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment);
 }

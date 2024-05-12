@@ -15,6 +15,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -241,10 +242,14 @@ class DataLoaderHelper<K, V> {
     @SuppressWarnings("unchecked")
     private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<Object> callContexts, List<CompletableFuture<V>> queuedFutures) {
         stats.incrementBatchLoadCountBy(keys.size(), new IncrementBatchLoadCountByStatisticsContext<>(keys, callContexts));
-        CompletableFuture<List<V>> batchLoad = invokeLoader(keys, callContexts, loaderOptions.cachingEnabled());
+        CompletableFuture<List<V>> batchLoad = invokeLoader(keys, callContexts, queuedFutures, loaderOptions.cachingEnabled());
         return batchLoad
                 .thenApply(values -> {
                     assertResultSize(keys, values);
+                    if (isObserverLoader() || isMapObserverLoader()) {
+                        // We have already completed the queued futures by the time the overall batchLoad future has completed.
+                        return values;
+                    }
 
                     List<K> clearCacheKeys = new ArrayList<>();
                     for (int idx = 0; idx < queuedFutures.size(); idx++) {
@@ -342,14 +347,15 @@ class DataLoaderHelper<K, V> {
     CompletableFuture<V> invokeLoaderImmediately(K key, Object keyContext, boolean cachingEnabled) {
         List<K> keys = singletonList(key);
         List<Object> keyContexts = singletonList(keyContext);
-        return invokeLoader(keys, keyContexts, cachingEnabled)
+        List<CompletableFuture<V>> queuedFutures = singletonList(new CompletableFuture<>());
+        return invokeLoader(keys, keyContexts, queuedFutures, cachingEnabled)
                 .thenApply(list -> list.get(0))
                 .toCompletableFuture();
     }
 
-    CompletableFuture<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts, boolean cachingEnabled) {
+    CompletableFuture<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, boolean cachingEnabled) {
         if (!cachingEnabled) {
-            return invokeLoader(keys, keyContexts);
+            return invokeLoader(keys, keyContexts, queuedFutures);
         }
         CompletableFuture<List<Try<V>>> cacheCallCF = getFromValueCache(keys);
         return cacheCallCF.thenCompose(cachedValues -> {
@@ -360,6 +366,7 @@ class DataLoaderHelper<K, V> {
             List<Integer> missedKeyIndexes = new ArrayList<>();
             List<K> missedKeys = new ArrayList<>();
             List<Object> missedKeyContexts = new ArrayList<>();
+            List<CompletableFuture<V>> missedQueuedFutures = new ArrayList<>();
 
             // if they return a ValueCachingNotSupported exception then we insert this special marker value, and it
             // means it's a total miss, we need to get all these keys via the batch loader
@@ -369,6 +376,7 @@ class DataLoaderHelper<K, V> {
                     missedKeyIndexes.add(i);
                     missedKeys.add(keys.get(i));
                     missedKeyContexts.add(keyContexts.get(i));
+                    missedQueuedFutures.add(queuedFutures.get(i));
                 }
             } else {
                 assertState(keys.size() == cachedValues.size(), () -> "The size of the cached values MUST be the same size as the key list");
@@ -393,7 +401,7 @@ class DataLoaderHelper<K, V> {
                 // we missed some keys from cache, so send them to the batch loader
                 // and then fill in their values
                 //
-                CompletableFuture<List<V>> batchLoad = invokeLoader(missedKeys, missedKeyContexts);
+                CompletableFuture<List<V>> batchLoad = invokeLoader(missedKeys, missedKeyContexts, missedQueuedFutures);
                 return batchLoad.thenCompose(missedValues -> {
                     assertResultSize(missedKeys, missedValues);
 
@@ -412,8 +420,7 @@ class DataLoaderHelper<K, V> {
         });
     }
 
-
-    CompletableFuture<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts) {
+    CompletableFuture<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures) {
         CompletableFuture<List<V>> batchLoad;
         try {
             Object context = loaderOptions.getBatchLoaderContextProvider().getContext();
@@ -421,6 +428,10 @@ class DataLoaderHelper<K, V> {
                     .context(context).keyContexts(keys, keyContexts).build();
             if (isMapLoader()) {
                 batchLoad = invokeMapBatchLoader(keys, environment);
+            } else if (isObserverLoader()) {
+                batchLoad = invokeObserverBatchLoader(keys, keyContexts, queuedFutures, environment);
+            } else if (isMapObserverLoader()) {
+                batchLoad = invokeMappedObserverBatchLoader(keys, keyContexts, queuedFutures, environment);
             } else {
                 batchLoad = invokeListBatchLoader(keys, environment);
             }
@@ -492,8 +503,66 @@ class DataLoaderHelper<K, V> {
         });
     }
 
+    private CompletableFuture<List<V>> invokeObserverBatchLoader(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, BatchLoaderEnvironment environment) {
+        CompletableFuture<List<V>> loadResult = new CompletableFuture<>();
+        BatchObserver<V> observer = new BatchObserverImpl(loadResult, keys, keyContexts, queuedFutures);
+
+        BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
+        if (batchLoadFunction instanceof ObserverBatchLoaderWithContext) {
+            ObserverBatchLoaderWithContext<K, V> loadFunction = (ObserverBatchLoaderWithContext<K, V>) batchLoadFunction;
+            if (batchLoaderScheduler != null) {
+                BatchLoaderScheduler.ScheduledObserverBatchLoaderCall loadCall = () -> loadFunction.load(keys, observer, environment);
+                batchLoaderScheduler.scheduleObserverBatchLoader(loadCall, keys, environment);
+            } else {
+                loadFunction.load(keys, observer, environment);
+            }
+        } else {
+            ObserverBatchLoader<K, V> loadFunction = (ObserverBatchLoader<K, V>) batchLoadFunction;
+            if (batchLoaderScheduler != null) {
+                BatchLoaderScheduler.ScheduledObserverBatchLoaderCall loadCall = () -> loadFunction.load(keys, observer);
+                batchLoaderScheduler.scheduleObserverBatchLoader(loadCall, keys, null);
+            } else {
+                loadFunction.load(keys, observer);
+            }
+        }
+        return loadResult;
+    }
+
+    private CompletableFuture<List<V>> invokeMappedObserverBatchLoader(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, BatchLoaderEnvironment environment) {
+        CompletableFuture<List<V>> loadResult = new CompletableFuture<>();
+        MappedBatchObserver<K, V> observer = new MappedBatchObserverImpl(loadResult, keys, keyContexts, queuedFutures);
+
+        BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
+        if (batchLoadFunction instanceof MappedObserverBatchLoaderWithContext) {
+            MappedObserverBatchLoaderWithContext<K, V> loadFunction = (MappedObserverBatchLoaderWithContext<K, V>) batchLoadFunction;
+            if (batchLoaderScheduler != null) {
+                BatchLoaderScheduler.ScheduledObserverBatchLoaderCall loadCall = () -> loadFunction.load(keys, observer, environment);
+                batchLoaderScheduler.scheduleObserverBatchLoader(loadCall, keys, environment);
+            } else {
+                loadFunction.load(keys, observer, environment);
+            }
+        } else {
+            MappedObserverBatchLoader<K, V> loadFunction = (MappedObserverBatchLoader<K, V>) batchLoadFunction;
+            if (batchLoaderScheduler != null) {
+                BatchLoaderScheduler.ScheduledObserverBatchLoaderCall loadCall = () -> loadFunction.load(keys, observer);
+                batchLoaderScheduler.scheduleObserverBatchLoader(loadCall, keys, null);
+            } else {
+                loadFunction.load(keys, observer);
+            }
+        }
+        return loadResult;
+    }
+
     private boolean isMapLoader() {
         return batchLoadFunction instanceof MappedBatchLoader || batchLoadFunction instanceof MappedBatchLoaderWithContext;
+    }
+
+    private boolean isObserverLoader() {
+        return batchLoadFunction instanceof ObserverBatchLoader;
+    }
+
+    private boolean isMapObserverLoader() {
+        return batchLoadFunction instanceof MappedObserverBatchLoader;
     }
 
     int dispatchDepth() {
@@ -545,5 +614,189 @@ class DataLoaderHelper<K, V> {
     @SuppressWarnings("unchecked") // Casting to any type is safe since the underlying list is empty
     private static <T> DispatchResult<T> emptyDispatchResult() {
         return (DispatchResult<T>) EMPTY_DISPATCH_RESULT;
+    }
+
+    private class BatchObserverImpl implements BatchObserver<V> {
+        private final CompletableFuture<List<V>> valuesFuture;
+        private final List<K> keys;
+        private final List<Object> callContexts;
+        private final List<CompletableFuture<V>> queuedFutures;
+
+        private final List<K> clearCacheKeys = new ArrayList<>();
+        private final List<V> completedValues = new ArrayList<>();
+        private int idx = 0;
+        private boolean onErrorCalled = false;
+        private boolean onCompletedCalled = false;
+
+        private BatchObserverImpl(
+            CompletableFuture<List<V>> valuesFuture,
+            List<K> keys,
+            List<Object> callContexts,
+            List<CompletableFuture<V>> queuedFutures
+        ) {
+            this.valuesFuture = valuesFuture;
+            this.keys = keys;
+            this.callContexts = callContexts;
+            this.queuedFutures = queuedFutures;
+        }
+
+        @Override
+        public void onNext(V value) {
+            assert !onErrorCalled && !onCompletedCalled;
+
+            K key = keys.get(idx);
+            Object callContext = callContexts.get(idx);
+            CompletableFuture<V> future = queuedFutures.get(idx);
+            if (value instanceof Throwable) {
+                stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
+                future.completeExceptionally((Throwable) value);
+                clearCacheKeys.add(keys.get(idx));
+            } else if (value instanceof Try) {
+                // we allow the batch loader to return a Try so we can better represent a computation
+                // that might have worked or not.
+                Try<V> tryValue = (Try<V>) value;
+                if (tryValue.isSuccess()) {
+                    future.complete(tryValue.get());
+                } else {
+                    stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
+                    future.completeExceptionally(tryValue.getThrowable());
+                    clearCacheKeys.add(keys.get(idx));
+                }
+            } else {
+                future.complete(value);
+            }
+
+            completedValues.add(value);
+            idx++;
+        }
+
+        @Override
+        public void onCompleted() {
+            assert !onErrorCalled;
+            onCompletedCalled = true;
+
+            assertResultSize(keys, completedValues);
+
+            possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
+            valuesFuture.complete(completedValues);
+        }
+
+        @Override
+        public void onError(Throwable ex) {
+            assert !onCompletedCalled;
+            onErrorCalled = true;
+
+            stats.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(keys, callContexts));
+            if (ex instanceof CompletionException) {
+                ex = ex.getCause();
+            }
+            // Set the remaining keys to the exception.
+            for (int i = idx; i < queuedFutures.size(); i++) {
+                K key = keys.get(i);
+                CompletableFuture<V> future = queuedFutures.get(i);
+                future.completeExceptionally(ex);
+                // clear any cached view of this key because they all failed
+                dataLoader.clear(key);
+            }
+        }
+    }
+
+    private class MappedBatchObserverImpl implements MappedBatchObserver<K, V> {
+        private final CompletableFuture<List<V>> valuesFuture;
+        private final List<K> keys;
+        private final List<Object> callContexts;
+        private final List<CompletableFuture<V>> queuedFutures;
+        private final Map<K, Object> callContextByKey;
+        private final Map<K, CompletableFuture<V>> queuedFutureByKey;
+
+        private final List<K> clearCacheKeys = new ArrayList<>();
+        private final Map<K, V> completedValuesByKey = new HashMap<>();
+        private boolean onErrorCalled = false;
+        private boolean onCompletedCalled = false;
+
+        private MappedBatchObserverImpl(
+            CompletableFuture<List<V>> valuesFuture,
+            List<K> keys,
+            List<Object> callContexts,
+            List<CompletableFuture<V>> queuedFutures
+        ) {
+            this.valuesFuture = valuesFuture;
+            this.keys = keys;
+            this.callContexts = callContexts;
+            this.queuedFutures = queuedFutures;
+
+            this.callContextByKey = new HashMap<>();
+            this.queuedFutureByKey = new HashMap<>();
+            for (int idx = 0; idx < queuedFutures.size(); idx++) {
+                K key = keys.get(idx);
+                Object callContext = callContexts.get(idx);
+                CompletableFuture<V> queuedFuture = queuedFutures.get(idx);
+                callContextByKey.put(key, callContext);
+                queuedFutureByKey.put(key, queuedFuture);
+            }
+        }
+
+        @Override
+        public void onNext(K key, V value) {
+            assert !onErrorCalled && !onCompletedCalled;
+
+            Object callContext = callContextByKey.get(key);
+            CompletableFuture<V> future = queuedFutureByKey.get(key);
+            if (value instanceof Throwable) {
+                stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
+                future.completeExceptionally((Throwable) value);
+                clearCacheKeys.add(key);
+            } else if (value instanceof Try) {
+                // we allow the batch loader to return a Try so we can better represent a computation
+                // that might have worked or not.
+                Try<V> tryValue = (Try<V>) value;
+                if (tryValue.isSuccess()) {
+                    future.complete(tryValue.get());
+                } else {
+                    stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
+                    future.completeExceptionally(tryValue.getThrowable());
+                    clearCacheKeys.add(key);
+                }
+            } else {
+                future.complete(value);
+            }
+
+            completedValuesByKey.put(key, value);
+        }
+
+        @Override
+        public void onCompleted() {
+            assert !onErrorCalled;
+            onCompletedCalled = true;
+
+            possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
+            List<V> values = new ArrayList<>(keys.size());
+            for (K key : keys) {
+                V value = completedValuesByKey.get(key);
+                values.add(value);
+            }
+            valuesFuture.complete(values);
+        }
+
+        @Override
+        public void onError(Throwable ex) {
+            assert !onCompletedCalled;
+            onErrorCalled = true;
+
+            stats.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(keys, callContexts));
+            if (ex instanceof CompletionException) {
+                ex = ex.getCause();
+            }
+            // Complete the futures for the remaining keys with the exception.
+            for (int idx = 0; idx < queuedFutures.size(); idx++) {
+                K key = keys.get(idx);
+                CompletableFuture<V> future = queuedFutureByKey.get(key);
+                if (!completedValuesByKey.containsKey(key)) {
+                    future.completeExceptionally(ex);
+                    // clear any cached view of this key because they all failed
+                    dataLoader.clear(key);
+                }
+            }
+        }
     }
 }
