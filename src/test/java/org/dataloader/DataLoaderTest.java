@@ -692,13 +692,13 @@ public class DataLoaderTest {
     public void should_Accept_objects_with_a_complex_key() throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
-        DataLoader<JsonObject, Integer> identityLoader = idLoader(options, loadCalls);
+        DataLoader<JsonObject, JsonObject> identityLoader = idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("id", 123);
         JsonObject key2 = new JsonObject().put("id", 123);
 
-        CompletableFuture<Integer> future1 = identityLoader.load(key1);
-        CompletableFuture<Integer> future2 = identityLoader.load(key2);
+        CompletableFuture<JsonObject> future1 = identityLoader.load(key1);
+        CompletableFuture<JsonObject> future2 = identityLoader.load(key2);
         identityLoader.dispatch();
 
         await().until(() -> future1.isDone() && future2.isDone());
@@ -713,18 +713,18 @@ public class DataLoaderTest {
     public void should_Clear_objects_with_complex_key() throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
-        DataLoader<JsonObject, Integer> identityLoader = idLoader(options, loadCalls);
+        DataLoader<JsonObject, JsonObject> identityLoader = idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("id", 123);
         JsonObject key2 = new JsonObject().put("id", 123);
 
-        CompletableFuture<Integer> future1 = identityLoader.load(key1);
+        CompletableFuture<JsonObject> future1 = identityLoader.load(key1);
         identityLoader.dispatch();
 
         await().until(future1::isDone);
         identityLoader.clear(key2); // clear equivalent object key
 
-        CompletableFuture<Integer> future2 = identityLoader.load(key1);
+        CompletableFuture<JsonObject> future2 = identityLoader.load(key1);
         identityLoader.dispatch();
 
         await().until(future2::isDone);
@@ -737,22 +737,22 @@ public class DataLoaderTest {
     public void should_Accept_objects_with_different_order_of_keys() throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
-        DataLoader<JsonObject, Integer> identityLoader = idLoader(options, loadCalls);
+        DataLoader<JsonObject, JsonObject> identityLoader = idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("a", 123).put("b", 321);
         JsonObject key2 = new JsonObject().put("b", 321).put("a", 123);
 
         // Fetches as expected
 
-        CompletableFuture<Integer> future1 = identityLoader.load(key1);
-        CompletableFuture<Integer> future2 = identityLoader.load(key2);
+        CompletableFuture<JsonObject> future1 = identityLoader.load(key1);
+        CompletableFuture<JsonObject> future2 = identityLoader.load(key2);
         identityLoader.dispatch();
 
         await().until(() -> future1.isDone() && future2.isDone());
         assertThat(loadCalls, equalTo(singletonList(singletonList(key1))));
         assertThat(loadCalls.size(), equalTo(1));
         assertThat(future1.get(), equalTo(key1));
-        assertThat(future2.get(), equalTo(key1));
+        assertThat(future2.get(), equalTo(key2));
     }
 
     @Test
