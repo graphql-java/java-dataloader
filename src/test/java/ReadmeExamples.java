@@ -306,7 +306,7 @@ public class ReadmeExamples {
             }
 
             @Override
-            public <K> void scheduleObserverBatchLoader(ScheduledObserverBatchLoaderCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+            public <K> void scheduleBatchPublisher(ScheduledBatchPublisherCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
                 snooze(10);
                 scheduledCall.invoke();
             }

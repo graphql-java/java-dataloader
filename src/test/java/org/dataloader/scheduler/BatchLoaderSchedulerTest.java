@@ -38,7 +38,7 @@ public class BatchLoaderSchedulerTest {
         }
 
         @Override
-        public <K> void scheduleObserverBatchLoader(ScheduledObserverBatchLoaderCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+        public <K> void scheduleBatchPublisher(ScheduledBatchPublisherCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
             scheduledCall.invoke();
         }
     };
@@ -63,7 +63,7 @@ public class BatchLoaderSchedulerTest {
             }
 
             @Override
-            public <K> void scheduleObserverBatchLoader(ScheduledObserverBatchLoaderCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+            public <K> void scheduleBatchPublisher(ScheduledBatchPublisherCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
                 snooze(ms);
                 scheduledCall.invoke();
             }
@@ -152,7 +152,7 @@ public class BatchLoaderSchedulerTest {
             }
 
             @Override
-            public <K> void scheduleObserverBatchLoader(ScheduledObserverBatchLoaderCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+            public <K> void scheduleBatchPublisher(ScheduledBatchPublisherCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
                 CompletableFuture.supplyAsync(() -> {
                     snooze(10);
                     scheduledCall.invoke();

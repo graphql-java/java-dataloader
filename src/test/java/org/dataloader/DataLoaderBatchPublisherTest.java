@@ -37,7 +37,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertThat;
 
-public class DataLoaderPublisherBatchLoaderTest {
+public class DataLoaderBatchPublisherTest {
 
     @Test
     public void should_Build_a_really_really_simple_data_loader() {
@@ -1043,7 +1043,7 @@ public class DataLoaderPublisherBatchLoaderTest {
     }
 
     private static <K> DataLoader<K, K> idLoader(DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return newPublisherDataLoader((PublisherBatchLoader<K, K>) (keys, subscriber) -> {
+        return newPublisherDataLoader((BatchPublisher<K, K>) (keys, subscriber) -> {
             loadCalls.add(new ArrayList<>(keys));
             Flux.fromIterable(keys).subscribe(subscriber);
         }, options);
@@ -1051,7 +1051,7 @@ public class DataLoaderPublisherBatchLoaderTest {
 
     private static <K, V> DataLoader<K, V> idLoaderBlowsUps(
         DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return newPublisherDataLoader((PublisherBatchLoader<K, V>) (keys, subscriber) -> {
+        return newPublisherDataLoader((BatchPublisher<K, V>) (keys, subscriber) -> {
             loadCalls.add(new ArrayList<>(keys));
             Flux.<V>error(new IllegalStateException("Error")).subscribe(subscriber);
         }, options);
@@ -1059,7 +1059,7 @@ public class DataLoaderPublisherBatchLoaderTest {
 
     private static <K> DataLoader<K, Object> idLoaderAllExceptions(
         DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return newPublisherDataLoaderWithTry((PublisherBatchLoader<K, Try<Object>>) (keys, subscriber) -> {
+        return newPublisherDataLoaderWithTry((BatchPublisher<K, Try<Object>>) (keys, subscriber) -> {
             loadCalls.add(new ArrayList<>(keys));
             Stream<Try<Object>> failures = keys.stream().map(k -> Try.failed(new IllegalStateException("Error")));
             Flux.fromStream(failures).subscribe(subscriber);
@@ -1068,7 +1068,7 @@ public class DataLoaderPublisherBatchLoaderTest {
 
     private static DataLoader<Integer, Object> idLoaderOddEvenExceptions(
         DataLoaderOptions options, List<Collection<Integer>> loadCalls) {
-        return newPublisherDataLoaderWithTry((PublisherBatchLoader<Integer, Try<Object>>) (keys, subscriber) -> {
+        return newPublisherDataLoaderWithTry((BatchPublisher<Integer, Try<Object>>) (keys, subscriber) -> {
             loadCalls.add(new ArrayList<>(keys));
 
             List<Try<Object>> errors = new ArrayList<>();
@@ -1083,7 +1083,7 @@ public class DataLoaderPublisherBatchLoaderTest {
         }, options);
     }
 
-    private static <K> PublisherBatchLoader<K, K> keysAsValues() {
+    private static <K> BatchPublisher<K, K> keysAsValues() {
         return (keys, subscriber) -> Flux.fromIterable(keys).subscribe(subscriber);
     }
 

@@ -288,7 +288,7 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      */
-    public static <K, V> DataLoader<K, V> newPublisherDataLoader(PublisherBatchLoader<K, V> batchLoadFunction) {
+    public static <K, V> DataLoader<K, V> newPublisherDataLoader(BatchPublisher<K, V> batchLoadFunction) {
         return newPublisherDataLoader(batchLoadFunction, null);
     }
 
@@ -302,7 +302,7 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      */
-    public static <K, V> DataLoader<K, V> newPublisherDataLoader(PublisherBatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
+    public static <K, V> DataLoader<K, V> newPublisherDataLoader(BatchPublisher<K, V> batchLoadFunction, DataLoaderOptions options) {
         return mkDataLoader(batchLoadFunction, options);
     }
 
@@ -323,7 +323,7 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      */
-    public static <K, V> DataLoader<K, V> newPublisherDataLoaderWithTry(PublisherBatchLoader<K, Try<V>> batchLoadFunction) {
+    public static <K, V> DataLoader<K, V> newPublisherDataLoaderWithTry(BatchPublisher<K, Try<V>> batchLoadFunction) {
         return newPublisherDataLoaderWithTry(batchLoadFunction, null);
     }
 
@@ -341,7 +341,7 @@ public class DataLoaderFactory {
      *
      * @see #newDataLoaderWithTry(BatchLoader)
      */
-    public static <K, V> DataLoader<K, V> newPublisherDataLoaderWithTry(PublisherBatchLoader<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
+    public static <K, V> DataLoader<K, V> newPublisherDataLoaderWithTry(BatchPublisher<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
         return mkDataLoader(batchLoadFunction, options);
     }
 
@@ -355,7 +355,7 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      */
-    public static <K, V> DataLoader<K, V> newPublisherDataLoader(PublisherBatchLoaderWithContext<K, V> batchLoadFunction) {
+    public static <K, V> DataLoader<K, V> newPublisherDataLoader(BatchPublisherWithContext<K, V> batchLoadFunction) {
         return newPublisherDataLoader(batchLoadFunction, null);
     }
 
@@ -369,7 +369,7 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      */
-    public static <K, V> DataLoader<K, V> newPublisherDataLoader(PublisherBatchLoaderWithContext<K, V> batchLoadFunction, DataLoaderOptions options) {
+    public static <K, V> DataLoader<K, V> newPublisherDataLoader(BatchPublisherWithContext<K, V> batchLoadFunction, DataLoaderOptions options) {
         return mkDataLoader(batchLoadFunction, options);
     }
 
@@ -390,7 +390,7 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      */
-    public static <K, V> DataLoader<K, V> newPublisherDataLoaderWithTry(PublisherBatchLoaderWithContext<K, Try<V>> batchLoadFunction) {
+    public static <K, V> DataLoader<K, V> newPublisherDataLoaderWithTry(BatchPublisherWithContext<K, Try<V>> batchLoadFunction) {
         return newPublisherDataLoaderWithTry(batchLoadFunction, null);
     }
 
@@ -406,9 +406,9 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      *
-     * @see #newPublisherDataLoaderWithTry(PublisherBatchLoader)
+     * @see #newPublisherDataLoaderWithTry(BatchPublisher)
      */
-    public static <K, V> DataLoader<K, V> newPublisherDataLoaderWithTry(PublisherBatchLoaderWithContext<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
+    public static <K, V> DataLoader<K, V> newPublisherDataLoaderWithTry(BatchPublisherWithContext<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
         return mkDataLoader(batchLoadFunction, options);
     }
 
@@ -422,7 +422,7 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      */
-    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoader(MappedPublisherBatchLoader<K, V> batchLoadFunction) {
+    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoader(MappedBatchPublisher<K, V> batchLoadFunction) {
         return newMappedPublisherDataLoader(batchLoadFunction, null);
     }
 
@@ -436,7 +436,7 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      */
-    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoader(MappedPublisherBatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
+    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoader(MappedBatchPublisher<K, V> batchLoadFunction, DataLoaderOptions options) {
         return mkDataLoader(batchLoadFunction, options);
     }
 
@@ -457,7 +457,7 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      */
-    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoaderWithTry(MappedPublisherBatchLoader<K, Try<V>> batchLoadFunction) {
+    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoaderWithTry(MappedBatchPublisher<K, Try<V>> batchLoadFunction) {
         return newMappedPublisherDataLoaderWithTry(batchLoadFunction, null);
     }
 
@@ -475,7 +475,7 @@ public class DataLoaderFactory {
      *
      * @see #newDataLoaderWithTry(BatchLoader)
      */
-    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoaderWithTry(MappedPublisherBatchLoader<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
+    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoaderWithTry(MappedBatchPublisher<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
         return mkDataLoader(batchLoadFunction, options);
     }
 
@@ -489,7 +489,7 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      */
-    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoader(MappedPublisherBatchLoaderWithContext<K, V> batchLoadFunction) {
+    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoader(MappedBatchPublisherWithContext<K, V> batchLoadFunction) {
         return newMappedPublisherDataLoader(batchLoadFunction, null);
     }
 
@@ -503,7 +503,7 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      */
-    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoader(MappedPublisherBatchLoaderWithContext<K, V> batchLoadFunction, DataLoaderOptions options) {
+    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoader(MappedBatchPublisherWithContext<K, V> batchLoadFunction, DataLoaderOptions options) {
         return mkDataLoader(batchLoadFunction, options);
     }
 
@@ -524,7 +524,7 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      */
-    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoaderWithTry(MappedPublisherBatchLoaderWithContext<K, Try<V>> batchLoadFunction) {
+    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoaderWithTry(MappedBatchPublisherWithContext<K, Try<V>> batchLoadFunction) {
         return newMappedPublisherDataLoaderWithTry(batchLoadFunction, null);
     }
 
@@ -540,9 +540,9 @@ public class DataLoaderFactory {
      *
      * @return a new DataLoader
      *
-     * @see #newMappedPublisherDataLoaderWithTry(MappedPublisherBatchLoader)
+     * @see #newMappedPublisherDataLoaderWithTry(MappedBatchPublisher)
      */
-    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoaderWithTry(MappedPublisherBatchLoaderWithContext<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
+    public static <K, V> DataLoader<K, V> newMappedPublisherDataLoaderWithTry(MappedBatchPublisherWithContext<K, Try<V>> batchLoadFunction, DataLoaderOptions options) {
         return mkDataLoader(batchLoadFunction, options);
     }
 

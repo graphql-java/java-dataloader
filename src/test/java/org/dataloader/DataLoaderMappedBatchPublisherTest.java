@@ -24,9 +24,9 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
-public class DataLoaderMappedPublisherBatchLoaderTest {
+public class DataLoaderMappedBatchPublisherTest {
 
-    MappedPublisherBatchLoader<String, String> evensOnlyMappedBatchLoader = (keys, subscriber) -> {
+    MappedBatchPublisher<String, String> evensOnlyMappedBatchLoader = (keys, subscriber) -> {
         Map<String, String> mapOfResults = new HashMap<>();
 
         AtomicInteger index = new AtomicInteger();
@@ -40,7 +40,7 @@ public class DataLoaderMappedPublisherBatchLoaderTest {
     };
 
     private static <K, V> DataLoader<K, V> idMapLoader(DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        MappedPublisherBatchLoader<K, V> kvBatchLoader = (keys, subscriber) -> {
+        MappedBatchPublisher<K, V> kvBatchLoader = (keys, subscriber) -> {
             loadCalls.add(new ArrayList<>(keys));
             Map<K, V> map = new HashMap<>();
             //noinspection unchecked
@@ -52,7 +52,7 @@ public class DataLoaderMappedPublisherBatchLoaderTest {
 
     private static <K, V> DataLoader<K, V> idMapLoaderBlowsUps(
         DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return newMappedPublisherDataLoader((MappedPublisherBatchLoader<K, V>) (keys, subscriber) -> {
+        return newMappedPublisherDataLoader((MappedBatchPublisher<K, V>) (keys, subscriber) -> {
             loadCalls.add(new ArrayList<>(keys));
             Flux.<Map.Entry<K, V>>error(new IllegalStateException("Error")).subscribe(subscriber);
         }, options);

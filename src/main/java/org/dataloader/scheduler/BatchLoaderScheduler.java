@@ -5,8 +5,8 @@ import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.MappedBatchLoader;
-import org.dataloader.MappedPublisherBatchLoader;
-import org.dataloader.PublisherBatchLoader;
+import org.dataloader.MappedBatchPublisher;
+import org.dataloader.BatchPublisher;
 
 import java.util.List;
 import java.util.Map;
@@ -45,9 +45,9 @@ public interface BatchLoaderScheduler {
     }
 
     /**
-     * This represents a callback that will invoke a {@link PublisherBatchLoader} or {@link MappedPublisherBatchLoader} function under the covers
+     * This represents a callback that will invoke a {@link BatchPublisher} or {@link MappedBatchPublisher} function under the covers
      */
-    interface ScheduledObserverBatchLoaderCall {
+    interface ScheduledBatchPublisherCall {
         void invoke();
     }
 
@@ -82,14 +82,14 @@ public interface BatchLoaderScheduler {
     <K, V> CompletionStage<Map<K, V>> scheduleMappedBatchLoader(ScheduledMappedBatchLoaderCall<K, V> scheduledCall, List<K> keys, BatchLoaderEnvironment environment);
 
     /**
-     * This is called to schedule a {@link PublisherBatchLoader} call.
+     * This is called to schedule a {@link BatchPublisher} call.
      *
-     * @param scheduledCall the callback that needs to be invoked to allow the {@link PublisherBatchLoader} to proceed.
-     * @param keys          this is the list of keys that will be passed to the {@link PublisherBatchLoader}.
+     * @param scheduledCall the callback that needs to be invoked to allow the {@link BatchPublisher} to proceed.
+     * @param keys          this is the list of keys that will be passed to the {@link BatchPublisher}.
      *                      This is provided only for informative reasons and, you can't change the keys that are used
      * @param environment   this is the {@link BatchLoaderEnvironment} in place,
-     *                      which can be null if it's a simple {@link PublisherBatchLoader} call
+     *                      which can be null if it's a simple {@link BatchPublisher} call
      * @param <K>           the key type
      */
-    <K> void scheduleObserverBatchLoader(ScheduledObserverBatchLoaderCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment);
+    <K> void scheduleBatchPublisher(ScheduledBatchPublisherCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment);
 }
