@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.util.Arrays.asList;
 import static org.awaitility.Awaitility.await;
-import static org.dataloader.DataLoaderFactory.mkDataLoader;
+import static org.dataloader.DataLoaderFactory.newMappedPublisherDataLoader;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -22,7 +22,7 @@ public class DataLoaderMappedPublisherBatchLoaderTest {
     @Test
     public void should_Build_a_really_really_simple_data_loader() {
         AtomicBoolean success = new AtomicBoolean();
-        DataLoader<Integer, Integer> identityLoader = mkDataLoader(keysAsValues(), DataLoaderOptions.newOptions());
+        DataLoader<Integer, Integer> identityLoader = newMappedPublisherDataLoader(keysAsValues(), DataLoaderOptions.newOptions());
 
         CompletionStage<Integer> future1 = identityLoader.load(1);
 
@@ -37,7 +37,7 @@ public class DataLoaderMappedPublisherBatchLoaderTest {
     @Test
     public void should_Support_loading_multiple_keys_in_one_call() {
         AtomicBoolean success = new AtomicBoolean();
-        DataLoader<Integer, Integer> identityLoader = mkDataLoader(keysAsValues(), DataLoaderOptions.newOptions());
+        DataLoader<Integer, Integer> identityLoader = newMappedPublisherDataLoader(keysAsValues(), DataLoaderOptions.newOptions());
 
         CompletionStage<List<Integer>> futureAll = identityLoader.loadMany(asList(1, 2));
         futureAll.thenAccept(promisedValues -> {
@@ -51,7 +51,7 @@ public class DataLoaderMappedPublisherBatchLoaderTest {
 
     @Test
     public void simple_dataloader() {
-        DataLoader<String, String> loader = mkDataLoader(keysAsValues(), DataLoaderOptions.newOptions());
+        DataLoader<String, String> loader = newMappedPublisherDataLoader(keysAsValues(), DataLoaderOptions.newOptions());
 
         loader.load("A");
         loader.load("B");
@@ -65,7 +65,7 @@ public class DataLoaderMappedPublisherBatchLoaderTest {
 
     @Test
     public void should_observer_batch_multiple_requests() throws ExecutionException, InterruptedException {
-        DataLoader<Integer, Integer> identityLoader = mkDataLoader(keysAsValues(), new DataLoaderOptions());
+        DataLoader<Integer, Integer> identityLoader = newMappedPublisherDataLoader(keysAsValues(), new DataLoaderOptions());
 
         CompletableFuture<Integer> future1 = identityLoader.load(1);
         CompletableFuture<Integer> future2 = identityLoader.load(2);
