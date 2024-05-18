@@ -1,6 +1,7 @@
 package org.dataloader;
 
 import org.junit.Test;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.Map;
@@ -10,15 +11,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.util.Arrays.asList;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderFactory.mkDataLoader;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
-public class DataLoaderMappedObserverBatchLoaderTest {
+public class DataLoaderMappedPublisherBatchLoaderTest {
 
     @Test
     public void should_Build_a_really_really_simple_data_loader() {
@@ -77,30 +76,9 @@ public class DataLoaderMappedObserverBatchLoaderTest {
         assertThat(future2.get(), equalTo(2));
     }
 
-    // A simple wrapper class intended as a proof external libraries can leverage this.
-    private static class Publisher<K, V> {
-
-        private final MappedBatchObserver<K, V> delegate;
-        private Publisher(MappedBatchObserver<K, V> delegate) { this.delegate = delegate; }
-        void onNext(Map.Entry<K, V> entry) { delegate.onNext(entry.getKey(), entry.getValue()); }
-        void onCompleted() { delegate.onCompleted(); }
-        void onError(Throwable e) { delegate.onError(e); }
-        // Mock 'subscribe' methods to simulate what would happen in the real thing.
-        void subscribe(Map<K, V> valueByKey) {
-            valueByKey.entrySet().forEach(this::onNext);
-            this.onCompleted();
-        }
-        void subscribe(Map<K, V> valueByKey, Throwable e) {
-            valueByKey.entrySet().forEach(this::onNext);
-            this.onError(e);
-        }
-    }
-
-    private static <K> MappedObserverBatchLoader<K, K> keysAsValues() {
-        return (keys, observer) -> {
-            Publisher<K, K> publisher = new Publisher<>(observer);
-            Map<K, K> valueByKey =  keys.stream().collect(toMap(identity(), identity()));
-            publisher.subscribe(valueByKey);
-        };
+    private static <K> MappedPublisherBatchLoader<K, K> keysAsValues() {
+        return (keys, subscriber) -> Flux
+            .fromStream(keys.stream().map(k -> Map.entry(k, k)))
+            .subscribe(subscriber);
     }
 }

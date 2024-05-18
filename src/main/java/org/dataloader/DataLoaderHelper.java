@@ -10,6 +10,8 @@ import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsCo
 import org.dataloader.stats.context.IncrementCacheHitCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -246,7 +248,7 @@ class DataLoaderHelper<K, V> {
         return batchLoad
                 .thenApply(values -> {
                     assertResultSize(keys, values);
-                    if (isObserverLoader() || isMapObserverLoader()) {
+                    if (isPublisherLoader() || isMappedPublisherLoader()) {
                         // We have already completed the queued futures by the time the overall batchLoad future has completed.
                         return values;
                     }
@@ -428,10 +430,10 @@ class DataLoaderHelper<K, V> {
                     .context(context).keyContexts(keys, keyContexts).build();
             if (isMapLoader()) {
                 batchLoad = invokeMapBatchLoader(keys, environment);
-            } else if (isObserverLoader()) {
-                batchLoad = invokeObserverBatchLoader(keys, keyContexts, queuedFutures, environment);
-            } else if (isMapObserverLoader()) {
-                batchLoad = invokeMappedObserverBatchLoader(keys, keyContexts, queuedFutures, environment);
+            } else if (isPublisherLoader()) {
+                batchLoad = invokePublisherBatchLoader(keys, keyContexts, queuedFutures, environment);
+            } else if (isMappedPublisherLoader()) {
+                batchLoad = invokeMappedPublisherBatchLoader(keys, keyContexts, queuedFutures, environment);
             } else {
                 batchLoad = invokeListBatchLoader(keys, environment);
             }
@@ -503,38 +505,38 @@ class DataLoaderHelper<K, V> {
         });
     }
 
-    private CompletableFuture<List<V>> invokeObserverBatchLoader(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, BatchLoaderEnvironment environment) {
+    private CompletableFuture<List<V>> invokePublisherBatchLoader(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, BatchLoaderEnvironment environment) {
         CompletableFuture<List<V>> loadResult = new CompletableFuture<>();
-        BatchObserver<V> observer = new BatchObserverImpl(loadResult, keys, keyContexts, queuedFutures);
+        Subscriber<V> subscriber = new DataLoaderSubscriber(loadResult, keys, keyContexts, queuedFutures);
 
         BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
-        if (batchLoadFunction instanceof ObserverBatchLoaderWithContext) {
-            ObserverBatchLoaderWithContext<K, V> loadFunction = (ObserverBatchLoaderWithContext<K, V>) batchLoadFunction;
+        if (batchLoadFunction instanceof PublisherBatchLoaderWithContext) {
+            PublisherBatchLoaderWithContext<K, V> loadFunction = (PublisherBatchLoaderWithContext<K, V>) batchLoadFunction;
             if (batchLoaderScheduler != null) {
-                BatchLoaderScheduler.ScheduledObserverBatchLoaderCall loadCall = () -> loadFunction.load(keys, observer, environment);
+                BatchLoaderScheduler.ScheduledObserverBatchLoaderCall loadCall = () -> loadFunction.load(keys, subscriber, environment);
                 batchLoaderScheduler.scheduleObserverBatchLoader(loadCall, keys, environment);
             } else {
-                loadFunction.load(keys, observer, environment);
+                loadFunction.load(keys, subscriber, environment);
             }
         } else {
-            ObserverBatchLoader<K, V> loadFunction = (ObserverBatchLoader<K, V>) batchLoadFunction;
+            PublisherBatchLoader<K, V> loadFunction = (PublisherBatchLoader<K, V>) batchLoadFunction;
             if (batchLoaderScheduler != null) {
-                BatchLoaderScheduler.ScheduledObserverBatchLoaderCall loadCall = () -> loadFunction.load(keys, observer);
+                BatchLoaderScheduler.ScheduledObserverBatchLoaderCall loadCall = () -> loadFunction.load(keys, subscriber);
                 batchLoaderScheduler.scheduleObserverBatchLoader(loadCall, keys, null);
             } else {
-                loadFunction.load(keys, observer);
+                loadFunction.load(keys, subscriber);
             }
         }
         return loadResult;
     }
 
-    private CompletableFuture<List<V>> invokeMappedObserverBatchLoader(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, BatchLoaderEnvironment environment) {
+    private CompletableFuture<List<V>> invokeMappedPublisherBatchLoader(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, BatchLoaderEnvironment environment) {
         CompletableFuture<List<V>> loadResult = new CompletableFuture<>();
-        MappedBatchObserver<K, V> observer = new MappedBatchObserverImpl(loadResult, keys, keyContexts, queuedFutures);
+        Subscriber<Map.Entry<K, V>> observer = new DataLoaderMapEntrySubscriber(loadResult, keys, keyContexts, queuedFutures);
 
         BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
-        if (batchLoadFunction instanceof MappedObserverBatchLoaderWithContext) {
-            MappedObserverBatchLoaderWithContext<K, V> loadFunction = (MappedObserverBatchLoaderWithContext<K, V>) batchLoadFunction;
+        if (batchLoadFunction instanceof MappedPublisherBatchLoaderWithContext) {
+            MappedPublisherBatchLoaderWithContext<K, V> loadFunction = (MappedPublisherBatchLoaderWithContext<K, V>) batchLoadFunction;
             if (batchLoaderScheduler != null) {
                 BatchLoaderScheduler.ScheduledObserverBatchLoaderCall loadCall = () -> loadFunction.load(keys, observer, environment);
                 batchLoaderScheduler.scheduleObserverBatchLoader(loadCall, keys, environment);
@@ -542,7 +544,7 @@ class DataLoaderHelper<K, V> {
                 loadFunction.load(keys, observer, environment);
             }
         } else {
-            MappedObserverBatchLoader<K, V> loadFunction = (MappedObserverBatchLoader<K, V>) batchLoadFunction;
+            MappedPublisherBatchLoader<K, V> loadFunction = (MappedPublisherBatchLoader<K, V>) batchLoadFunction;
             if (batchLoaderScheduler != null) {
                 BatchLoaderScheduler.ScheduledObserverBatchLoaderCall loadCall = () -> loadFunction.load(keys, observer);
                 batchLoaderScheduler.scheduleObserverBatchLoader(loadCall, keys, null);
@@ -557,12 +559,12 @@ class DataLoaderHelper<K, V> {
         return batchLoadFunction instanceof MappedBatchLoader || batchLoadFunction instanceof MappedBatchLoaderWithContext;
     }
 
-    private boolean isObserverLoader() {
-        return batchLoadFunction instanceof ObserverBatchLoader;
+    private boolean isPublisherLoader() {
+        return batchLoadFunction instanceof PublisherBatchLoader;
     }
 
-    private boolean isMapObserverLoader() {
-        return batchLoadFunction instanceof MappedObserverBatchLoader;
+    private boolean isMappedPublisherLoader() {
+        return batchLoadFunction instanceof MappedPublisherBatchLoader;
     }
 
     int dispatchDepth() {
@@ -616,7 +618,8 @@ class DataLoaderHelper<K, V> {
         return (DispatchResult<T>) EMPTY_DISPATCH_RESULT;
     }
 
-    private class BatchObserverImpl implements BatchObserver<V> {
+    private class DataLoaderSubscriber implements Subscriber<V> {
+
         private final CompletableFuture<List<V>> valuesFuture;
         private final List<K> keys;
         private final List<Object> callContexts;
@@ -628,7 +631,7 @@ class DataLoaderHelper<K, V> {
         private boolean onErrorCalled = false;
         private boolean onCompletedCalled = false;
 
-        private BatchObserverImpl(
+        private DataLoaderSubscriber(
             CompletableFuture<List<V>> valuesFuture,
             List<K> keys,
             List<Object> callContexts,
@@ -638,6 +641,11 @@ class DataLoaderHelper<K, V> {
             this.keys = keys;
             this.callContexts = callContexts;
             this.queuedFutures = queuedFutures;
+        }
+
+        @Override
+        public void onSubscribe(Subscription subscription) {
+            subscription.request(keys.size());
         }
 
         @Override
@@ -671,7 +679,7 @@ class DataLoaderHelper<K, V> {
         }
 
         @Override
-        public void onCompleted() {
+        public void onComplete() {
             assert !onErrorCalled;
             onCompletedCalled = true;
 
@@ -701,7 +709,7 @@ class DataLoaderHelper<K, V> {
         }
     }
 
-    private class MappedBatchObserverImpl implements MappedBatchObserver<K, V> {
+    private class DataLoaderMapEntrySubscriber implements Subscriber<Map.Entry<K, V>> {
         private final CompletableFuture<List<V>> valuesFuture;
         private final List<K> keys;
         private final List<Object> callContexts;
@@ -714,7 +722,7 @@ class DataLoaderHelper<K, V> {
         private boolean onErrorCalled = false;
         private boolean onCompletedCalled = false;
 
-        private MappedBatchObserverImpl(
+        private DataLoaderMapEntrySubscriber(
             CompletableFuture<List<V>> valuesFuture,
             List<K> keys,
             List<Object> callContexts,
@@ -737,8 +745,15 @@ class DataLoaderHelper<K, V> {
         }
 
         @Override
-        public void onNext(K key, V value) {
+        public void onSubscribe(Subscription subscription) {
+            subscription.request(keys.size());
+        }
+
+        @Override
+        public void onNext(Map.Entry<K, V> entry) {
             assert !onErrorCalled && !onCompletedCalled;
+            K key = entry.getKey();
+            V value = entry.getValue();
 
             Object callContext = callContextByKey.get(key);
             CompletableFuture<V> future = queuedFutureByKey.get(key);
@@ -765,7 +780,7 @@ class DataLoaderHelper<K, V> {
         }
 
         @Override
-        public void onCompleted() {
+        public void onComplete() {
             assert !onErrorCalled;
             onCompletedCalled = true;
 

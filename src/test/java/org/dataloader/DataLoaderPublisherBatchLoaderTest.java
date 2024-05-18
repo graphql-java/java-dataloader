@@ -1,6 +1,7 @@
 package org.dataloader;
 
 import org.junit.Test;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -15,7 +16,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
-public class DataLoaderObserverBatchLoaderTest {
+public class DataLoaderPublisherBatchLoaderTest {
 
     @Test
     public void should_Build_a_really_really_simple_data_loader() {
@@ -74,35 +75,7 @@ public class DataLoaderObserverBatchLoaderTest {
         assertThat(future2.get(), equalTo(2));
     }
 
-    // A simple wrapper class intended as a proof external libraries can leverage this.
-    private static class Publisher<V> {
-        private final BatchObserver<V> delegate;
-        private Publisher(BatchObserver<V> delegate) { this.delegate = delegate; }
-        void onNext(V value) { delegate.onNext(value); }
-        void onCompleted() { delegate.onCompleted(); }
-        void onError(Throwable e) { delegate.onError(e); }
-        // Mock 'subscribe' methods to simulate what would happen in the real thing.
-        void subscribe(List<V> values) {
-            values.forEach(this::onNext);
-            this.onCompleted();
-        }
-        void subscribe(List<V> values, Throwable e) {
-            values.forEach(this::onNext);
-            this.onError(e);
-        }
-    }
-
-    private static <K> ObserverBatchLoader<K, K> keysAsValues() {
-        return (keys, observer) -> {
-            Publisher<K> publisher = new Publisher<>(observer);
-            publisher.subscribe(keys);
-        };
-    }
-
-    private static <K, V> ObserverBatchLoader<K, V> keysWithValuesAndException(List<V> values, Throwable e) {
-        return (keys, observer) -> {
-            Publisher<V> publisher = new Publisher<>(observer);
-            publisher.subscribe(values, e);
-        };
+    private static <K> PublisherBatchLoader<K, K> keysAsValues() {
+        return (keys, subscriber) -> Flux.fromIterable(keys).subscribe(subscriber);
     }
 }
