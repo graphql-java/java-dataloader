@@ -648,8 +648,10 @@ class DataLoaderHelper<K, V> {
             subscription.request(keys.size());
         }
 
+        // onNext may be called by multiple threads - for the time being, we pass 'synchronized' to guarantee
+        // correctness (at the cost of speed).
         @Override
-        public void onNext(V value) {
+        public synchronized void onNext(V value) {
             assertState(!onErrorCalled, () -> "onError has already been called; onNext may not be invoked.");
             assertState(!onCompleteCalled, () -> "onComplete has already been called; onNext may not be invoked.");
 
