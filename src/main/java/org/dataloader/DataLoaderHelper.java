@@ -656,11 +656,7 @@ class DataLoaderHelper<K, V> {
             K key = keys.get(idx);
             Object callContext = callContexts.get(idx);
             CompletableFuture<V> future = queuedFutures.get(idx);
-            if (value instanceof Throwable) {
-                stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
-                future.completeExceptionally((Throwable) value);
-                clearCacheKeys.add(keys.get(idx));
-            } else if (value instanceof Try) {
+            if (value instanceof Try) {
                 // we allow the batch loader to return a Try so we can better represent a computation
                 // that might have worked or not.
                 Try<V> tryValue = (Try<V>) value;
@@ -759,11 +755,7 @@ class DataLoaderHelper<K, V> {
 
             Object callContext = callContextByKey.get(key);
             CompletableFuture<V> future = queuedFutureByKey.get(key);
-            if (value instanceof Throwable) {
-                stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
-                future.completeExceptionally((Throwable) value);
-                clearCacheKeys.add(key);
-            } else if (value instanceof Try) {
+            if (value instanceof Try) {
                 // we allow the batch loader to return a Try so we can better represent a computation
                 // that might have worked or not.
                 Try<V> tryValue = (Try<V>) value;
