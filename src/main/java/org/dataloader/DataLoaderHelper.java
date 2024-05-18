@@ -629,7 +629,7 @@ class DataLoaderHelper<K, V> {
         private final List<V> completedValues = new ArrayList<>();
         private int idx = 0;
         private boolean onErrorCalled = false;
-        private boolean onCompletedCalled = false;
+        private boolean onCompleteCalled = false;
 
         private DataLoaderSubscriber(
             CompletableFuture<List<V>> valuesFuture,
@@ -650,7 +650,8 @@ class DataLoaderHelper<K, V> {
 
         @Override
         public void onNext(V value) {
-            assert !onErrorCalled && !onCompletedCalled;
+            assertState(!onErrorCalled, () -> "onError has already been called; onNext may not be invoked.");
+            assertState(!onCompleteCalled, () -> "onComplete has already been called; onNext may not be invoked.");
 
             K key = keys.get(idx);
             Object callContext = callContexts.get(idx);
@@ -680,8 +681,8 @@ class DataLoaderHelper<K, V> {
 
         @Override
         public void onComplete() {
-            assert !onErrorCalled;
-            onCompletedCalled = true;
+            assertState(!onErrorCalled, () -> "onError has already been called; onComplete may not be invoked.");
+            onCompleteCalled = true;
 
             assertResultSize(keys, completedValues);
 
@@ -691,7 +692,7 @@ class DataLoaderHelper<K, V> {
 
         @Override
         public void onError(Throwable ex) {
-            assert !onCompletedCalled;
+            assertState(!onCompleteCalled, () -> "onComplete has already been called; onError may not be invoked.");
             onErrorCalled = true;
 
             stats.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(keys, callContexts));
@@ -720,7 +721,7 @@ class DataLoaderHelper<K, V> {
         private final List<K> clearCacheKeys = new ArrayList<>();
         private final Map<K, V> completedValuesByKey = new HashMap<>();
         private boolean onErrorCalled = false;
-        private boolean onCompletedCalled = false;
+        private boolean onCompleteCalled = false;
 
         private DataLoaderMapEntrySubscriber(
             CompletableFuture<List<V>> valuesFuture,
@@ -751,7 +752,8 @@ class DataLoaderHelper<K, V> {
 
         @Override
         public void onNext(Map.Entry<K, V> entry) {
-            assert !onErrorCalled && !onCompletedCalled;
+            assertState(!onErrorCalled, () -> "onError has already been called; onNext may not be invoked.");
+            assertState(!onCompleteCalled, () -> "onComplete has already been called; onNext may not be invoked.");
             K key = entry.getKey();
             V value = entry.getValue();
 
@@ -781,8 +783,8 @@ class DataLoaderHelper<K, V> {
 
         @Override
         public void onComplete() {
-            assert !onErrorCalled;
-            onCompletedCalled = true;
+            assertState(!onErrorCalled, () -> "onError has already been called; onComplete may not be invoked.");
+            onCompleteCalled = true;
 
             possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
             List<V> values = new ArrayList<>(keys.size());
@@ -795,7 +797,7 @@ class DataLoaderHelper<K, V> {
 
         @Override
         public void onError(Throwable ex) {
-            assert !onCompletedCalled;
+            assertState(!onCompleteCalled, () -> "onComplete has already been called; onError may not be invoked.");
             onErrorCalled = true;
 
             stats.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(keys, callContexts));
