@@ -3,7 +3,7 @@ package org.dataloader.registries;
 import org.dataloader.BatchLoader;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderRegistry;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -12,10 +12,9 @@ import static java.util.Arrays.asList;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.dataloader.fixtures.TestKit.asSet;
-import static org.dataloader.registries.DispatchPredicate.DISPATCH_NEVER;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 public class ScheduledDataLoaderRegistryPredicateTest {
     final BatchLoader<Object, Object> identityBatchLoader = CompletableFuture::completedFuture;

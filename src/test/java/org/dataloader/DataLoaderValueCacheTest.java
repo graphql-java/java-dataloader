@@ -5,7 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dataloader.fixtures.CaffeineValueCache;
 import org.dataloader.fixtures.CustomValueCache;
 import org.dataloader.impl.DataLoaderAssertionException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,11 +22,11 @@ import static org.dataloader.fixtures.TestKit.idLoader;
 import static org.dataloader.fixtures.TestKit.snooze;
 import static org.dataloader.fixtures.TestKit.sort;
 import static org.dataloader.impl.CompletableFutureKit.failedFuture;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DataLoaderValueCacheTest {
 

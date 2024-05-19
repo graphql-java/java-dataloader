@@ -1,11 +1,11 @@
 package org.dataloader.registries;
 
-import junit.framework.TestCase;
 import org.awaitility.core.ConditionTimeoutException;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderFactory;
 import org.dataloader.DataLoaderRegistry;
 import org.dataloader.fixtures.TestKit;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -22,17 +22,22 @@ import static org.awaitility.Awaitility.await;
 import static org.awaitility.Duration.TWO_SECONDS;
 import static org.dataloader.fixtures.TestKit.keysAsValues;
 import static org.dataloader.fixtures.TestKit.snooze;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-public class ScheduledDataLoaderRegistryTest extends TestCase {
+public class ScheduledDataLoaderRegistryTest {
 
     DispatchPredicate alwaysDispatch = (key, dl) -> true;
     DispatchPredicate neverDispatch = (key, dl) -> false;
 
 
-    public void test_basic_setup_works_like_a_normal_dlr() {
+    @Test
+    public void basic_setup_works_like_a_normal_dlr() {
 
         List<List<String>> aCalls = new ArrayList<>();
         List<List<String>> bCalls = new ArrayList<>();
@@ -63,7 +68,8 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         assertThat(bCalls, equalTo(singletonList(asList("BK1", "BK2"))));
     }
 
-    public void test_predicate_always_false() {
+    @Test
+    public void predicate_always_false() {
 
         List<List<String>> calls = new ArrayList<>();
         DataLoader<String, String> dlA = DataLoaderFactory.newDataLoader(keysAsValues(calls));
@@ -92,7 +98,8 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         assertThat(calls.size(), equalTo(0));
     }
 
-    public void test_predicate_that_eventually_returns_true() {
+    @Test
+    public void predicate_that_eventually_returns_true() {
 
 
         AtomicInteger counter = new AtomicInteger();
@@ -123,7 +130,8 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         assertTrue(p2.isDone());
     }
 
-    public void test_dispatchAllWithCountImmediately() {
+    @Test
+    public void dispatchAllWithCountImmediately() {
         List<List<String>> calls = new ArrayList<>();
         DataLoader<String, String> dlA = DataLoaderFactory.newDataLoader(keysAsValues(calls));
         dlA.load("K1");
@@ -140,7 +148,8 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         assertThat(calls, equalTo(singletonList(asList("K1", "K2"))));
     }
 
-    public void test_dispatchAllImmediately() {
+    @Test
+    public void dispatchAllImmediately() {
         List<List<String>> calls = new ArrayList<>();
         DataLoader<String, String> dlA = DataLoaderFactory.newDataLoader(keysAsValues(calls));
         dlA.load("K1");
@@ -156,7 +165,8 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         assertThat(calls, equalTo(singletonList(asList("K1", "K2"))));
     }
 
-    public void test_rescheduleNow() {
+    @Test
+    public void rescheduleNow() {
         AtomicInteger i = new AtomicInteger();
         DispatchPredicate countingPredicate = (dataLoaderKey, dataLoader) -> i.incrementAndGet() > 5;
 
@@ -179,7 +189,8 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         assertThat(calls, equalTo(singletonList(asList("K1", "K2"))));
     }
 
-    public void test_it_will_take_out_the_schedule_once_it_dispatches() {
+    @Test
+    public void it_will_take_out_the_schedule_once_it_dispatches() {
         AtomicInteger counter = new AtomicInteger();
         DispatchPredicate countingPredicate = (dataLoaderKey, dataLoader) -> counter.incrementAndGet() > 5;
 
@@ -220,7 +231,8 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         assertThat(calls, equalTo(asList(asList("K1", "K2"), asList("K3", "K4"))));
     }
 
-    public void test_close_is_a_one_way_door() {
+    @Test
+    public void close_is_a_one_way_door() {
         AtomicInteger counter = new AtomicInteger();
         DispatchPredicate countingPredicate = (dataLoaderKey, dataLoader) -> {
             counter.incrementAndGet();
@@ -264,7 +276,8 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         assertEquals(counter.get(), countThen + 1);
     }
 
-    public void test_can_tick_after_first_dispatch_for_chain_data_loaders() {
+    @Test
+    public void can_tick_after_first_dispatch_for_chain_data_loaders() {
 
         // delays much bigger than the tick rate will mean multiple calls to dispatch
         DataLoader<String, String> dlA = TestKit.idLoaderAsync(Duration.ofMillis(100));
@@ -293,7 +306,8 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         registry.close();
     }
 
-    public void test_chain_data_loaders_will_hang_if_not_in_ticker_mode() {
+    @Test
+    public void chain_data_loaders_will_hang_if_not_in_ticker_mode() {
 
         // delays much bigger than the tick rate will mean multiple calls to dispatch
         DataLoader<String, String> dlA = TestKit.idLoaderAsync(Duration.ofMillis(100));
@@ -325,7 +339,8 @@ public class ScheduledDataLoaderRegistryTest extends TestCase {
         registry.close();
     }
 
-    public void test_executors_are_shutdown() {
+    @Test
+    public void executors_are_shutdown() {
         ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry().build();
 
         ScheduledExecutorService executorService = registry.getScheduledExecutorService();

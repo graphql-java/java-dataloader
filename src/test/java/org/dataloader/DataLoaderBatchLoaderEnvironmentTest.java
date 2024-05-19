@@ -1,6 +1,6 @@
 package org.dataloader;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,8 +14,8 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.dataloader.DataLoaderFactory.newMappedDataLoader;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
 
 /**
  * Tests related to context.  DataLoaderTest is getting to big and needs refactoring
