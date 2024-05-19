@@ -30,7 +30,6 @@ def getDevelopmentVersion() {
     version
 }
 
-
 def releaseVersion = System.env.RELEASE_VERSION
 version = releaseVersion ? releaseVersion : getDevelopmentVersion()
 group = 'com.graphql-java'
@@ -76,6 +75,7 @@ dependencies {
     testImplementation 'org.awaitility:awaitility:2.0.0'
     testImplementation 'io.projectreactor:reactor-core:3.6.6'
     testImplementation 'com.github.ben-manes.caffeine:caffeine:2.9.0'
+    testImplementation 'io.projectreactor:reactor-core:3.6.6'
 }
 
 task sourcesJar(type: Jar) {

@@ -304,6 +304,12 @@ public class ReadmeExamples {
                     return scheduledCall.invoke();
                 }).thenCompose(Function.identity());
             }
+
+            @Override
+            public <K> void scheduleBatchPublisher(ScheduledBatchPublisherCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+                snooze(10);
+                scheduledCall.invoke();
+            }
         };
     }
 
