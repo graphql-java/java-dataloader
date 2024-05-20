@@ -2,16 +2,16 @@ package org.dataloader;
 
 import org.dataloader.stats.SimpleStatisticsCollector;
 import org.dataloader.stats.Statistics;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CompletableFuture;
 
 import static java.util.Arrays.asList;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.sameInstance;
-import static org.junit.Assert.assertThat;
 
 public class DataLoaderRegistryTest {
     final BatchLoader<Object, Object> identityBatchLoader = CompletableFuture::completedFuture;

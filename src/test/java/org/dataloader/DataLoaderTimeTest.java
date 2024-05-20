@@ -1,13 +1,13 @@
 package org.dataloader;
 
 import org.dataloader.fixtures.TestingClock;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 
 import static org.dataloader.fixtures.TestKit.keysAsValues;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
 
 @SuppressWarnings("UnusedReturnValue")
 public class DataLoaderTimeTest {

@@ -9,7 +9,7 @@ import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsCo
 import org.dataloader.stats.context.IncrementCacheHitCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,9 +19,9 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertThat;
 
 /**
  * Tests related to stats.  DataLoaderTest is getting to big and needs refactoring

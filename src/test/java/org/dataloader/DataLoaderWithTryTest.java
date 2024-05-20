@@ -1,7 +1,7 @@
 package org.dataloader;
 
 import org.hamcrest.Matchers;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,9 +12,9 @@ import java.util.concurrent.CompletableFuture;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.dataloader.DataLoaderFactory.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
 
 public class DataLoaderWithTryTest {
 

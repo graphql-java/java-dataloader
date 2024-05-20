@@ -1,7 +1,7 @@
 package org.dataloader;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -9,11 +9,11 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TryTest {
 
@@ -29,7 +29,7 @@ public class TryTest {
                 return;
             }
         }
-        Assert.fail("Expected throwable :  " + throwableClass.getName());
+        Assertions.fail("Expected throwable :  " + throwableClass.getName());
     }
 
     @SuppressWarnings("SameParameterValue")

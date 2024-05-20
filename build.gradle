@@ -71,10 +71,14 @@ dependencies {
     api 'org.reactivestreams:reactive-streams:' + reactiveStreamsVersion
 
     testImplementation 'org.slf4j:slf4j-simple:' + slf4jVersion
-    testImplementation 'junit:junit:4.12'
     testImplementation 'org.awaitility:awaitility:2.0.0'
+    testImplementation "org.hamcrest:hamcrest:2.2"
     testImplementation 'io.projectreactor:reactor-core:3.6.6'
     testImplementation 'com.github.ben-manes.caffeine:caffeine:2.9.0'
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testImplementation 'io.projectreactor:reactor-core:3.6.6'
 }
 
@@ -102,6 +106,7 @@ test {
     testLogging {
         exceptionFormat = 'full'
     }
+    useJUnitPlatform()
 }
 
 publishing {

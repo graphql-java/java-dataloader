@@ -3,7 +3,7 @@ package org.dataloader.scheduler;
 import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -20,8 +20,8 @@ import static org.dataloader.fixtures.TestKit.keysAsMapOfValuesWithContext;
 import static org.dataloader.fixtures.TestKit.keysAsValues;
 import static org.dataloader.fixtures.TestKit.keysAsValuesWithContext;
 import static org.dataloader.fixtures.TestKit.snooze;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
 
 public class BatchLoaderSchedulerTest {
 

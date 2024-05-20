@@ -1,6 +1,6 @@
 package org.dataloader.impl;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -12,12 +12,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static org.awaitility.Awaitility.await;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
 
 public class PromisedValuesImplTest {
 
