@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -49,6 +50,10 @@ import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.dataloader.DataLoaderFactory.newMappedDataLoader;
+import static org.dataloader.DataLoaderFactory.newMappedPublisherDataLoader;
+import static org.dataloader.DataLoaderFactory.newMappedPublisherDataLoaderWithTry;
+import static org.dataloader.DataLoaderFactory.newPublisherDataLoader;
+import static org.dataloader.DataLoaderFactory.newPublisherDataLoaderWithTry;
 import static org.dataloader.DataLoaderOptions.newOptions;
 import static org.dataloader.fixtures.TestKit.futureError;
 import static org.dataloader.fixtures.TestKit.listFrom;
@@ -727,7 +732,7 @@ public class DataLoaderTest {
         assertThat(future1.get(), equalTo("A"));
         assertThat(future2.get(), equalTo("B"));
         assertThat(future3.get(), equalTo("A"));
-        if (factory instanceof ListDataLoaderFactory) {
+        if (factory instanceof ListDataLoaderFactory || factory instanceof PublisherDataLoaderFactory) {
             assertThat(loadCalls, equalTo(singletonList(asList("A", "B", "A"))));
         } else {
             assertThat(loadCalls, equalTo(singletonList(asList("A", "B"))));
@@ -1147,32 +1152,30 @@ public class DataLoaderTest {
     private static Stream<Arguments> dataLoaderFactories() {
         return Stream.of(
                 Arguments.of(Named.of("List DataLoader", new ListDataLoaderFactory())),
-                Arguments.of(Named.of("Mapped DataLoader", new MappedDataLoaderFactory()))
+                Arguments.of(Named.of("Mapped DataLoader", new MappedDataLoaderFactory())),
+                Arguments.of(Named.of("Publisher DataLoader", new PublisherDataLoaderFactory())),
+                Arguments.of(Named.of("Mapped Publisher DataLoader", new MappedPublisherDataLoaderFactory()))
         );
     }
 
     public interface TestDataLoaderFactory {
-        <K, V> DataLoader<K, V> idLoader(DataLoaderOptions options, List<Collection<K>> loadCalls);
-        <K, V> DataLoader<K, V> idLoaderBlowsUps(DataLoaderOptions options, List<Collection<K>> loadCalls);
+        <K> DataLoader<K, K> idLoader(DataLoaderOptions options, List<Collection<K>> loadCalls);
+        <K> DataLoader<K, K> idLoaderBlowsUps(DataLoaderOptions options, List<Collection<K>> loadCalls);
         <K> DataLoader<K, Object> idLoaderAllExceptions(DataLoaderOptions options, List<Collection<K>> loadCalls);
         DataLoader<Integer, Object> idLoaderOddEvenExceptions(DataLoaderOptions options, List<Collection<Integer>> loadCalls);
     }
 
     private static class ListDataLoaderFactory implements TestDataLoaderFactory {
         @Override
-        public <K, V> DataLoader<K, V> idLoader(DataLoaderOptions options, List<Collection<K>> loadCalls) {
+        public <K> DataLoader<K, K> idLoader(DataLoaderOptions options, List<Collection<K>> loadCalls) {
             return newDataLoader(keys -> {
                 loadCalls.add(new ArrayList<>(keys));
-                @SuppressWarnings("unchecked")
-                List<V> values = keys.stream()
-                        .map(k -> (V) k)
-                        .collect(Collectors.toList());
-                return CompletableFuture.completedFuture(values);
+                return CompletableFuture.completedFuture(keys);
             }, options);
         }
 
         @Override
-        public <K, V> DataLoader<K, V> idLoaderBlowsUps(
+        public <K> DataLoader<K, K> idLoaderBlowsUps(
                 DataLoaderOptions options, List<Collection<K>> loadCalls) {
             return newDataLoader(keys -> {
                 loadCalls.add(new ArrayList<>(keys));
@@ -1211,19 +1214,18 @@ public class DataLoaderTest {
     private static class MappedDataLoaderFactory implements TestDataLoaderFactory {
 
         @Override
-        public <K, V> DataLoader<K, V> idLoader(
+        public <K> DataLoader<K, K> idLoader(
                 DataLoaderOptions options, List<Collection<K>> loadCalls) {
             return newMappedDataLoader((keys) -> {
                 loadCalls.add(new ArrayList<>(keys));
-                Map<K, V> map = new HashMap<>();
-                //noinspection unchecked
-                keys.forEach(k -> map.put(k, (V) k));
+                Map<K, K> map = new HashMap<>();
+                keys.forEach(k -> map.put(k, k));
                 return CompletableFuture.completedFuture(map);
             }, options);
         }
 
         @Override
-        public <K, V> DataLoader<K, V> idLoaderBlowsUps(DataLoaderOptions options, List<Collection<K>> loadCalls) {
+        public <K> DataLoader<K, K> idLoaderBlowsUps(DataLoaderOptions options, List<Collection<K>> loadCalls) {
             return newMappedDataLoader((keys) -> {
                 loadCalls.add(new ArrayList<>(keys));
                 return futureError();
@@ -1256,6 +1258,104 @@ public class DataLoaderTest {
                     }
                 }
                 return CompletableFuture.completedFuture(errorByKey);
+            }, options);
+        }
+    }
+
+    private static class PublisherDataLoaderFactory implements TestDataLoaderFactory {
+
+        @Override
+        public <K> DataLoader<K, K> idLoader(
+            DataLoaderOptions options, List<Collection<K>> loadCalls) {
+            return newPublisherDataLoader((keys, subscriber) -> {
+                loadCalls.add(new ArrayList<>(keys));
+                Flux.fromIterable(keys).subscribe(subscriber);
+            }, options);
+        }
+
+        @Override
+        public <K> DataLoader<K, K> idLoaderBlowsUps(DataLoaderOptions options, List<Collection<K>> loadCalls) {
+            return newPublisherDataLoader((keys, subscriber) -> {
+                loadCalls.add(new ArrayList<>(keys));
+                Flux.<K>error(new IllegalStateException("Error")).subscribe(subscriber);
+            }, options);
+        }
+
+        @Override
+        public <K> DataLoader<K, Object> idLoaderAllExceptions(
+            DataLoaderOptions options, List<Collection<K>> loadCalls) {
+            return newPublisherDataLoaderWithTry((keys, subscriber) -> {
+                loadCalls.add(new ArrayList<>(keys));
+                Stream<Try<Object>> failures = keys.stream().map(k -> Try.failed(new IllegalStateException("Error")));
+                Flux.fromStream(failures).subscribe(subscriber);
+            }, options);
+        }
+
+        @Override
+        public DataLoader<Integer, Object> idLoaderOddEvenExceptions(
+            DataLoaderOptions options, List<Collection<Integer>> loadCalls) {
+            return newPublisherDataLoaderWithTry((keys, subscriber) -> {
+                loadCalls.add(new ArrayList<>(keys));
+
+                List<Try<Object>> errors = new ArrayList<>();
+                for (Integer key : keys) {
+                    if (key % 2 == 0) {
+                        errors.add(Try.succeeded(key));
+                    } else {
+                        errors.add(Try.failed(new IllegalStateException("Error")));
+                    }
+                }
+                Flux.fromIterable(errors).subscribe(subscriber);
+            }, options);
+        }
+    }
+
+    private static class MappedPublisherDataLoaderFactory implements TestDataLoaderFactory {
+
+        @Override
+        public <K> DataLoader<K, K> idLoader(
+            DataLoaderOptions options, List<Collection<K>> loadCalls) {
+            return newMappedPublisherDataLoader((keys, subscriber) -> {
+                loadCalls.add(new ArrayList<>(keys));
+                Map<K, K> map = new HashMap<>();
+                keys.forEach(k -> map.put(k, k));
+                Flux.fromIterable(map.entrySet()).subscribe(subscriber);
+            }, options);
+        }
+
+        @Override
+        public <K> DataLoader<K, K> idLoaderBlowsUps(DataLoaderOptions options, List<Collection<K>> loadCalls) {
+            return newMappedPublisherDataLoader((keys, subscriber) -> {
+                loadCalls.add(new ArrayList<>(keys));
+                Flux.<Map.Entry<K, K>>error(new IllegalStateException("Error")).subscribe(subscriber);
+            }, options);
+        }
+
+        @Override
+        public <K> DataLoader<K, Object> idLoaderAllExceptions(
+            DataLoaderOptions options, List<Collection<K>> loadCalls) {
+            return newMappedPublisherDataLoaderWithTry((keys, subscriber) -> {
+                loadCalls.add(new ArrayList<>(keys));
+                Stream<Map.Entry<K, Try<Object>>> failures = keys.stream().map(k -> Map.entry(k, Try.failed(new IllegalStateException("Error"))));
+                Flux.fromStream(failures).subscribe(subscriber);
+            }, options);
+        }
+
+        @Override
+        public DataLoader<Integer, Object> idLoaderOddEvenExceptions(
+            DataLoaderOptions options, List<Collection<Integer>> loadCalls) {
+            return newMappedPublisherDataLoaderWithTry((keys, subscriber) -> {
+                loadCalls.add(new ArrayList<>(keys));
+
+                Map<Integer, Try<Object>> errorByKey = new HashMap<>();
+                for (Integer key : keys) {
+                    if (key % 2 == 0) {
+                        errorByKey.put(key, Try.succeeded(key));
+                    } else {
+                        errorByKey.put(key, Try.failed(new IllegalStateException("Error")));
+                    }
+                }
+                Flux.fromIterable(errorByKey.entrySet()).subscribe(subscriber);
             }, options);
         }
     }
