@@ -22,25 +22,35 @@ import org.dataloader.fixtures.TestKit;
 import org.dataloader.fixtures.User;
 import org.dataloader.fixtures.UserManager;
 import org.dataloader.impl.CompletableFutureKit;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
+import static org.dataloader.DataLoaderFactory.newMappedDataLoader;
 import static org.dataloader.DataLoaderOptions.newOptions;
+import static org.dataloader.fixtures.TestKit.futureError;
 import static org.dataloader.fixtures.TestKit.listFrom;
 import static org.dataloader.impl.CompletableFutureKit.cause;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -65,7 +75,7 @@ public class DataLoaderTest {
     @Test
     public void should_Build_a_really_really_simple_data_loader() {
         AtomicBoolean success = new AtomicBoolean();
-        DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValues());
+        DataLoader<Integer, Integer> identityLoader = newDataLoader(CompletableFuture::completedFuture);
 
         CompletionStage<Integer> future1 = identityLoader.load(1);
 
@@ -78,9 +88,36 @@ public class DataLoaderTest {
     }
 
     @Test
-    public void should_Support_loading_multiple_keys_in_one_call() {
+    public void basic_map_batch_loading() {
+        MappedBatchLoader<String, String> evensOnlyMappedBatchLoader = (keys) -> {
+            Map<String, String> mapOfResults = new HashMap<>();
+
+            AtomicInteger index = new AtomicInteger();
+            keys.forEach(k -> {
+                int i = index.getAndIncrement();
+                if (i % 2 == 0) {
+                    mapOfResults.put(k, k);
+                }
+            });
+            return CompletableFuture.completedFuture(mapOfResults);
+        };
+        DataLoader<String, String> loader = DataLoaderFactory.newMappedDataLoader(evensOnlyMappedBatchLoader);
+
+        loader.load("A");
+        loader.load("B");
+        loader.loadMany(asList("C", "D"));
+
+        List<String> results = loader.dispatchAndJoin();
+
+        assertThat(results.size(), equalTo(4));
+        assertThat(results, equalTo(asList("A", null, "C", null)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Support_loading_multiple_keys_in_one_call(TestDataLoaderFactory factory) {
         AtomicBoolean success = new AtomicBoolean();
-        DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValues());
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
 
         CompletionStage<List<Integer>> futureAll = identityLoader.loadMany(asList(1, 2));
         futureAll.thenAccept(promisedValues -> {
@@ -92,10 +129,11 @@ public class DataLoaderTest {
         assertThat(futureAll.toCompletableFuture().join(), equalTo(asList(1, 2)));
     }
 
-    @Test
-    public void should_Resolve_to_empty_list_when_no_keys_supplied() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Resolve_to_empty_list_when_no_keys_supplied(TestDataLoaderFactory factory) {
         AtomicBoolean success = new AtomicBoolean();
-        DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValues());
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
         CompletableFuture<List<Integer>> futureEmpty = identityLoader.loadMany(emptyList());
         futureEmpty.thenAccept(promisedValues -> {
             assertThat(promisedValues.size(), is(0));
@@ -106,10 +144,11 @@ public class DataLoaderTest {
         assertThat(futureEmpty.join(), empty());
     }
 
-    @Test
-    public void should_Return_zero_entries_dispatched_when_no_keys_supplied() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Return_zero_entries_dispatched_when_no_keys_supplied(TestDataLoaderFactory factory) {
         AtomicBoolean success = new AtomicBoolean();
-        DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValues());
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
         CompletableFuture<List<Integer>> futureEmpty = identityLoader.loadMany(emptyList());
         futureEmpty.thenAccept(promisedValues -> {
             assertThat(promisedValues.size(), is(0));
@@ -120,10 +159,11 @@ public class DataLoaderTest {
         assertThat(dispatchResult.getKeysCount(), equalTo(0));
     }
 
-    @Test
-    public void should_Batch_multiple_requests() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Batch_multiple_requests(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<Integer> future1 = identityLoader.load(1);
         CompletableFuture<Integer> future2 = identityLoader.load(2);
@@ -135,10 +175,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(singletonList(asList(1, 2))));
     }
 
-    @Test
-    public void should_Return_number_of_batched_entries() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Return_number_of_batched_entries(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<Integer> future1 = identityLoader.load(1);
         CompletableFuture<Integer> future2 = identityLoader.load(2);
@@ -149,10 +190,11 @@ public class DataLoaderTest {
         assertThat(dispatchResult.getPromisedResults().isDone(), equalTo(true));
     }
 
-    @Test
-    public void should_Coalesce_identical_requests() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Coalesce_identical_requests(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<Integer> future1a = identityLoader.load(1);
         CompletableFuture<Integer> future1b = identityLoader.load(1);
@@ -165,10 +207,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(singletonList(singletonList(1))));
     }
 
-    @Test
-    public void should_Cache_repeated_requests() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Cache_repeated_requests(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
@@ -200,10 +243,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(asList(asList("A", "B"), singletonList("C"))));
     }
 
-    @Test
-    public void should_Not_redispatch_previous_load() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Not_redispatch_previous_load(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         identityLoader.dispatch();
@@ -217,10 +261,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(asList(singletonList("A"), singletonList("B"))));
     }
 
-    @Test
-    public void should_Cache_on_redispatch() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Cache_on_redispatch(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         identityLoader.dispatch();
@@ -234,10 +279,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(asList(singletonList("A"), singletonList("B"))));
     }
 
-    @Test
-    public void should_Clear_single_value_in_loader() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Clear_single_value_in_loader(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
@@ -262,10 +308,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(asList(asList("A", "B"), singletonList("A"))));
     }
 
-    @Test
-    public void should_Clear_all_values_in_loader() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Clear_all_values_in_loader(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
@@ -289,10 +336,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(asList(asList("A", "B"), asList("A", "B"))));
     }
 
-    @Test
-    public void should_Allow_priming_the_cache() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Allow_priming_the_cache(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         DataLoader<String, String> dlFluency = identityLoader.prime("A", "A");
         assertThat(dlFluency, equalTo(identityLoader));
@@ -307,10 +355,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(singletonList(singletonList("B"))));
     }
 
-    @Test
-    public void should_Not_prime_keys_that_already_exist() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Not_prime_keys_that_already_exist(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         identityLoader.prime("A", "X");
 
@@ -335,10 +384,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(singletonList(singletonList("B"))));
     }
 
-    @Test
-    public void should_Allow_to_forcefully_prime_the_cache() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Allow_to_forcefully_prime_the_cache(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         identityLoader.prime("A", "X");
 
@@ -363,10 +413,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(singletonList(singletonList("B"))));
     }
 
-    @Test
-    public void should_Allow_priming_the_cache_with_a_future() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Allow_priming_the_cache_with_a_future(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         DataLoader<String, String> dlFluency = identityLoader.prime("A", CompletableFuture.completedFuture("A"));
         assertThat(dlFluency, equalTo(identityLoader));
@@ -381,10 +432,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(singletonList(singletonList("B"))));
     }
 
-    @Test
-    public void should_not_Cache_failed_fetches_on_complete_failure() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_not_Cache_failed_fetches_on_complete_failure(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> errorLoader = idLoaderBlowsUps(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> errorLoader = factory.idLoaderBlowsUps(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<Integer> future1 = errorLoader.load(1);
         errorLoader.dispatch();
@@ -402,10 +454,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(asList(singletonList(1), singletonList(1))));
     }
 
-    @Test
-    public void should_Resolve_to_error_to_indicate_failure() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Resolve_to_error_to_indicate_failure(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Object> evenLoader = idLoaderOddEvenExceptions(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Object> evenLoader = factory.idLoaderOddEvenExceptions(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<Object> future1 = evenLoader.load(1);
         evenLoader.dispatch();
@@ -424,11 +477,12 @@ public class DataLoaderTest {
 
     // Accept any kind of key.
 
-    @Test
-    public void should_Represent_failures_and_successes_simultaneously() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Represent_failures_and_successes_simultaneously(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         AtomicBoolean success = new AtomicBoolean();
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Object> evenLoader = idLoaderOddEvenExceptions(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Object> evenLoader = factory.idLoaderOddEvenExceptions(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<Object> future1 = evenLoader.load(1);
         CompletableFuture<Object> future2 = evenLoader.load(2);
@@ -450,10 +504,11 @@ public class DataLoaderTest {
 
     // Accepts options
 
-    @Test
-    public void should_Cache_failed_fetches() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Cache_failed_fetches(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Object> errorLoader = idLoaderAllExceptions(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Object> errorLoader = factory.idLoaderAllExceptions(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<Object> future1 = errorLoader.load(1);
         errorLoader.dispatch();
@@ -472,11 +527,12 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(singletonList(singletonList(1))));
     }
 
-    @Test
-    public void should_NOT_Cache_failed_fetches_if_told_not_too() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_NOT_Cache_failed_fetches_if_told_not_too(TestDataLoaderFactory factory) {
         DataLoaderOptions options = DataLoaderOptions.newOptions().setCachingExceptionsEnabled(false);
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Object> errorLoader = idLoaderAllExceptions(options, loadCalls);
+        DataLoader<Integer, Object> errorLoader = factory.idLoaderAllExceptions(options, loadCalls);
 
         CompletableFuture<Object> future1 = errorLoader.load(1);
         errorLoader.dispatch();
@@ -498,10 +554,11 @@ public class DataLoaderTest {
 
     // Accepts object key in custom cacheKey function
 
-    @Test
-    public void should_Handle_priming_the_cache_with_an_error() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Handle_priming_the_cache_with_an_error(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         identityLoader.prime(1, new IllegalStateException("Error"));
 
@@ -514,10 +571,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(emptyList()));
     }
 
-    @Test
-    public void should_Clear_values_from_cache_after_errors() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Clear_values_from_cache_after_errors(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> errorLoader = idLoaderBlowsUps(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> errorLoader = factory.idLoaderBlowsUps(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<Integer> future1 = errorLoader.load(1);
         future1.handle((value, t) -> {
@@ -549,10 +607,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(asList(singletonList(1), singletonList(1))));
     }
 
-    @Test
-    public void should_Propagate_error_to_all_loads() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Propagate_error_to_all_loads(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> errorLoader = idLoaderBlowsUps(new DataLoaderOptions(), loadCalls);
+        DataLoader<Integer, Integer> errorLoader = factory.idLoaderBlowsUps(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<Integer> future1 = errorLoader.load(1);
         CompletableFuture<Integer> future2 = errorLoader.load(2);
@@ -572,10 +631,11 @@ public class DataLoaderTest {
         assertThat(loadCalls, equalTo(singletonList(asList(1, 2))));
     }
 
-    @Test
-    public void should_Accept_objects_as_keys() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Accept_objects_as_keys(TestDataLoaderFactory factory) {
         List<Collection<Object>> loadCalls = new ArrayList<>();
-        DataLoader<Object, Object> identityLoader = idLoader(new DataLoaderOptions(), loadCalls);
+        DataLoader<Object, Object> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
 
         Object keyA = new Object();
         Object keyB = new Object();
@@ -613,11 +673,12 @@ public class DataLoaderTest {
         assertThat(loadCalls.get(1).toArray()[0], equalTo(keyA));
     }
 
-    @Test
-    public void should_Disable_caching() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Disable_caching(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader =
-                idLoader(newOptions().setCachingEnabled(false), loadCalls);
+                factory.idLoader(newOptions().setCachingEnabled(false), loadCalls);
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
@@ -650,11 +711,12 @@ public class DataLoaderTest {
                 asList("A", "C"), asList("A", "B", "C"))));
     }
 
-    @Test
-    public void should_work_with_duplicate_keys_when_caching_disabled() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_work_with_duplicate_keys_when_caching_disabled(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader =
-                idLoader(newOptions().setCachingEnabled(false), loadCalls);
+                factory.idLoader(newOptions().setCachingEnabled(false), loadCalls);
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
@@ -665,14 +727,19 @@ public class DataLoaderTest {
         assertThat(future1.get(), equalTo("A"));
         assertThat(future2.get(), equalTo("B"));
         assertThat(future3.get(), equalTo("A"));
-        assertThat(loadCalls, equalTo(singletonList(asList("A", "B", "A"))));
+        if (factory instanceof ListDataLoaderFactory) {
+            assertThat(loadCalls, equalTo(singletonList(asList("A", "B", "A"))));
+        } else {
+            assertThat(loadCalls, equalTo(singletonList(asList("A", "B"))));
+        }
     }
 
-    @Test
-    public void should_work_with_duplicate_keys_when_caching_enabled() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_work_with_duplicate_keys_when_caching_enabled(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader =
-                idLoader(newOptions().setCachingEnabled(true), loadCalls);
+                factory.idLoader(newOptions().setCachingEnabled(true), loadCalls);
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
@@ -688,11 +755,12 @@ public class DataLoaderTest {
 
     // It is resilient to job queue ordering
 
-    @Test
-    public void should_Accept_objects_with_a_complex_key() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Accept_objects_with_a_complex_key(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
-        DataLoader<JsonObject, JsonObject> identityLoader = idLoader(options, loadCalls);
+        DataLoader<JsonObject, JsonObject> identityLoader = factory.idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("id", 123);
         JsonObject key2 = new JsonObject().put("id", 123);
@@ -709,11 +777,12 @@ public class DataLoaderTest {
 
     // Helper methods
 
-    @Test
-    public void should_Clear_objects_with_complex_key() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Clear_objects_with_complex_key(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
-        DataLoader<JsonObject, JsonObject> identityLoader = idLoader(options, loadCalls);
+        DataLoader<JsonObject, JsonObject> identityLoader = factory.idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("id", 123);
         JsonObject key2 = new JsonObject().put("id", 123);
@@ -733,11 +802,12 @@ public class DataLoaderTest {
         assertThat(future2.get(), equalTo(key1));
     }
 
-    @Test
-    public void should_Accept_objects_with_different_order_of_keys() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Accept_objects_with_different_order_of_keys(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
-        DataLoader<JsonObject, JsonObject> identityLoader = idLoader(options, loadCalls);
+        DataLoader<JsonObject, JsonObject> identityLoader = factory.idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("a", 123).put("b", 321);
         JsonObject key2 = new JsonObject().put("b", 321).put("a", 123);
@@ -755,11 +825,12 @@ public class DataLoaderTest {
         assertThat(future2.get(), equalTo(key2));
     }
 
-    @Test
-    public void should_Allow_priming_the_cache_with_an_object_key() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Allow_priming_the_cache_with_an_object_key(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
-        DataLoader<JsonObject, JsonObject> identityLoader = idLoader(options, loadCalls);
+        DataLoader<JsonObject, JsonObject> identityLoader = factory.idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("id", 123);
         JsonObject key2 = new JsonObject().put("id", 123);
@@ -776,12 +847,13 @@ public class DataLoaderTest {
         assertThat(future2.get(), equalTo(key1));
     }
 
-    @Test
-    public void should_Accept_a_custom_cache_map_implementation() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Accept_a_custom_cache_map_implementation(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         CustomCacheMap customMap = new CustomCacheMap();
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setCacheMap(customMap);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         // Fetches as expected
 
@@ -827,12 +899,13 @@ public class DataLoaderTest {
         assertArrayEquals(customMap.stash.keySet().toArray(), emptyList().toArray());
     }
 
-    @Test
-    public void should_degrade_gracefully_if_cache_get_throws() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_degrade_gracefully_if_cache_get_throws(TestDataLoaderFactory factory) {
         CacheMap<String, Object> cache = new ThrowingCacheMap();
         DataLoaderOptions options = newOptions().setCachingEnabled(true).setCacheMap(cache);
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         assertThat(identityLoader.getIfPresent("a"), equalTo(Optional.empty()));
 
@@ -841,11 +914,12 @@ public class DataLoaderTest {
         assertThat(future.join(), equalTo("a"));
     }
 
-    @Test
-    public void batching_disabled_should_dispatch_immediately() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void batching_disabled_should_dispatch_immediately(TestDataLoaderFactory factory) {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setBatchingEnabled(false);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fa = identityLoader.load("A");
         CompletableFuture<String> fb = identityLoader.load("B");
@@ -869,11 +943,12 @@ public class DataLoaderTest {
 
     }
 
-    @Test
-    public void batching_disabled_and_caching_disabled_should_dispatch_immediately_and_forget() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void batching_disabled_and_caching_disabled_should_dispatch_immediately_and_forget(TestDataLoaderFactory factory) {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setBatchingEnabled(false).setCachingEnabled(false);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fa = identityLoader.load("A");
         CompletableFuture<String> fb = identityLoader.load("B");
@@ -900,10 +975,11 @@ public class DataLoaderTest {
 
     }
 
-    @Test
-    public void batches_multiple_requests_with_max_batch_size() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void batches_multiple_requests_with_max_batch_size(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> identityLoader = idLoader(newOptions().setMaxBatchSize(2), loadCalls);
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(newOptions().setMaxBatchSize(2), loadCalls);
 
         CompletableFuture<Integer> f1 = identityLoader.load(1);
         CompletableFuture<Integer> f2 = identityLoader.load(2);
@@ -921,10 +997,11 @@ public class DataLoaderTest {
 
     }
 
-    @Test
-    public void can_split_max_batch_sizes_correctly() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void can_split_max_batch_sizes_correctly(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> identityLoader = idLoader(newOptions().setMaxBatchSize(5), loadCalls);
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(newOptions().setMaxBatchSize(5), loadCalls);
 
         for (int i = 0; i < 21; i++) {
             identityLoader.load(i);
@@ -943,10 +1020,11 @@ public class DataLoaderTest {
 
     }
 
-    @Test
-    public void should_Batch_loads_occurring_within_futures() {
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Batch_loads_occurring_within_futures(TestDataLoaderFactory factory) {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = idLoader(newOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(newOptions(), loadCalls);
 
         Supplier<Object> nullValue = () -> null;
 
@@ -1066,54 +1144,120 @@ public class DataLoaderTest {
                 .collect(Collectors.joining());
     }
 
-    private static <K, V> DataLoader<K, V> idLoader(DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return newDataLoader(keys -> {
-            loadCalls.add(new ArrayList<>(keys));
-            @SuppressWarnings("unchecked")
-            List<V> values = keys.stream()
-                    .map(k -> (V) k)
-                    .collect(Collectors.toList());
-            return CompletableFuture.completedFuture(values);
-        }, options);
+    private static Stream<Arguments> dataLoaderFactories() {
+        return Stream.of(
+                Arguments.of(Named.of("List DataLoader", new ListDataLoaderFactory())),
+                Arguments.of(Named.of("Mapped DataLoader", new MappedDataLoaderFactory()))
+        );
     }
 
-    private static <K, V> DataLoader<K, V> idLoaderBlowsUps(
-            DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return newDataLoader(keys -> {
-            loadCalls.add(new ArrayList<>(keys));
-            return TestKit.futureError();
-        }, options);
+    public interface TestDataLoaderFactory {
+        <K, V> DataLoader<K, V> idLoader(DataLoaderOptions options, List<Collection<K>> loadCalls);
+        <K, V> DataLoader<K, V> idLoaderBlowsUps(DataLoaderOptions options, List<Collection<K>> loadCalls);
+        <K> DataLoader<K, Object> idLoaderAllExceptions(DataLoaderOptions options, List<Collection<K>> loadCalls);
+        DataLoader<Integer, Object> idLoaderOddEvenExceptions(DataLoaderOptions options, List<Collection<Integer>> loadCalls);
     }
 
-    private static <K> DataLoader<K, Object> idLoaderAllExceptions(
-            DataLoaderOptions options, List<Collection<K>> loadCalls) {
-        return newDataLoader(keys -> {
-            loadCalls.add(new ArrayList<>(keys));
+    private static class ListDataLoaderFactory implements TestDataLoaderFactory {
+        @Override
+        public <K, V> DataLoader<K, V> idLoader(DataLoaderOptions options, List<Collection<K>> loadCalls) {
+            return newDataLoader(keys -> {
+                loadCalls.add(new ArrayList<>(keys));
+                @SuppressWarnings("unchecked")
+                List<V> values = keys.stream()
+                        .map(k -> (V) k)
+                        .collect(Collectors.toList());
+                return CompletableFuture.completedFuture(values);
+            }, options);
+        }
 
-            List<Object> errors = keys.stream().map(k -> new IllegalStateException("Error")).collect(Collectors.toList());
-            return CompletableFuture.completedFuture(errors);
-        }, options);
-    }
+        @Override
+        public <K, V> DataLoader<K, V> idLoaderBlowsUps(
+                DataLoaderOptions options, List<Collection<K>> loadCalls) {
+            return newDataLoader(keys -> {
+                loadCalls.add(new ArrayList<>(keys));
+                return TestKit.futureError();
+            }, options);
+        }
 
-    private static DataLoader<Integer, Object> idLoaderOddEvenExceptions(
-            DataLoaderOptions options, List<Collection<Integer>> loadCalls) {
-        return newDataLoader(keys -> {
-            loadCalls.add(new ArrayList<>(keys));
+        @Override
+        public <K> DataLoader<K, Object> idLoaderAllExceptions(DataLoaderOptions options, List<Collection<K>> loadCalls) {
+            return newDataLoader(keys -> {
+                loadCalls.add(new ArrayList<>(keys));
 
-            List<Object> errors = new ArrayList<>();
-            for (Integer key : keys) {
-                if (key % 2 == 0) {
-                    errors.add(key);
-                } else {
-                    errors.add(new IllegalStateException("Error"));
+                List<Object> errors = keys.stream().map(k -> new IllegalStateException("Error")).collect(Collectors.toList());
+                return CompletableFuture.completedFuture(errors);
+            }, options);
+        }
+
+        @Override
+        public DataLoader<Integer, Object> idLoaderOddEvenExceptions(DataLoaderOptions options, List<Collection<Integer>> loadCalls) {
+            return newDataLoader(keys -> {
+                loadCalls.add(new ArrayList<>(keys));
+
+                List<Object> errors = new ArrayList<>();
+                for (Integer key : keys) {
+                    if (key % 2 == 0) {
+                        errors.add(key);
+                    } else {
+                        errors.add(new IllegalStateException("Error"));
+                    }
                 }
-            }
-            return CompletableFuture.completedFuture(errors);
-        }, options);
+                return CompletableFuture.completedFuture(errors);
+            }, options);
+        }
     }
 
-    private <T> BatchLoader<T, T> keysAsValues() {
-        return CompletableFuture::completedFuture;
+    private static class MappedDataLoaderFactory implements TestDataLoaderFactory {
+
+        @Override
+        public <K, V> DataLoader<K, V> idLoader(
+                DataLoaderOptions options, List<Collection<K>> loadCalls) {
+            return newMappedDataLoader((keys) -> {
+                loadCalls.add(new ArrayList<>(keys));
+                Map<K, V> map = new HashMap<>();
+                //noinspection unchecked
+                keys.forEach(k -> map.put(k, (V) k));
+                return CompletableFuture.completedFuture(map);
+            }, options);
+        }
+
+        @Override
+        public <K, V> DataLoader<K, V> idLoaderBlowsUps(DataLoaderOptions options, List<Collection<K>> loadCalls) {
+            return newMappedDataLoader((keys) -> {
+                loadCalls.add(new ArrayList<>(keys));
+                return futureError();
+            }, options);
+        }
+
+        @Override
+        public <K> DataLoader<K, Object> idLoaderAllExceptions(
+                DataLoaderOptions options, List<Collection<K>> loadCalls) {
+            return newMappedDataLoader(keys -> {
+                loadCalls.add(new ArrayList<>(keys));
+                Map<K, Object> errorByKey = new HashMap<>();
+                keys.forEach(k -> errorByKey.put(k, new IllegalStateException("Error")));
+                return CompletableFuture.completedFuture(errorByKey);
+            }, options);
+        }
+
+        @Override
+        public DataLoader<Integer, Object> idLoaderOddEvenExceptions(
+                DataLoaderOptions options, List<Collection<Integer>> loadCalls) {
+            return newMappedDataLoader(keys -> {
+                loadCalls.add(new ArrayList<>(keys));
+
+                Map<Integer, Object> errorByKey = new HashMap<>();
+                for (Integer key : keys) {
+                    if (key % 2 == 0) {
+                        errorByKey.put(key, key);
+                    } else {
+                        errorByKey.put(key, new IllegalStateException("Error"));
+                    }
+                }
+                return CompletableFuture.completedFuture(errorByKey);
+            }, options);
+        }
     }
 
     private static class ThrowingCacheMap extends CustomCacheMap {
