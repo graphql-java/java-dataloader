@@ -5,7 +5,7 @@ import org.dataloader.fixtures.JsonObject;
 import org.dataloader.fixtures.User;
 import org.dataloader.fixtures.UserManager;
 import org.dataloader.impl.CompletableFutureKit;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
@@ -30,12 +30,12 @@ import static org.dataloader.DataLoaderFactory.newPublisherDataLoaderWithTry;
 import static org.dataloader.DataLoaderOptions.newOptions;
 import static org.dataloader.fixtures.TestKit.listFrom;
 import static org.dataloader.impl.CompletableFutureKit.cause;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public class DataLoaderBatchPublisherTest {
 

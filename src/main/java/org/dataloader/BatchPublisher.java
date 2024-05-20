@@ -11,7 +11,7 @@ import java.util.List;
  * the future returned by {@link DataLoader#load(Object)} to complete as soon as the individual value is available
  * (rather than when all values have been retrieved).
  * <p>
- * <b>NOTE:</b> It is <b>required </b> that {@link Subscriber#onNext(V)} is invoked on each value in the same order as
+ * <b>NOTE:</b> It is <b>required </b> that {@link Subscriber#onNext(Object)} is invoked on each value in the same order as
  * the provided keys.
  *
  * @param <K> type parameter indicating the type of keys to use for data load requests.
