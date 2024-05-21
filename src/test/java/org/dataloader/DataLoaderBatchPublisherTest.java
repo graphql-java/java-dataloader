@@ -385,18 +385,20 @@ public class DataLoaderBatchPublisherTest {
         DataLoader<Integer, Object> evenLoader = idLoaderOddEvenExceptions(new DataLoaderOptions(), loadCalls);
 
         CompletableFuture<Object> future1 = evenLoader.load(1);
-        evenLoader.dispatch();
+        CompletableFuture<List<Object>> dispatchCF = evenLoader.dispatch();
 
         await().until(future1::isDone);
         assertThat(future1.isCompletedExceptionally(), is(true));
         assertThat(cause(future1), instanceOf(IllegalStateException.class));
+        assertThat(dispatchCF.isCompletedExceptionally(), is(true));
 
         CompletableFuture<Object> future2 = evenLoader.load(2);
-        evenLoader.dispatch();
+        dispatchCF = evenLoader.dispatch();
 
         await().until(future2::isDone);
         assertThat(future2.get(), equalTo(2));
         assertThat(loadCalls, equalTo(asList(singletonList(1), singletonList(2))));
+        assertThat(dispatchCF.isCompletedExceptionally(), is(true));
     }
 
     // Accept any kind of key.

@@ -116,7 +116,7 @@ public class DataLoaderMappedBatchPublisherTest {
 
         CompletableFuture<Integer> future1 = errorLoader.load(1);
         CompletableFuture<Integer> future2 = errorLoader.load(2);
-        errorLoader.dispatch();
+        CompletableFuture<List<Integer>> dispatchedCF = errorLoader.dispatch();
 
         await().until(future1::isDone);
 
@@ -132,6 +132,8 @@ public class DataLoaderMappedBatchPublisherTest {
         assertThat(cause.getMessage(), equalTo(cause.getMessage()));
 
         assertThat(loadCalls, equalTo(singletonList(asList(1, 2))));
+
+        assertThat(dispatchedCF.isCompletedExceptionally(),equalTo(true));
     }
 
     @Test
