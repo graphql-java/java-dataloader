@@ -618,24 +618,23 @@ class DataLoaderHelper<K, V> {
         return (DispatchResult<T>) EMPTY_DISPATCH_RESULT;
     }
 
-    private class DataLoaderSubscriber implements Subscriber<V> {
+    private abstract class DataLoaderSubscriberBase<T> implements Subscriber<T> {
 
-        private final CompletableFuture<List<V>> valuesFuture;
-        private final List<K> keys;
-        private final List<Object> callContexts;
-        private final List<CompletableFuture<V>> queuedFutures;
+        final CompletableFuture<List<V>> valuesFuture;
+        final List<K> keys;
+        final List<Object> callContexts;
+        final List<CompletableFuture<V>> queuedFutures;
 
-        private final List<K> clearCacheKeys = new ArrayList<>();
-        private final List<V> completedValues = new ArrayList<>();
-        private int idx = 0;
-        private boolean onErrorCalled = false;
-        private boolean onCompleteCalled = false;
+        List<K> clearCacheKeys = new ArrayList<>();
+        List<V> completedValues = new ArrayList<>();
+        boolean onErrorCalled = false;
+        boolean onCompleteCalled = false;
 
-        private DataLoaderSubscriber(
-            CompletableFuture<List<V>> valuesFuture,
-            List<K> keys,
-            List<Object> callContexts,
-            List<CompletableFuture<V>> queuedFutures
+        DataLoaderSubscriberBase(
+                CompletableFuture<List<V>> valuesFuture,
+                List<K> keys,
+                List<Object> callContexts,
+                List<CompletableFuture<V>> queuedFutures
         ) {
             this.valuesFuture = valuesFuture;
             this.keys = keys;
@@ -648,118 +647,34 @@ class DataLoaderHelper<K, V> {
             subscription.request(keys.size());
         }
 
-        // onNext may be called by multiple threads - for the time being, we pass 'synchronized' to guarantee
-        // correctness (at the cost of speed).
         @Override
-        public synchronized void onNext(V value) {
+        public void onNext(T v) {
             assertState(!onErrorCalled, () -> "onError has already been called; onNext may not be invoked.");
             assertState(!onCompleteCalled, () -> "onComplete has already been called; onNext may not be invoked.");
-
-            K key = keys.get(idx);
-            Object callContext = callContexts.get(idx);
-            CompletableFuture<V> future = queuedFutures.get(idx);
-            if (value instanceof Try) {
-                // we allow the batch loader to return a Try so we can better represent a computation
-                // that might have worked or not.
-                Try<V> tryValue = (Try<V>) value;
-                if (tryValue.isSuccess()) {
-                    future.complete(tryValue.get());
-                } else {
-                    stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
-                    future.completeExceptionally(tryValue.getThrowable());
-                    clearCacheKeys.add(keys.get(idx));
-                }
-            } else {
-                future.complete(value);
-            }
-
-            completedValues.add(value);
-            idx++;
         }
 
         @Override
         public void onComplete() {
             assertState(!onErrorCalled, () -> "onError has already been called; onComplete may not be invoked.");
             onCompleteCalled = true;
-
-            assertResultSize(keys, completedValues);
-
-            possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
-            valuesFuture.complete(completedValues);
         }
 
         @Override
-        public void onError(Throwable ex) {
+        public void onError(Throwable throwable) {
             assertState(!onCompleteCalled, () -> "onComplete has already been called; onError may not be invoked.");
             onErrorCalled = true;
 
             stats.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(keys, callContexts));
-            if (ex instanceof CompletionException) {
-                ex = ex.getCause();
-            }
-            // Set the remaining keys to the exception.
-            for (int i = idx; i < queuedFutures.size(); i++) {
-                K key = keys.get(i);
-                CompletableFuture<V> future = queuedFutures.get(i);
-                future.completeExceptionally(ex);
-                // clear any cached view of this key because they all failed
-                dataLoader.clear(key);
-            }
-        }
-    }
-
-    private class DataLoaderMapEntrySubscriber implements Subscriber<Map.Entry<K, V>> {
-        private final CompletableFuture<List<V>> valuesFuture;
-        private final List<K> keys;
-        private final List<Object> callContexts;
-        private final List<CompletableFuture<V>> queuedFutures;
-        private final Map<K, Object> callContextByKey;
-        private final Map<K, CompletableFuture<V>> queuedFutureByKey;
-
-        private final List<K> clearCacheKeys = new ArrayList<>();
-        private final Map<K, V> completedValuesByKey = new HashMap<>();
-        private boolean onErrorCalled = false;
-        private boolean onCompleteCalled = false;
-
-        private DataLoaderMapEntrySubscriber(
-            CompletableFuture<List<V>> valuesFuture,
-            List<K> keys,
-            List<Object> callContexts,
-            List<CompletableFuture<V>> queuedFutures
-        ) {
-            this.valuesFuture = valuesFuture;
-            this.keys = keys;
-            this.callContexts = callContexts;
-            this.queuedFutures = queuedFutures;
-
-            this.callContextByKey = new HashMap<>();
-            this.queuedFutureByKey = new HashMap<>();
-            for (int idx = 0; idx < queuedFutures.size(); idx++) {
-                K key = keys.get(idx);
-                Object callContext = callContexts.get(idx);
-                CompletableFuture<V> queuedFuture = queuedFutures.get(idx);
-                callContextByKey.put(key, callContext);
-                queuedFutureByKey.put(key, queuedFuture);
-            }
         }
 
-        @Override
-        public void onSubscribe(Subscription subscription) {
-            subscription.request(keys.size());
-        }
-
-        @Override
-        public void onNext(Map.Entry<K, V> entry) {
-            assertState(!onErrorCalled, () -> "onError has already been called; onNext may not be invoked.");
-            assertState(!onCompleteCalled, () -> "onComplete has already been called; onNext may not be invoked.");
-            K key = entry.getKey();
-            V value = entry.getValue();
-
-            Object callContext = callContextByKey.get(key);
-            CompletableFuture<V> future = queuedFutureByKey.get(key);
+        /*
+         * A value has arrived - how do we complete the future that's associated with it in a common way
+         */
+        void onNextValue(K key, V value, Object callContext, CompletableFuture<V> future) {
             if (value instanceof Try) {
                 // we allow the batch loader to return a Try so we can better represent a computation
                 // that might have worked or not.
+                //noinspection unchecked
                 Try<V> tryValue = (Try<V>) value;
                 if (tryValue.isSuccess()) {
                     future.complete(tryValue.get());
@@ -771,14 +686,113 @@ class DataLoaderHelper<K, V> {
             } else {
                 future.complete(value);
             }
+        }
+
+        Throwable unwrapThrowable(Throwable ex) {
+            if (ex instanceof CompletionException) {
+                ex = ex.getCause();
+            }
+            return ex;
+        }
+    }
+
+    private class DataLoaderSubscriber extends DataLoaderSubscriberBase<V> {
+
+        private int idx = 0;
+
+        private DataLoaderSubscriber(
+                CompletableFuture<List<V>> valuesFuture,
+                List<K> keys,
+                List<Object> callContexts,
+                List<CompletableFuture<V>> queuedFutures
+        ) {
+            super(valuesFuture, keys, callContexts, queuedFutures);
+        }
+
+        // onNext may be called by multiple threads - for the time being, we pass 'synchronized' to guarantee
+        // correctness (at the cost of speed).
+        @Override
+        public synchronized void onNext(V value) {
+            super.onNext(value);
+
+            K key = keys.get(idx);
+            Object callContext = callContexts.get(idx);
+            CompletableFuture<V> future = queuedFutures.get(idx);
+            onNextValue(key, value, callContext, future);
+
+            completedValues.add(value);
+            idx++;
+        }
+
+
+        @Override
+        public void onComplete() {
+            super.onComplete();
+            assertResultSize(keys, completedValues);
+
+            possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
+            valuesFuture.complete(completedValues);
+        }
+
+        @Override
+        public void onError(Throwable ex) {
+            super.onError(ex);
+            ex = unwrapThrowable(ex);
+            // Set the remaining keys to the exception.
+            for (int i = idx; i < queuedFutures.size(); i++) {
+                K key = keys.get(i);
+                CompletableFuture<V> future = queuedFutures.get(i);
+                future.completeExceptionally(ex);
+                // clear any cached view of this key because they all failed
+                dataLoader.clear(key);
+            }
+        }
+
+    }
+
+    private class DataLoaderMapEntrySubscriber extends DataLoaderSubscriberBase<Map.Entry<K, V>> {
+
+        private final Map<K, Object> callContextByKey;
+        private final Map<K, CompletableFuture<V>> queuedFutureByKey;
+        private final Map<K, V> completedValuesByKey = new HashMap<>();
+
+
+        private DataLoaderMapEntrySubscriber(
+                CompletableFuture<List<V>> valuesFuture,
+                List<K> keys,
+                List<Object> callContexts,
+                List<CompletableFuture<V>> queuedFutures
+        ) {
+            super(valuesFuture,keys,callContexts,queuedFutures);
+            this.callContextByKey = new HashMap<>();
+            this.queuedFutureByKey = new HashMap<>();
+            for (int idx = 0; idx < queuedFutures.size(); idx++) {
+                K key = keys.get(idx);
+                Object callContext = callContexts.get(idx);
+                CompletableFuture<V> queuedFuture = queuedFutures.get(idx);
+                callContextByKey.put(key, callContext);
+                queuedFutureByKey.put(key, queuedFuture);
+            }
+        }
+
+
+        @Override
+        public void onNext(Map.Entry<K, V> entry) {
+            super.onNext(entry);
+            K key = entry.getKey();
+            V value = entry.getValue();
+
+            Object callContext = callContextByKey.get(key);
+            CompletableFuture<V> future = queuedFutureByKey.get(key);
+
+            onNextValue(key, value, callContext, future);
 
             completedValuesByKey.put(key, value);
         }
 
         @Override
         public void onComplete() {
-            assertState(!onErrorCalled, () -> "onError has already been called; onComplete may not be invoked.");
-            onCompleteCalled = true;
+            super.onComplete();
 
             possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
             List<V> values = new ArrayList<>(keys.size());
@@ -791,13 +805,8 @@ class DataLoaderHelper<K, V> {
 
         @Override
         public void onError(Throwable ex) {
-            assertState(!onCompleteCalled, () -> "onComplete has already been called; onError may not be invoked.");
-            onErrorCalled = true;
-
-            stats.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(keys, callContexts));
-            if (ex instanceof CompletionException) {
-                ex = ex.getCause();
-            }
+            super.onError(ex);
+            ex = unwrapThrowable(ex);
             // Complete the futures for the remaining keys with the exception.
             for (int idx = 0; idx < queuedFutures.size(); idx++) {
                 K key = keys.get(idx);
