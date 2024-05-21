@@ -726,7 +726,7 @@ class DataLoaderHelper<K, V> {
 
 
         @Override
-        public void onComplete() {
+        public synchronized void onComplete() {
             super.onComplete();
             assertResultSize(keys, completedValues);
 
@@ -735,7 +735,7 @@ class DataLoaderHelper<K, V> {
         }
 
         @Override
-        public void onError(Throwable ex) {
+        public synchronized void onError(Throwable ex) {
             super.onError(ex);
             ex = unwrapThrowable(ex);
             // Set the remaining keys to the exception.
@@ -777,7 +777,7 @@ class DataLoaderHelper<K, V> {
 
 
         @Override
-        public void onNext(Map.Entry<K, V> entry) {
+        public synchronized void onNext(Map.Entry<K, V> entry) {
             super.onNext(entry);
             K key = entry.getKey();
             V value = entry.getValue();
@@ -791,7 +791,7 @@ class DataLoaderHelper<K, V> {
         }
 
         @Override
-        public void onComplete() {
+        public synchronized void onComplete() {
             super.onComplete();
 
             possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
@@ -804,7 +804,7 @@ class DataLoaderHelper<K, V> {
         }
 
         @Override
-        public void onError(Throwable ex) {
+        public synchronized void onError(Throwable ex) {
             super.onError(ex);
             ex = unwrapThrowable(ex);
             // Complete the futures for the remaining keys with the exception.
