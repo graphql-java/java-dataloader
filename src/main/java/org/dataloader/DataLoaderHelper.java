@@ -746,6 +746,7 @@ class DataLoaderHelper<K, V> {
                 // clear any cached view of this key because they all failed
                 dataLoader.clear(key);
             }
+            valuesFuture.completeExceptionally(ex);
         }
 
     }
@@ -763,7 +764,7 @@ class DataLoaderHelper<K, V> {
                 List<Object> callContexts,
                 List<CompletableFuture<V>> queuedFutures
         ) {
-            super(valuesFuture,keys,callContexts,queuedFutures);
+            super(valuesFuture, keys, callContexts, queuedFutures);
             this.callContextByKey = new HashMap<>();
             this.queuedFutureByKey = new HashMap<>();
             for (int idx = 0; idx < queuedFutures.size(); idx++) {
@@ -817,6 +818,8 @@ class DataLoaderHelper<K, V> {
                     dataLoader.clear(key);
                 }
             }
+            valuesFuture.completeExceptionally(ex);
         }
+
     }
 }
