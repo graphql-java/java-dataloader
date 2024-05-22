@@ -714,7 +714,7 @@ class DataLoaderHelper<K, V> {
         private final List<Object> callContexts;
         private final List<CompletableFuture<V>> queuedFutures;
         private final Map<K, Object> callContextByKey;
-        private final Map<K, CompletableFuture<V>> queuedFutureByKey;
+        private final Map<K, List<CompletableFuture<V>>> queuedFuturesByKey;
 
         private final List<K> clearCacheKeys = new ArrayList<>();
         private final Map<K, V> completedValuesByKey = new HashMap<>();
@@ -733,13 +733,13 @@ class DataLoaderHelper<K, V> {
             this.queuedFutures = queuedFutures;
 
             this.callContextByKey = new HashMap<>();
-            this.queuedFutureByKey = new HashMap<>();
+            this.queuedFuturesByKey = new HashMap<>();
             for (int idx = 0; idx < queuedFutures.size(); idx++) {
                 K key = keys.get(idx);
                 Object callContext = callContexts.get(idx);
                 CompletableFuture<V> queuedFuture = queuedFutures.get(idx);
                 callContextByKey.put(key, callContext);
-                queuedFutureByKey.put(key, queuedFuture);
+                queuedFuturesByKey.computeIfAbsent(key, k -> new ArrayList<>()).add(queuedFuture);
             }
         }
 
@@ -756,20 +756,20 @@ class DataLoaderHelper<K, V> {
             V value = entry.getValue();
 
             Object callContext = callContextByKey.get(key);
-            CompletableFuture<V> future = queuedFutureByKey.get(key);
+            List<CompletableFuture<V>> futures = queuedFuturesByKey.get(key);
             if (value instanceof Try) {
                 // we allow the batch loader to return a Try so we can better represent a computation
                 // that might have worked or not.
                 Try<V> tryValue = (Try<V>) value;
                 if (tryValue.isSuccess()) {
-                    future.complete(tryValue.get());
+                    futures.forEach(f -> f.complete(tryValue.get()));
                 } else {
                     stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
-                    future.completeExceptionally(tryValue.getThrowable());
+                    futures.forEach(f -> f.completeExceptionally(tryValue.getThrowable()));
                     clearCacheKeys.add(key);
                 }
             } else {
-                future.complete(value);
+                futures.forEach(f -> f.complete(value));
             }
 
             completedValuesByKey.put(key, value);
@@ -801,9 +801,11 @@ class DataLoaderHelper<K, V> {
             // Complete the futures for the remaining keys with the exception.
             for (int idx = 0; idx < queuedFutures.size(); idx++) {
                 K key = keys.get(idx);
-                CompletableFuture<V> future = queuedFutureByKey.get(key);
+                List<CompletableFuture<V>> futures = queuedFuturesByKey.get(key);
                 if (!completedValuesByKey.containsKey(key)) {
-                    future.completeExceptionally(ex);
+                    for (CompletableFuture<V> future : futures) {
+                        future.completeExceptionally(ex);
+                    }
                     // clear any cached view of this key because they all failed
                     dataLoader.clear(key);
                 }
