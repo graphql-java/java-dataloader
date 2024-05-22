@@ -155,11 +155,13 @@ class DataLoaderHelper<K, V> {
         }
     }
 
+    @SuppressWarnings("unchecked")
     Object getCacheKey(K key) {
         return loaderOptions.cacheKeyFunction().isPresent() ?
                 loaderOptions.cacheKeyFunction().get().getKey(key) : key;
     }
 
+    @SuppressWarnings("unchecked")
     Object getCacheKeyWithContext(K key, Object context) {
         return loaderOptions.cacheKeyFunction().isPresent() ?
                 loaderOptions.cacheKeyFunction().get().getKeyWithContext(key, context) : key;
@@ -511,6 +513,7 @@ class DataLoaderHelper<K, V> {
 
         BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
         if (batchLoadFunction instanceof BatchPublisherWithContext) {
+            //noinspection unchecked
             BatchPublisherWithContext<K, V> loadFunction = (BatchPublisherWithContext<K, V>) batchLoadFunction;
             if (batchLoaderScheduler != null) {
                 BatchLoaderScheduler.ScheduledBatchPublisherCall loadCall = () -> loadFunction.load(keys, subscriber, environment);
@@ -519,6 +522,7 @@ class DataLoaderHelper<K, V> {
                 loadFunction.load(keys, subscriber, environment);
             }
         } else {
+            //noinspection unchecked
             BatchPublisher<K, V> loadFunction = (BatchPublisher<K, V>) batchLoadFunction;
             if (batchLoaderScheduler != null) {
                 BatchLoaderScheduler.ScheduledBatchPublisherCall loadCall = () -> loadFunction.load(keys, subscriber);
@@ -536,6 +540,7 @@ class DataLoaderHelper<K, V> {
 
         BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
         if (batchLoadFunction instanceof MappedBatchPublisherWithContext) {
+            //noinspection unchecked
             MappedBatchPublisherWithContext<K, V> loadFunction = (MappedBatchPublisherWithContext<K, V>) batchLoadFunction;
             if (batchLoaderScheduler != null) {
                 BatchLoaderScheduler.ScheduledBatchPublisherCall loadCall = () -> loadFunction.load(keys, subscriber, environment);
@@ -544,6 +549,7 @@ class DataLoaderHelper<K, V> {
                 loadFunction.load(keys, subscriber, environment);
             }
         } else {
+            //noinspection unchecked
             MappedBatchPublisher<K, V> loadFunction = (MappedBatchPublisher<K, V>) batchLoadFunction;
             if (batchLoaderScheduler != null) {
                 BatchLoaderScheduler.ScheduledBatchPublisherCall loadCall = () -> loadFunction.load(keys, subscriber);
@@ -670,21 +676,21 @@ class DataLoaderHelper<K, V> {
         /*
          * A value has arrived - how do we complete the future that's associated with it in a common way
          */
-        void onNextValue(K key, V value, Object callContext, CompletableFuture<V> future) {
+        void onNextValue(K key, V value, Object callContext, List<CompletableFuture<V>> futures) {
             if (value instanceof Try) {
                 // we allow the batch loader to return a Try so we can better represent a computation
                 // that might have worked or not.
                 //noinspection unchecked
                 Try<V> tryValue = (Try<V>) value;
                 if (tryValue.isSuccess()) {
-                    future.complete(tryValue.get());
+                    futures.forEach(f -> f.complete(tryValue.get()));
                 } else {
                     stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
-                    future.completeExceptionally(tryValue.getThrowable());
+                    futures.forEach(f -> f.completeExceptionally(tryValue.getThrowable()));
                     clearCacheKeys.add(key);
                 }
             } else {
-                future.complete(value);
+                futures.forEach(f -> f.complete(value));
             }
         }
 
@@ -718,7 +724,7 @@ class DataLoaderHelper<K, V> {
             K key = keys.get(idx);
             Object callContext = callContexts.get(idx);
             CompletableFuture<V> future = queuedFutures.get(idx);
-            onNextValue(key, value, callContext, future);
+            onNextValue(key, value, callContext, List.of(future));
 
             completedValues.add(value);
             idx++;
@@ -754,7 +760,7 @@ class DataLoaderHelper<K, V> {
     private class DataLoaderMapEntrySubscriber extends DataLoaderSubscriberBase<Map.Entry<K, V>> {
 
         private final Map<K, Object> callContextByKey;
-        private final Map<K, CompletableFuture<V>> queuedFutureByKey;
+        private final Map<K, List<CompletableFuture<V>>> queuedFuturesByKey;
         private final Map<K, V> completedValuesByKey = new HashMap<>();
 
 
@@ -766,13 +772,13 @@ class DataLoaderHelper<K, V> {
         ) {
             super(valuesFuture, keys, callContexts, queuedFutures);
             this.callContextByKey = new HashMap<>();
-            this.queuedFutureByKey = new HashMap<>();
+            this.queuedFuturesByKey = new HashMap<>();
             for (int idx = 0; idx < queuedFutures.size(); idx++) {
                 K key = keys.get(idx);
                 Object callContext = callContexts.get(idx);
                 CompletableFuture<V> queuedFuture = queuedFutures.get(idx);
                 callContextByKey.put(key, callContext);
-                queuedFutureByKey.put(key, queuedFuture);
+                queuedFuturesByKey.computeIfAbsent(key, k -> new ArrayList<>()).add(queuedFuture);
             }
         }
 
@@ -784,9 +790,9 @@ class DataLoaderHelper<K, V> {
             V value = entry.getValue();
 
             Object callContext = callContextByKey.get(key);
-            CompletableFuture<V> future = queuedFutureByKey.get(key);
+            List<CompletableFuture<V>> futures = queuedFuturesByKey.get(key);
 
-            onNextValue(key, value, callContext, future);
+            onNextValue(key, value, callContext, futures);
 
             completedValuesByKey.put(key, value);
         }
@@ -811,15 +817,16 @@ class DataLoaderHelper<K, V> {
             // Complete the futures for the remaining keys with the exception.
             for (int idx = 0; idx < queuedFutures.size(); idx++) {
                 K key = keys.get(idx);
-                CompletableFuture<V> future = queuedFutureByKey.get(key);
+                List<CompletableFuture<V>> futures = queuedFuturesByKey.get(key);
                 if (!completedValuesByKey.containsKey(key)) {
-                    future.completeExceptionally(ex);
+                    for (CompletableFuture<V> future : futures) {
+                        future.completeExceptionally(ex);
+                    }
                     // clear any cached view of this key because they all failed
                     dataLoader.clear(key);
                 }
             }
             valuesFuture.completeExceptionally(ex);
         }
-
     }
 }
