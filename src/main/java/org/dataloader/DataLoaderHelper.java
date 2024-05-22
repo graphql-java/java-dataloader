@@ -790,7 +790,7 @@ class DataLoaderHelper<K, V> {
             V value = entry.getValue();
 
             Object callContext = callContextByKey.get(key);
-            List<CompletableFuture<V>> futures = queuedFuturesByKey.get(key);
+            List<CompletableFuture<V>> futures = queuedFuturesByKey.getOrDefault(key, List.of());
 
             onNextValue(key, value, callContext, futures);
 
