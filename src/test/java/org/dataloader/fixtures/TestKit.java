@@ -131,4 +131,13 @@ public class TestKit {
     public static <T> Set<T> asSet(Collection<T> elements) {
         return new LinkedHashSet<>(elements);
     }
+
+    public static boolean areAllDone(CompletableFuture<?>... cfs) {
+        for (CompletableFuture<?> cf : cfs) {
+            if (! cf.isDone()) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

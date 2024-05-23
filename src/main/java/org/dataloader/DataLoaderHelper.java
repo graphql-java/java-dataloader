@@ -3,6 +3,7 @@ package org.dataloader;
 import org.dataloader.annotations.GuardedBy;
 import org.dataloader.annotations.Internal;
 import org.dataloader.impl.CompletableFutureKit;
+import org.dataloader.impl.DataLoaderAssertionException;
 import org.dataloader.scheduler.BatchLoaderScheduler;
 import org.dataloader.stats.StatisticsCollector;
 import org.dataloader.stats.context.IncrementBatchLoadCountByStatisticsContext;
@@ -624,6 +625,15 @@ class DataLoaderHelper<K, V> {
         return (DispatchResult<T>) EMPTY_DISPATCH_RESULT;
     }
 
+    /**********************************************************************************************
+     * ********************************************************************************************
+     * <p>
+     * The reactive support classes start here
+     *
+     * @param <T> for two
+     **********************************************************************************************
+     **********************************************************************************************
+     */
     private abstract class DataLoaderSubscriberBase<T> implements Subscriber<T> {
 
         final CompletableFuture<List<V>> valuesFuture;
@@ -721,6 +731,11 @@ class DataLoaderHelper<K, V> {
         public synchronized void onNext(V value) {
             super.onNext(value);
 
+            if (idx >= keys.size()) {
+                // hang on they have given us more values than we asked for in keys
+                // we cant handle this
+                return;
+            }
             K key = keys.get(idx);
             Object callContext = callContexts.get(idx);
             CompletableFuture<V> future = queuedFutures.get(idx);
@@ -734,8 +749,16 @@ class DataLoaderHelper<K, V> {
         @Override
         public synchronized void onComplete() {
             super.onComplete();
-            assertResultSize(keys, completedValues);
-
+            if (keys.size() != completedValues.size()) {
+                // we have more or less values than promised
+                // we will go through all the outstanding promises and mark those that
+                // have not finished as failed
+                for (CompletableFuture<V> queuedFuture : queuedFutures) {
+                    if (!queuedFuture.isDone()) {
+                        queuedFuture.completeExceptionally(new DataLoaderAssertionException("The size of the promised values MUST be the same size as the key list"));
+                    }
+                }
+            }
             possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
             valuesFuture.complete(completedValues);
         }
@@ -748,9 +771,11 @@ class DataLoaderHelper<K, V> {
             for (int i = idx; i < queuedFutures.size(); i++) {
                 K key = keys.get(i);
                 CompletableFuture<V> future = queuedFutures.get(i);
-                future.completeExceptionally(ex);
-                // clear any cached view of this key because they all failed
-                dataLoader.clear(key);
+                if (! future.isDone()) {
+                    future.completeExceptionally(ex);
+                    // clear any cached view of this key because it failed
+                    dataLoader.clear(key);
+                }
             }
             valuesFuture.completeExceptionally(ex);
         }
@@ -790,11 +815,14 @@ class DataLoaderHelper<K, V> {
             V value = entry.getValue();
 
             Object callContext = callContextByKey.get(key);
-            List<CompletableFuture<V>> futures = queuedFuturesByKey.get(key);
+            List<CompletableFuture<V>> futures = queuedFuturesByKey.getOrDefault(key, List.of());
 
             onNextValue(key, value, callContext, futures);
 
-            completedValuesByKey.put(key, value);
+            // did we have an actual key for this value - ignore it if they send us one outside the key set
+            if (!futures.isEmpty()) {
+                completedValuesByKey.put(key, value);
+            }
         }
 
         @Override
@@ -806,6 +834,16 @@ class DataLoaderHelper<K, V> {
             for (K key : keys) {
                 V value = completedValuesByKey.get(key);
                 values.add(value);
+
+                List<CompletableFuture<V>> futures = queuedFuturesByKey.getOrDefault(key, List.of());
+                for (CompletableFuture<V> future : futures) {
+                    if (! future.isDone()) {
+                        // we have a future that never came back for that key
+                        // but the publisher is done sending in data - it must be null
+                        // e.g. for key X when found no value
+                        future.complete(null);
+                    }
+                }
             }
             valuesFuture.complete(values);
         }
