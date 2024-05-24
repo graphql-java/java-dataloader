@@ -18,7 +18,7 @@ import static org.dataloader.impl.Assertions.assertState;
  *
  * @param <T> for two
  */
-abstract class DataLoaderSubscriberBase<K, V, T> implements Subscriber<T> {
+abstract class AbstractBatchSubscriber<K, V, T> implements Subscriber<T> {
 
     final CompletableFuture<List<V>> valuesFuture;
     final List<K> keys;
@@ -31,7 +31,7 @@ abstract class DataLoaderSubscriberBase<K, V, T> implements Subscriber<T> {
     boolean onErrorCalled = false;
     boolean onCompleteCalled = false;
 
-    DataLoaderSubscriberBase(
+    AbstractBatchSubscriber(
             CompletableFuture<List<V>> valuesFuture,
             List<K> keys,
             List<Object> callContexts,

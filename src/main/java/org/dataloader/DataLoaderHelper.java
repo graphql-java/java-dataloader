@@ -4,8 +4,8 @@ import org.dataloader.annotations.GuardedBy;
 import org.dataloader.annotations.Internal;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.reactive.HelperIntegration;
-import org.dataloader.reactive.DataLoaderMapEntrySubscriber;
-import org.dataloader.reactive.DataLoaderSubscriber;
+import org.dataloader.reactive.MappedBatchSubscriber;
+import org.dataloader.reactive.BatchSubscriber;
 import org.dataloader.scheduler.BatchLoaderScheduler;
 import org.dataloader.stats.StatisticsCollector;
 import org.dataloader.stats.context.IncrementBatchLoadCountByStatisticsContext;
@@ -510,7 +510,7 @@ class DataLoaderHelper<K, V> {
 
     private CompletableFuture<List<V>> invokeBatchPublisher(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, BatchLoaderEnvironment environment) {
         CompletableFuture<List<V>> loadResult = new CompletableFuture<>();
-        Subscriber<V> subscriber = new DataLoaderSubscriber<>(loadResult, keys, keyContexts, queuedFutures, helperIntegration());
+        Subscriber<V> subscriber = new BatchSubscriber<>(loadResult, keys, keyContexts, queuedFutures, helperIntegration());
 
         BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
         if (batchLoadFunction instanceof BatchPublisherWithContext) {
@@ -556,7 +556,7 @@ class DataLoaderHelper<K, V> {
 
     private CompletableFuture<List<V>> invokeMappedBatchPublisher(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, BatchLoaderEnvironment environment) {
         CompletableFuture<List<V>> loadResult = new CompletableFuture<>();
-        Subscriber<Map.Entry<K, V>> subscriber = new DataLoaderMapEntrySubscriber<>(loadResult, keys, keyContexts, queuedFutures, helperIntegration());
+        Subscriber<Map.Entry<K, V>> subscriber = new MappedBatchSubscriber<>(loadResult, keys, keyContexts, queuedFutures, helperIntegration());
 
         BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
         if (batchLoadFunction instanceof MappedBatchPublisherWithContext) {

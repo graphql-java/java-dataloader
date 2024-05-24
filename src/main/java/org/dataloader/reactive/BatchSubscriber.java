@@ -15,11 +15,11 @@ import java.util.concurrent.CompletableFuture;
  * @param <K> the type of keys
  * @param <V> the type of values
  */
-public class DataLoaderSubscriber<K, V> extends DataLoaderSubscriberBase<K, V, V> {
+public class BatchSubscriber<K, V> extends AbstractBatchSubscriber<K, V, V> {
 
     private int idx = 0;
 
-    public DataLoaderSubscriber(
+    public BatchSubscriber(
             CompletableFuture<List<V>> valuesFuture,
             List<K> keys,
             List<Object> callContexts,

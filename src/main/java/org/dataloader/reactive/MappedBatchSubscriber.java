@@ -15,14 +15,14 @@ import java.util.concurrent.CompletableFuture;
  * @param <K> the type of keys
  * @param <V> the type of values
  */
-public class DataLoaderMapEntrySubscriber<K, V> extends DataLoaderSubscriberBase<K, V, Map.Entry<K, V>> {
+public class MappedBatchSubscriber<K, V> extends AbstractBatchSubscriber<K, V, Map.Entry<K, V>> {
 
     private final Map<K, Object> callContextByKey;
     private final Map<K, List<CompletableFuture<V>>> queuedFuturesByKey;
     private final Map<K, V> completedValuesByKey = new HashMap<>();
 
 
-    public DataLoaderMapEntrySubscriber(
+    public MappedBatchSubscriber(
             CompletableFuture<List<V>> valuesFuture,
             List<K> keys,
             List<Object> callContexts,
