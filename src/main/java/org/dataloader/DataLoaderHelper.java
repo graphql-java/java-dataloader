@@ -533,25 +533,6 @@ class DataLoaderHelper<K, V> {
         return loadResult;
     }
 
-    private ReactiveSupport.HelperIntegration<K> helperIntegration() {
-        return new ReactiveSupport.HelperIntegration<>() {
-            @Override
-            public StatisticsCollector getStats() {
-                return stats;
-            }
-
-            @Override
-            public void clearCacheView(K key) {
-                dataLoader.clear(key);
-            }
-
-            @Override
-            public void clearCacheEntriesOnExceptions(List<K> keys) {
-                possiblyClearCacheEntriesOnExceptions(keys);
-            }
-        };
-    }
-
     private CompletableFuture<List<V>> invokeMappedBatchPublisher(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, BatchLoaderEnvironment environment) {
         CompletableFuture<List<V>> loadResult = new CompletableFuture<>();
         Subscriber<Map.Entry<K, V>> subscriber = ReactiveSupport.mappedBatchSubscriber(loadResult, keys, keyContexts, queuedFutures, helperIntegration());
@@ -642,4 +623,22 @@ class DataLoaderHelper<K, V> {
         return (DispatchResult<T>) EMPTY_DISPATCH_RESULT;
     }
 
+    private ReactiveSupport.HelperIntegration<K> helperIntegration() {
+        return new ReactiveSupport.HelperIntegration<>() {
+            @Override
+            public StatisticsCollector getStats() {
+                return stats;
+            }
+
+            @Override
+            public void clearCacheView(K key) {
+                dataLoader.clear(key);
+            }
+
+            @Override
+            public void clearCacheEntriesOnExceptions(List<K> keys) {
+                possiblyClearCacheEntriesOnExceptions(keys);
+            }
+        };
+    }
 }
