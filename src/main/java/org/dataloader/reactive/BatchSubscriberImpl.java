@@ -15,16 +15,16 @@ import java.util.concurrent.CompletableFuture;
  * @param <K> the type of keys
  * @param <V> the type of values
  */
-public class BatchSubscriber<K, V> extends AbstractBatchSubscriber<K, V, V> {
+class BatchSubscriberImpl<K, V> extends AbstractBatchSubscriber<K, V, V> {
 
     private int idx = 0;
 
-    public BatchSubscriber(
+    BatchSubscriberImpl(
             CompletableFuture<List<V>> valuesFuture,
             List<K> keys,
             List<Object> callContexts,
             List<CompletableFuture<V>> queuedFutures,
-            HelperIntegration<K> helperIntegration
+            ReactiveSupport.HelperIntegration<K> helperIntegration
     ) {
         super(valuesFuture, keys, callContexts, queuedFutures, helperIntegration);
     }

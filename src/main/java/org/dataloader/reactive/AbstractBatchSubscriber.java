@@ -24,7 +24,7 @@ abstract class AbstractBatchSubscriber<K, V, T> implements Subscriber<T> {
     final List<K> keys;
     final List<Object> callContexts;
     final List<CompletableFuture<V>> queuedFutures;
-    final HelperIntegration<K> helperIntegration;
+    final ReactiveSupport.HelperIntegration<K> helperIntegration;
 
     List<K> clearCacheKeys = new ArrayList<>();
     List<V> completedValues = new ArrayList<>();
@@ -36,7 +36,7 @@ abstract class AbstractBatchSubscriber<K, V, T> implements Subscriber<T> {
             List<K> keys,
             List<Object> callContexts,
             List<CompletableFuture<V>> queuedFutures,
-            HelperIntegration<K> helperIntegration
+            ReactiveSupport.HelperIntegration<K> helperIntegration
     ) {
         this.valuesFuture = valuesFuture;
         this.keys = keys;
