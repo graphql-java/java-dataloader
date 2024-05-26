@@ -2,8 +2,8 @@ package org.dataloader;
 
 import org.reactivestreams.Subscriber;
 
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * A function that is invoked for batch loading a stream of data values indicated by the provided list of keys.
@@ -26,5 +26,5 @@ public interface MappedBatchPublisher<K, V> {
      * @param keys       the collection of keys to load
      * @param subscriber as values arrive you must call the subscriber for each value
      */
-    void load(List<K> keys, Subscriber<Map.Entry<K, V>> subscriber);
+    void load(Set<K> keys, Subscriber<Map.Entry<K, V>> subscriber);
 }

@@ -10,8 +10,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.dataloader.DataLoaderFactory.newMappedPublisherDataLoader;
 import static org.dataloader.DataLoaderFactory.newMappedPublisherDataLoaderWithTry;
 
@@ -69,7 +73,7 @@ public class MappedPublisherDataLoaderFactory implements TestDataLoaderFactory, 
         return newMappedPublisherDataLoader((keys, subscriber) -> {
             loadCalls.add(new ArrayList<>(keys));
 
-            List<K> nKeys = keys.subList(0, N);
+            List<K> nKeys = keys.stream().limit(N).collect(toList());
             Flux<Map.Entry<K, K>> subFlux = Flux.fromIterable(nKeys).map(k -> Map.entry(k, k));
             subFlux.concatWith(Flux.error(new IllegalStateException("Error")))
                     .subscribe(subscriber);
@@ -81,7 +85,7 @@ public class MappedPublisherDataLoaderFactory implements TestDataLoaderFactory, 
         return newMappedPublisherDataLoader((keys, subscriber) -> {
             loadCalls.add(new ArrayList<>(keys));
 
-            List<String> nKeys = keys.subList(0, N);
+            List<String> nKeys = keys.stream().limit(N).collect(toList());
             Flux.fromIterable(nKeys).map(k -> Map.entry(k, k))
                     .subscribe(subscriber);
         }, options);

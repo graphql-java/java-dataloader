@@ -536,7 +536,7 @@ class DataLoaderHelper<K, V> {
     private CompletableFuture<List<V>> invokeMappedBatchPublisher(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, BatchLoaderEnvironment environment) {
         CompletableFuture<List<V>> loadResult = new CompletableFuture<>();
         Subscriber<Map.Entry<K, V>> subscriber = ReactiveSupport.mappedBatchSubscriber(loadResult, keys, keyContexts, queuedFutures, helperIntegration());
-
+        Set<K> setOfKeys = new LinkedHashSet<>(keys);
         BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
         if (batchLoadFunction instanceof MappedBatchPublisherWithContext) {
             //noinspection unchecked
@@ -551,10 +551,10 @@ class DataLoaderHelper<K, V> {
             //noinspection unchecked
             MappedBatchPublisher<K, V> loadFunction = (MappedBatchPublisher<K, V>) batchLoadFunction;
             if (batchLoaderScheduler != null) {
-                BatchLoaderScheduler.ScheduledBatchPublisherCall loadCall = () -> loadFunction.load(keys, subscriber);
+                BatchLoaderScheduler.ScheduledBatchPublisherCall loadCall = () -> loadFunction.load(setOfKeys, subscriber);
                 batchLoaderScheduler.scheduleBatchPublisher(loadCall, keys, null);
             } else {
-                loadFunction.load(keys, subscriber);
+                loadFunction.load(setOfKeys, subscriber);
             }
         }
         return loadResult;

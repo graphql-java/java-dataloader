@@ -740,7 +740,7 @@ public class DataLoaderTest {
         assertThat(future1.get(), equalTo("A"));
         assertThat(future2.get(), equalTo("B"));
         assertThat(future3.get(), equalTo("A"));
-        if (factory instanceof MappedDataLoaderFactory) {
+        if (factory instanceof MappedDataLoaderFactory || factory instanceof MappedPublisherDataLoaderFactory) {
             assertThat(loadCalls, equalTo(singletonList(asList("A", "B"))));
         } else {
             assertThat(loadCalls, equalTo(singletonList(asList("A", "B", "A"))));
