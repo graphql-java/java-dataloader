@@ -1,11 +1,13 @@
 import org.dataloader.BatchLoader;
 import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.BatchLoaderWithContext;
+import org.dataloader.BatchPublisher;
 import org.dataloader.CacheMap;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderFactory;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.MappedBatchLoaderWithContext;
+import org.dataloader.MappedBatchPublisher;
 import org.dataloader.Try;
 import org.dataloader.fixtures.SecurityCtx;
 import org.dataloader.fixtures.User;
@@ -15,6 +17,7 @@ import org.dataloader.registries.ScheduledDataLoaderRegistry;
 import org.dataloader.scheduler.BatchLoaderScheduler;
 import org.dataloader.stats.Statistics;
 import org.dataloader.stats.ThreadLocalStatisticsCollector;
+import org.reactivestreams.Subscriber;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -171,7 +174,7 @@ public class ReadmeExamples {
         }
     }
 
-    private void tryBatcLoader() {
+    private void tryBatchLoader() {
         DataLoader<String, User> dataLoader = DataLoaderFactory.newDataLoaderWithTry(new BatchLoader<String, Try<User>>() {
             @Override
             public CompletionStage<List<Try<User>>> load(List<String> keys) {
@@ -185,6 +188,26 @@ public class ReadmeExamples {
                 });
             }
         });
+    }
+
+    private void batchPublisher() {
+        BatchPublisher<Long, User> batchPublisher = new BatchPublisher<Long, User>() {
+            @Override
+            public void load(List<Long> userIds, Subscriber<User> userSubscriber) {
+                userManager.publishUsersById(userIds, userSubscriber);
+            }
+        };
+        DataLoader<Long, User> userLoader = DataLoaderFactory.newPublisherDataLoader(batchPublisher);
+    }
+
+    private void mappedBatchPublisher() {
+        MappedBatchPublisher<Long, User> mappedBatchPublisher = new MappedBatchPublisher<Long, User>() {
+            @Override
+            public void load(Set<Long> userIds, Subscriber<Map.Entry<Long, User>> userEntrySubscriber) {
+                userManager.publishUsersById(userIds, userEntrySubscriber);
+            }
+        };
+        DataLoader<Long, User> userLoader = DataLoaderFactory.newMappedPublisherDataLoader(mappedBatchPublisher);
     }
 
     DataLoader<String, User> userDataLoader;
