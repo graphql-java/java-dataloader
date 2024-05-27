@@ -19,7 +19,6 @@ import org.dataloader.stats.Statistics;
 import org.dataloader.stats.ThreadLocalStatisticsCollector;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
-import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -196,7 +195,7 @@ public class ReadmeExamples {
         BatchPublisher<Long, User> batchPublisher = new BatchPublisher<Long, User>() {
             @Override
             public void load(List<Long> userIds, Subscriber<User> userSubscriber) {
-                Publisher<User> userResults = userManager.publishUsersById(userIds);
+                Publisher<User> userResults = userManager.streamUsersById(userIds);
                 userResults.subscribe(userSubscriber);
             }
         };
@@ -207,7 +206,7 @@ public class ReadmeExamples {
         MappedBatchPublisher<Long, User> mappedBatchPublisher = new MappedBatchPublisher<Long, User>() {
             @Override
             public void load(Set<Long> userIds, Subscriber<Map.Entry<Long, User>> userEntrySubscriber) {
-                Publisher<Map.Entry<Long, User>> userEntries = userManager.publishUsersById(userIds);
+                Publisher<Map.Entry<Long, User>> userEntries = userManager.streamUsersById(userIds);
                 userEntries.subscribe(userEntrySubscriber);
             }
         };

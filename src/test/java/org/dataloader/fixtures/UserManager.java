@@ -1,7 +1,6 @@
 package org.dataloader.fixtures;
 
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
 
 import java.util.HashMap;
@@ -56,11 +55,11 @@ public class UserManager {
         return userIds.stream().map(this::loadUserById).collect(Collectors.toList());
     }
 
-    public Publisher<User> publishUsersById(List<Long> userIds) {
+    public Publisher<User> streamUsersById(List<Long> userIds) {
         return Flux.fromIterable(loadUsersById(userIds));
     }
 
-    public Publisher<Map.Entry<Long, User>> publishUsersById(Set<Long> userIds) {
+    public Publisher<Map.Entry<Long, User>> streamUsersById(Set<Long> userIds) {
         return Flux.fromIterable(loadMapOfUsersByIds(null, userIds).entrySet());
     }
 
