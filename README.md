@@ -286,6 +286,66 @@ For example, let's assume you want to load users from a database, you could prob
         // ...
 ```
 
+### Returning a stream of results from your batch publisher
+
+It may be that your batch loader function is a [Reactive Streams](https://www.reactive-streams.org/) [Publisher](https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/org/reactivestreams/Publisher.html), where values are emitted as an asynchronous stream.
+
+For example, let's say you wanted to load many users from a service without forcing the service to load all
+users into its memory (which may exert considerable pressure on it).
+
+A `org.dataloader.BatchPublisher` may be used to load this data:
+
+```java
+        BatchPublisher<Long, User> batchPublisher = new BatchPublisher<Long, User>() {
+            @Override
+            public void load(List<Long> userIds, Subscriber<User> userSubscriber) {
+                userManager.publishUsersById(userIds, userSubscriber);
+            }
+        };
+        DataLoader<Long, User> userLoader = DataLoaderFactory.newPublisherDataLoader(batchPublisher);
+
+        // ...
+```
+
+Rather than waiting for all values to be returned, this `DataLoader` will complete
+the `CompletableFuture<User>` returned by `Dataloader#load(Long)` as each value is
+processed.
+
+If an exception is thrown, the remaining futures yet to be completed are completed
+exceptionally.
+
+You *MUST* ensure that the values are streamed in the same order as the keys provided,
+with the same cardinality (i.e. the number of values must match the number of keys).
+Failing to do so will result in incorrect data being returned from `DataLoader#load`.
+
+
+### Returning a mapped stream of results from your batch publisher
+
+Your publisher may not necessarily return values in the same order in which it processes keys.
+
+For example, let's say your batch publisher function loads user data which is spread across shards,
+with some shards responding more quickly than others.
+
+In instances like these, `org.dataloader.MappedBatchPublisher` can be used.
+
+```java
+        MappedBatchPublisher<Long, User> mappedBatchPublisher = new MappedBatchPublisher<Long, User>() {
+            @Override
+            public void load(Set<Long> userIds, Subscriber<Map.Entry<Long, User>> userEntrySubscriber) {
+                userManager.publishUsersById(userIds, userEntrySubscriber);
+            }
+        };
+        DataLoader<Long, User> userLoader = DataLoaderFactory.newMappedPublisherDataLoader(mappedBatchPublisher);
+
+        // ...
+```
+
+Like the `BatchPublisher`, if an exception is thrown, the remaining futures yet to be completed are completed
+exceptionally.
+
+Unlike the `BatchPublisher`, however, it is not necessary to return values in the same order as the provided keys,
+or even the same number of values.
+
 ### Error object is not a thing in a type safe Java world
 
 In the reference JS implementation if the batch loader returns an `Error` object back from the `load()` promise is rejected
@@ -541,6 +601,12 @@ The following is a `BatchLoaderScheduler` that waits 10 milliseconds before invo
                     return scheduledCall.invoke();
                 }).thenCompose(Function.identity());
             }
+
+             @Override
+             public <K> void scheduleBatchPublisher(ScheduledBatchPublisherCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+                 snooze(10);
+                 scheduledCall.invoke();
+             }
         };
 ```
 

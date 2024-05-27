@@ -30,7 +30,6 @@ def getDevelopmentVersion() {
     version
 }
 
-def slf4jVersion = '1.7.30'
 def releaseVersion = System.env.RELEASE_VERSION
 version = releaseVersion ? releaseVersion : getDevelopmentVersion()
 group = 'com.graphql-java'
@@ -64,16 +63,23 @@ jar {
     }
 }
 
+def slf4jVersion = '1.7.30'
+def reactiveStreamsVersion = '1.0.3'
+
 dependencies {
     api 'org.slf4j:slf4j-api:' + slf4jVersion
+    api 'org.reactivestreams:reactive-streams:' + reactiveStreamsVersion
+
     testImplementation 'org.slf4j:slf4j-simple:' + slf4jVersion
     testImplementation 'org.awaitility:awaitility:2.0.0'
     testImplementation "org.hamcrest:hamcrest:2.2"
+    testImplementation 'io.projectreactor:reactor-core:3.6.6'
     testImplementation 'com.github.ben-manes.caffeine:caffeine:2.9.0'
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.junit.jupiter:junit-jupiter-params'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testImplementation 'io.projectreactor:reactor-core:3.6.6'
 }
 
 task sourcesJar(type: Jar) {

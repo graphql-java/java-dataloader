@@ -3,6 +3,7 @@ package org.dataloader;
 import org.dataloader.annotations.GuardedBy;
 import org.dataloader.annotations.Internal;
 import org.dataloader.impl.CompletableFutureKit;
+import org.dataloader.reactive.ReactiveSupport;
 import org.dataloader.scheduler.BatchLoaderScheduler;
 import org.dataloader.stats.StatisticsCollector;
 import org.dataloader.stats.context.IncrementBatchLoadCountByStatisticsContext;
@@ -10,6 +11,7 @@ import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsCo
 import org.dataloader.stats.context.IncrementCacheHitCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
+import org.reactivestreams.Subscriber;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -152,11 +154,13 @@ class DataLoaderHelper<K, V> {
         }
     }
 
+    @SuppressWarnings("unchecked")
     Object getCacheKey(K key) {
         return loaderOptions.cacheKeyFunction().isPresent() ?
                 loaderOptions.cacheKeyFunction().get().getKey(key) : key;
     }
 
+    @SuppressWarnings("unchecked")
     Object getCacheKeyWithContext(K key, Object context) {
         return loaderOptions.cacheKeyFunction().isPresent() ?
                 loaderOptions.cacheKeyFunction().get().getKeyWithContext(key, context) : key;
@@ -241,10 +245,14 @@ class DataLoaderHelper<K, V> {
     @SuppressWarnings("unchecked")
     private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<Object> callContexts, List<CompletableFuture<V>> queuedFutures) {
         stats.incrementBatchLoadCountBy(keys.size(), new IncrementBatchLoadCountByStatisticsContext<>(keys, callContexts));
-        CompletableFuture<List<V>> batchLoad = invokeLoader(keys, callContexts, loaderOptions.cachingEnabled());
+        CompletableFuture<List<V>> batchLoad = invokeLoader(keys, callContexts, queuedFutures, loaderOptions.cachingEnabled());
         return batchLoad
                 .thenApply(values -> {
                     assertResultSize(keys, values);
+                    if (isPublisher() || isMappedPublisher()) {
+                        // We have already completed the queued futures by the time the overall batchLoad future has completed.
+                        return values;
+                    }
 
                     List<K> clearCacheKeys = new ArrayList<>();
                     for (int idx = 0; idx < queuedFutures.size(); idx++) {
@@ -342,14 +350,15 @@ class DataLoaderHelper<K, V> {
     CompletableFuture<V> invokeLoaderImmediately(K key, Object keyContext, boolean cachingEnabled) {
         List<K> keys = singletonList(key);
         List<Object> keyContexts = singletonList(keyContext);
-        return invokeLoader(keys, keyContexts, cachingEnabled)
+        List<CompletableFuture<V>> queuedFutures = singletonList(new CompletableFuture<>());
+        return invokeLoader(keys, keyContexts, queuedFutures, cachingEnabled)
                 .thenApply(list -> list.get(0))
                 .toCompletableFuture();
     }
 
-    CompletableFuture<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts, boolean cachingEnabled) {
+    CompletableFuture<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, boolean cachingEnabled) {
         if (!cachingEnabled) {
-            return invokeLoader(keys, keyContexts);
+            return invokeLoader(keys, keyContexts, queuedFutures);
         }
         CompletableFuture<List<Try<V>>> cacheCallCF = getFromValueCache(keys);
         return cacheCallCF.thenCompose(cachedValues -> {
@@ -360,6 +369,7 @@ class DataLoaderHelper<K, V> {
             List<Integer> missedKeyIndexes = new ArrayList<>();
             List<K> missedKeys = new ArrayList<>();
             List<Object> missedKeyContexts = new ArrayList<>();
+            List<CompletableFuture<V>> missedQueuedFutures = new ArrayList<>();
 
             // if they return a ValueCachingNotSupported exception then we insert this special marker value, and it
             // means it's a total miss, we need to get all these keys via the batch loader
@@ -369,6 +379,7 @@ class DataLoaderHelper<K, V> {
                     missedKeyIndexes.add(i);
                     missedKeys.add(keys.get(i));
                     missedKeyContexts.add(keyContexts.get(i));
+                    missedQueuedFutures.add(queuedFutures.get(i));
                 }
             } else {
                 assertState(keys.size() == cachedValues.size(), () -> "The size of the cached values MUST be the same size as the key list");
@@ -393,7 +404,7 @@ class DataLoaderHelper<K, V> {
                 // we missed some keys from cache, so send them to the batch loader
                 // and then fill in their values
                 //
-                CompletableFuture<List<V>> batchLoad = invokeLoader(missedKeys, missedKeyContexts);
+                CompletableFuture<List<V>> batchLoad = invokeLoader(missedKeys, missedKeyContexts, missedQueuedFutures);
                 return batchLoad.thenCompose(missedValues -> {
                     assertResultSize(missedKeys, missedValues);
 
@@ -412,8 +423,7 @@ class DataLoaderHelper<K, V> {
         });
     }
 
-
-    CompletableFuture<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts) {
+    CompletableFuture<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures) {
         CompletableFuture<List<V>> batchLoad;
         try {
             Object context = loaderOptions.getBatchLoaderContextProvider().getContext();
@@ -421,6 +431,10 @@ class DataLoaderHelper<K, V> {
                     .context(context).keyContexts(keys, keyContexts).build();
             if (isMapLoader()) {
                 batchLoad = invokeMapBatchLoader(keys, environment);
+            } else if (isPublisher()) {
+                batchLoad = invokeBatchPublisher(keys, keyContexts, queuedFutures, environment);
+            } else if (isMappedPublisher()) {
+                batchLoad = invokeMappedBatchPublisher(keys, keyContexts, queuedFutures, environment);
             } else {
                 batchLoad = invokeListBatchLoader(keys, environment);
             }
@@ -492,8 +506,70 @@ class DataLoaderHelper<K, V> {
         });
     }
 
+    private CompletableFuture<List<V>> invokeBatchPublisher(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, BatchLoaderEnvironment environment) {
+        CompletableFuture<List<V>> loadResult = new CompletableFuture<>();
+        Subscriber<V> subscriber = ReactiveSupport.batchSubscriber(loadResult, keys, keyContexts, queuedFutures, helperIntegration());
+
+        BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
+        if (batchLoadFunction instanceof BatchPublisherWithContext) {
+            //noinspection unchecked
+            BatchPublisherWithContext<K, V> loadFunction = (BatchPublisherWithContext<K, V>) batchLoadFunction;
+            if (batchLoaderScheduler != null) {
+                BatchLoaderScheduler.ScheduledBatchPublisherCall loadCall = () -> loadFunction.load(keys, subscriber, environment);
+                batchLoaderScheduler.scheduleBatchPublisher(loadCall, keys, environment);
+            } else {
+                loadFunction.load(keys, subscriber, environment);
+            }
+        } else {
+            //noinspection unchecked
+            BatchPublisher<K, V> loadFunction = (BatchPublisher<K, V>) batchLoadFunction;
+            if (batchLoaderScheduler != null) {
+                BatchLoaderScheduler.ScheduledBatchPublisherCall loadCall = () -> loadFunction.load(keys, subscriber);
+                batchLoaderScheduler.scheduleBatchPublisher(loadCall, keys, null);
+            } else {
+                loadFunction.load(keys, subscriber);
+            }
+        }
+        return loadResult;
+    }
+
+    private CompletableFuture<List<V>> invokeMappedBatchPublisher(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, BatchLoaderEnvironment environment) {
+        CompletableFuture<List<V>> loadResult = new CompletableFuture<>();
+        Subscriber<Map.Entry<K, V>> subscriber = ReactiveSupport.mappedBatchSubscriber(loadResult, keys, keyContexts, queuedFutures, helperIntegration());
+        Set<K> setOfKeys = new LinkedHashSet<>(keys);
+        BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
+        if (batchLoadFunction instanceof MappedBatchPublisherWithContext) {
+            //noinspection unchecked
+            MappedBatchPublisherWithContext<K, V> loadFunction = (MappedBatchPublisherWithContext<K, V>) batchLoadFunction;
+            if (batchLoaderScheduler != null) {
+                BatchLoaderScheduler.ScheduledBatchPublisherCall loadCall = () -> loadFunction.load(keys, subscriber, environment);
+                batchLoaderScheduler.scheduleBatchPublisher(loadCall, keys, environment);
+            } else {
+                loadFunction.load(keys, subscriber, environment);
+            }
+        } else {
+            //noinspection unchecked
+            MappedBatchPublisher<K, V> loadFunction = (MappedBatchPublisher<K, V>) batchLoadFunction;
+            if (batchLoaderScheduler != null) {
+                BatchLoaderScheduler.ScheduledBatchPublisherCall loadCall = () -> loadFunction.load(setOfKeys, subscriber);
+                batchLoaderScheduler.scheduleBatchPublisher(loadCall, keys, null);
+            } else {
+                loadFunction.load(setOfKeys, subscriber);
+            }
+        }
+        return loadResult;
+    }
+
     private boolean isMapLoader() {
         return batchLoadFunction instanceof MappedBatchLoader || batchLoadFunction instanceof MappedBatchLoaderWithContext;
+    }
+
+    private boolean isPublisher() {
+        return batchLoadFunction instanceof BatchPublisher;
+    }
+
+    private boolean isMappedPublisher() {
+        return batchLoadFunction instanceof MappedBatchPublisher;
     }
 
     int dispatchDepth() {
@@ -545,5 +621,24 @@ class DataLoaderHelper<K, V> {
     @SuppressWarnings("unchecked") // Casting to any type is safe since the underlying list is empty
     private static <T> DispatchResult<T> emptyDispatchResult() {
         return (DispatchResult<T>) EMPTY_DISPATCH_RESULT;
+    }
+
+    private ReactiveSupport.HelperIntegration<K> helperIntegration() {
+        return new ReactiveSupport.HelperIntegration<>() {
+            @Override
+            public StatisticsCollector getStats() {
+                return stats;
+            }
+
+            @Override
+            public void clearCacheView(K key) {
+                dataLoader.clear(key);
+            }
+
+            @Override
+            public void clearCacheEntriesOnExceptions(List<K> keys) {
+                possiblyClearCacheEntriesOnExceptions(keys);
+            }
+        };
     }
 }
