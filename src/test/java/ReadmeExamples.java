@@ -17,7 +17,9 @@ import org.dataloader.registries.ScheduledDataLoaderRegistry;
 import org.dataloader.scheduler.BatchLoaderScheduler;
 import org.dataloader.stats.Statistics;
 import org.dataloader.stats.ThreadLocalStatisticsCollector;
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -194,7 +196,8 @@ public class ReadmeExamples {
         BatchPublisher<Long, User> batchPublisher = new BatchPublisher<Long, User>() {
             @Override
             public void load(List<Long> userIds, Subscriber<User> userSubscriber) {
-                userManager.publishUsersById(userIds, userSubscriber);
+                Publisher<User> userResults = userManager.publishUsersById(userIds);
+                userResults.subscribe(userSubscriber);
             }
         };
         DataLoader<Long, User> userLoader = DataLoaderFactory.newPublisherDataLoader(batchPublisher);
@@ -204,7 +207,8 @@ public class ReadmeExamples {
         MappedBatchPublisher<Long, User> mappedBatchPublisher = new MappedBatchPublisher<Long, User>() {
             @Override
             public void load(Set<Long> userIds, Subscriber<Map.Entry<Long, User>> userEntrySubscriber) {
-                userManager.publishUsersById(userIds, userEntrySubscriber);
+                Publisher<Map.Entry<Long, User>> userEntries = userManager.publishUsersById(userIds);
+                userEntries.subscribe(userEntrySubscriber);
             }
         };
         DataLoader<Long, User> userLoader = DataLoaderFactory.newMappedPublisherDataLoader(mappedBatchPublisher);
