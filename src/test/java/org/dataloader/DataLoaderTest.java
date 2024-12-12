@@ -35,24 +35,19 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
+import static java.util.Collections.*;
 import static java.util.concurrent.CompletableFuture.*;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
@@ -66,10 +61,7 @@ import static org.dataloader.fixtures.TestKit.areAllDone;
 import static org.dataloader.fixtures.TestKit.listFrom;
 import static org.dataloader.impl.CompletableFutureKit.cause;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -116,19 +108,25 @@ public class DataLoaderTest {
         };
         DataLoader<String, String> loader = DataLoaderFactory.newMappedDataLoader(evensOnlyMappedBatchLoader);
 
+        final List<String> keys = asList("C", "D");
+        final Map<String, ?> keysAndContexts = new LinkedHashMap<>();
+        keysAndContexts.put("E", null);
+        keysAndContexts.put("F", null);
+
         loader.load("A");
         loader.load("B");
-        loader.loadMany(asList("C", "D"));
+        loader.loadMany(keys);
+        loader.loadMany(keysAndContexts);
 
         List<String> results = loader.dispatchAndJoin();
 
-        assertThat(results.size(), equalTo(4));
-        assertThat(results, equalTo(asList("A", null, "C", null)));
+        assertThat(results.size(), equalTo(6));
+        assertThat(results, equalTo(asList("A", null, "C", null, "E", null)));
     }
 
     @ParameterizedTest
     @MethodSource("dataLoaderFactories")
-    public void should_Support_loading_multiple_keys_in_one_call(TestDataLoaderFactory factory) {
+    public void should_Support_loading_multiple_keys_in_one_call_via_list(TestDataLoaderFactory factory) {
         AtomicBoolean success = new AtomicBoolean();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
 
@@ -140,6 +138,26 @@ public class DataLoaderTest {
         identityLoader.dispatch();
         await().untilAtomic(success, is(true));
         assertThat(futureAll.toCompletableFuture().join(), equalTo(asList(1, 2)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Support_loading_multiple_keys_in_one_call_via_map(TestDataLoaderFactory factory) {
+        AtomicBoolean success = new AtomicBoolean();
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
+
+        final Map<Integer, ?> keysAndContexts = new LinkedHashMap<>();
+        keysAndContexts.put(1, null);
+        keysAndContexts.put(2, null);
+
+        CompletionStage<Map<Integer, Integer>> futureAll = identityLoader.loadMany(keysAndContexts);
+        futureAll.thenAccept(promisedValues -> {
+            assertThat(promisedValues.size(), is(2));
+            success.set(true);
+        });
+        identityLoader.dispatch();
+        await().untilAtomic(success, is(true));
+        assertThat(futureAll.toCompletableFuture().join(), equalTo(Map.of(1, 1, 2, 2)));
     }
 
     @ParameterizedTest
@@ -159,10 +177,40 @@ public class DataLoaderTest {
 
     @ParameterizedTest
     @MethodSource("dataLoaderFactories")
-    public void should_Return_zero_entries_dispatched_when_no_keys_supplied(TestDataLoaderFactory factory) {
+    public void should_Resolve_to_empty_map_when_no_keys_supplied(TestDataLoaderFactory factory) {
+        AtomicBoolean success = new AtomicBoolean();
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
+        CompletableFuture<Map<Integer, Integer>> futureEmpty = identityLoader.loadMany(emptyMap());
+        futureEmpty.thenAccept(promisedValues -> {
+            assertThat(promisedValues.size(), is(0));
+            success.set(true);
+        });
+        identityLoader.dispatch();
+        await().untilAtomic(success, is(true));
+        assertThat(futureEmpty.join(), anEmptyMap());
+    }
+
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Return_zero_entries_dispatched_when_no_keys_supplied_via_list(TestDataLoaderFactory factory) {
         AtomicBoolean success = new AtomicBoolean();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
         CompletableFuture<List<Integer>> futureEmpty = identityLoader.loadMany(emptyList());
+        futureEmpty.thenAccept(promisedValues -> {
+            assertThat(promisedValues.size(), is(0));
+            success.set(true);
+        });
+        DispatchResult<Integer> dispatchResult = identityLoader.dispatchWithCounts();
+        await().untilAtomic(success, is(true));
+        assertThat(dispatchResult.getKeysCount(), equalTo(0));
+    }
+
+    @ParameterizedTest
+    @MethodSource("dataLoaderFactories")
+    public void should_Return_zero_entries_dispatched_when_no_keys_supplied_via_map(TestDataLoaderFactory factory) {
+        AtomicBoolean success = new AtomicBoolean();
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
+        CompletableFuture<Map<Integer, Integer>> futureEmpty = identityLoader.loadMany(emptyMap());
         futureEmpty.thenAccept(promisedValues -> {
             assertThat(promisedValues.size(), is(0));
             success.set(true);
@@ -286,10 +334,17 @@ public class DataLoaderTest {
         CompletableFuture<List<String>> future2 = identityLoader.loadMany(asList("A", "B"));
         identityLoader.dispatch();
 
-        await().until(() -> future1.isDone() && future2.isDone());
+        Map<String, ?> keysAndContexts = new LinkedHashMap<>();
+        keysAndContexts.put("A", null);
+        keysAndContexts.put("C", null);
+        CompletableFuture<Map<String, String>> future3 = identityLoader.loadMany(keysAndContexts);
+        identityLoader.dispatch();
+
+        await().until(() -> future1.isDone() && future2.isDone() && future3.isDone());
         assertThat(future1.get(), equalTo("A"));
         assertThat(future2.get(), equalTo(asList("A", "B")));
-        assertThat(loadCalls, equalTo(asList(singletonList("A"), singletonList("B"))));
+        assertThat(future3.get(), equalTo(keysAndContexts.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getKey))));
+        assertThat(loadCalls, equalTo(asList(singletonList("A"), singletonList("B"), singletonList("C"))));
     }
 
     @ParameterizedTest

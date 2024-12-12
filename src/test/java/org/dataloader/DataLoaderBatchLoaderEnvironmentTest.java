@@ -2,10 +2,7 @@ package org.dataloader;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -50,10 +47,14 @@ public class DataLoaderBatchLoaderEnvironmentTest {
         loader.load("A");
         loader.load("B");
         loader.loadMany(asList("C", "D"));
+        Map<String, ?> keysAndContexts = new LinkedHashMap<>();
+        keysAndContexts.put("E", null);
+        keysAndContexts.put("F", null);
+        loader.loadMany(keysAndContexts);
 
         List<String> results = loader.dispatchAndJoin();
 
-        assertThat(results, equalTo(asList("A-ctx", "B-ctx", "C-ctx", "D-ctx")));
+        assertThat(results, equalTo(asList("A-ctx", "B-ctx", "C-ctx", "D-ctx", "E-ctx", "F-ctx")));
     }
 
     @Test
@@ -66,10 +67,14 @@ public class DataLoaderBatchLoaderEnvironmentTest {
         loader.load("A", "aCtx");
         loader.load("B", "bCtx");
         loader.loadMany(asList("C", "D"), asList("cCtx", "dCtx"));
+        Map<String, String> keysAndContexts = new LinkedHashMap<>();
+        keysAndContexts.put("E", "eCtx");
+        keysAndContexts.put("F", "fCtx");
+        loader.loadMany(keysAndContexts);
 
         List<String> results = loader.dispatchAndJoin();
 
-        assertThat(results, equalTo(asList("A-ctx-m:aCtx-l:aCtx", "B-ctx-m:bCtx-l:bCtx", "C-ctx-m:cCtx-l:cCtx", "D-ctx-m:dCtx-l:dCtx")));
+        assertThat(results, equalTo(asList("A-ctx-m:aCtx-l:aCtx", "B-ctx-m:bCtx-l:bCtx", "C-ctx-m:cCtx-l:cCtx", "D-ctx-m:dCtx-l:dCtx", "E-ctx-m:eCtx-l:eCtx", "F-ctx-m:fCtx-l:fCtx")));
     }
 
     @Test
@@ -82,12 +87,17 @@ public class DataLoaderBatchLoaderEnvironmentTest {
 
         CompletableFuture<String> aLoad = loader.load("A", "aCtx");
         CompletableFuture<String> bLoad = loader.load("B", "bCtx");
-        CompletableFuture<List<String>> canDLoad = loader.loadMany(asList("C", "D"), asList("cCtx", "dCtx"));
+        CompletableFuture<List<String>> cAndDLoad = loader.loadMany(asList("C", "D"), asList("cCtx", "dCtx"));
+        Map<String, String> keysAndContexts = new LinkedHashMap<>();
+        keysAndContexts.put("E", "eCtx");
+        keysAndContexts.put("F", "fCtx");
+        CompletableFuture<Map<String, String>> eAndFLoad = loader.loadMany(keysAndContexts);
 
         List<String> results = new ArrayList<>(asList(aLoad.join(), bLoad.join()));
-        results.addAll(canDLoad.join());
+        results.addAll(cAndDLoad.join());
+        results.addAll(eAndFLoad.join().values());
 
-        assertThat(results, equalTo(asList("A-ctx-m:aCtx-l:aCtx", "B-ctx-m:bCtx-l:bCtx", "C-ctx-m:cCtx-l:cCtx", "D-ctx-m:dCtx-l:dCtx")));
+        assertThat(results, equalTo(asList("A-ctx-m:aCtx-l:aCtx", "B-ctx-m:bCtx-l:bCtx", "C-ctx-m:cCtx-l:cCtx", "D-ctx-m:dCtx-l:dCtx", "E-ctx-m:eCtx-l:eCtx", "F-ctx-m:fCtx-l:fCtx")));
     }
 
     @Test
@@ -101,9 +111,14 @@ public class DataLoaderBatchLoaderEnvironmentTest {
         loader.load("B");
         loader.loadMany(asList("C", "D"), singletonList("cCtx"));
 
+        Map<String, String> keysAndContexts = new LinkedHashMap<>();
+        keysAndContexts.put("E", "eCtx");
+        keysAndContexts.put("F", null);
+        loader.loadMany(keysAndContexts);
+
         List<String> results = loader.dispatchAndJoin();
 
-        assertThat(results, equalTo(asList("A-ctx-m:aCtx-l:aCtx", "B-ctx-m:null-l:null", "C-ctx-m:cCtx-l:cCtx", "D-ctx-m:null-l:null")));
+        assertThat(results, equalTo(asList("A-ctx-m:aCtx-l:aCtx", "B-ctx-m:null-l:null", "C-ctx-m:cCtx-l:cCtx", "D-ctx-m:null-l:null", "E-ctx-m:eCtx-l:eCtx", "F-ctx-m:null-l:null")));
     }
 
     @Test
@@ -125,9 +140,14 @@ public class DataLoaderBatchLoaderEnvironmentTest {
         loader.load("B");
         loader.loadMany(asList("C", "D"), singletonList("cCtx"));
 
+        Map<String, String> keysAndContexts = new LinkedHashMap<>();
+        keysAndContexts.put("E", "eCtx");
+        keysAndContexts.put("F", null);
+        loader.loadMany(keysAndContexts);
+
         List<String> results = loader.dispatchAndJoin();
 
-        assertThat(results, equalTo(asList("A-ctx-aCtx", "B-ctx-null", "C-ctx-cCtx", "D-ctx-null")));
+        assertThat(results, equalTo(asList("A-ctx-aCtx", "B-ctx-null", "C-ctx-cCtx", "D-ctx-null", "E-ctx-eCtx", "F-ctx-null")));
     }
 
     @Test
@@ -142,9 +162,14 @@ public class DataLoaderBatchLoaderEnvironmentTest {
         loader.load("B");
         loader.loadMany(asList("C", "D"));
 
+        Map<String, String> keysAndContexts = new LinkedHashMap<>();
+        keysAndContexts.put("E", null);
+        keysAndContexts.put("F", null);
+        loader.loadMany(keysAndContexts);
+
         List<String> results = loader.dispatchAndJoin();
 
-        assertThat(results, equalTo(asList("A-null", "B-null", "C-null", "D-null")));
+        assertThat(results, equalTo(asList("A-null", "B-null", "C-null", "D-null", "E-null", "F-null")));
     }
 
     @Test
@@ -160,9 +185,14 @@ public class DataLoaderBatchLoaderEnvironmentTest {
         loader.load("B");
         loader.loadMany(asList("C", "D"));
 
+        Map<String, String> keysAndContexts = new LinkedHashMap<>();
+        keysAndContexts.put("E", null);
+        keysAndContexts.put("F", null);
+        loader.loadMany(keysAndContexts);
+
         List<String> results = loader.dispatchAndJoin();
 
-        assertThat(results, equalTo(asList("A-null", "B-null", "C-null", "D-null")));
+        assertThat(results, equalTo(asList("A-null", "B-null", "C-null", "D-null", "E-null", "F-null")));
     }
 
     @Test
