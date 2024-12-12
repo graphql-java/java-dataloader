@@ -3,8 +3,10 @@ package org.dataloader.impl;
 import org.dataloader.annotations.Internal;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 
@@ -48,10 +50,21 @@ public class CompletableFutureKit {
     }
 
     public static <T> CompletableFuture<List<T>> allOf(List<CompletableFuture<T>> cfs) {
-        return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0]))
+        return CompletableFuture.allOf(cfs.toArray(CompletableFuture[]::new))
                 .thenApply(v -> cfs.stream()
                         .map(CompletableFuture::join)
                         .collect(toList())
+                );
+    }
+
+    public static <K, V> CompletableFuture<Map<K, V>> allOf(Map<K, CompletableFuture<V>> cfs) {
+        return CompletableFuture.allOf(cfs.values().toArray(CompletableFuture[]::new))
+                .thenApply(v -> cfs.entrySet().stream()
+                        .collect(
+                                Collectors.toMap(
+                                        Map.Entry::getKey,
+                                        task -> task.getValue().join())
+                        )
                 );
     }
 }

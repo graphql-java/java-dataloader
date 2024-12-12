@@ -25,10 +25,7 @@ import org.dataloader.stats.StatisticsCollector;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
@@ -569,6 +566,35 @@ public class DataLoader<K, V> {
                     keyContext = keyContexts.get(i);
                 }
                 collect.add(load(key, keyContext));
+            }
+            return CompletableFutureKit.allOf(collect);
+        }
+    }
+
+    /**
+     * Requests to load the map of data provided by the specified keys asynchronously, and returns a composite future
+     * of the resulting values.
+     * <p>
+     * If batching is enabled (the default), you'll have to call {@link DataLoader#dispatch()} at a later stage to
+     * start batch execution. If you forget this call the future will never be completed (unless already completed,
+     * and returned from cache).
+     * <p>
+     * The key context object may be useful in the batch loader interfaces such as {@link org.dataloader.BatchLoaderWithContext} or
+     * {@link org.dataloader.MappedBatchLoaderWithContext} to help retrieve data.
+     *
+     * @param keysAndContexts the map of keys to their respective contexts
+     *
+     * @return the composite future of the map of keys and values
+     */
+    public CompletableFuture<Map<K, V>> loadMany(Map<K, ?> keysAndContexts) {
+        nonNull(keysAndContexts);
+
+        synchronized (this) {
+            Map<K, CompletableFuture<V>> collect = new HashMap<>(keysAndContexts.size());
+            for (Map.Entry<K, ?> entry : keysAndContexts.entrySet()) {
+                K key = entry.getKey();
+                Object keyContext = entry.getValue();
+                collect.put(key, load(key, keyContext));
             }
             return CompletableFutureKit.allOf(collect);
         }

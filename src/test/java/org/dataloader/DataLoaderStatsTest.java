@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static java.util.Arrays.asList;
@@ -118,9 +119,10 @@ public class DataLoaderStatsTest {
         loader.load("A");
         loader.load("B");
         loader.loadMany(asList("C", "D"));
+        loader.loadMany(Map.of("E", "E", "F", "F"));
 
         Statistics stats = loader.getStatistics();
-        assertThat(stats.getLoadCount(), equalTo(4L));
+        assertThat(stats.getLoadCount(), equalTo(6L));
         assertThat(stats.getBatchInvokeCount(), equalTo(0L));
         assertThat(stats.getBatchLoadCount(), equalTo(0L));
         assertThat(stats.getCacheHitCount(), equalTo(0L));
@@ -128,9 +130,9 @@ public class DataLoaderStatsTest {
         loader.dispatch();
 
         stats = loader.getStatistics();
-        assertThat(stats.getLoadCount(), equalTo(4L));
+        assertThat(stats.getLoadCount(), equalTo(6L));
         assertThat(stats.getBatchInvokeCount(), equalTo(1L));
-        assertThat(stats.getBatchLoadCount(), equalTo(4L));
+        assertThat(stats.getBatchLoadCount(), equalTo(6L));
         assertThat(stats.getCacheHitCount(), equalTo(0L));
 
         loader.load("A");
@@ -139,9 +141,9 @@ public class DataLoaderStatsTest {
         loader.dispatch();
 
         stats = loader.getStatistics();
-        assertThat(stats.getLoadCount(), equalTo(6L));
+        assertThat(stats.getLoadCount(), equalTo(8L));
         assertThat(stats.getBatchInvokeCount(), equalTo(2L));
-        assertThat(stats.getBatchLoadCount(), equalTo(6L));
+        assertThat(stats.getBatchLoadCount(), equalTo(8L));
         assertThat(stats.getCacheHitCount(), equalTo(0L));
     }
 
