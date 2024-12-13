@@ -21,3 +21,5 @@ jobs:
           java-version: '11.0.23'
       - name: build and test
         run: ./gradlew assemble && ./gradlew check --info --stacktrace
+        env:
+          CI: true
