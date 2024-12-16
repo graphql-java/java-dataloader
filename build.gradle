@@ -3,10 +3,13 @@ import java.text.SimpleDateFormat
 plugins {
     id 'java'
     id 'java-library'
+    id 'jvm-test-suite'
     id 'maven-publish'
     id 'signing'
-    id "biz.aQute.bnd.builder" version "6.2.0"
-    id "io.github.gradle-nexus.publish-plugin" version "1.0.0"
+    id 'groovy'
+    id 'biz.aQute.bnd.builder' version '6.2.0'
+    id 'io.github.gradle-nexus.publish-plugin' version '1.0.0'
+    id 'com.github.ben-manes.versions' version '0.51.0'
 }
 
 java {
@@ -53,48 +56,32 @@ repositories {
     mavenLocal()
 }
 
-apply plugin: 'groovy'
-
 jar {
     manifest {
         attributes('Automatic-Module-Name': 'org.dataloader',
-		'-exportcontents': 'org.dataloader.*',
-		'-removeheaders': 'Private-Package')
+                '-exportcontents': 'org.dataloader.*',
+                '-removeheaders': 'Private-Package')
     }
 }
 
-def slf4jVersion = '1.7.30'
-def reactiveStreamsVersion = '1.0.3'
-
 dependencies {
-    api 'org.slf4j:slf4j-api:' + slf4jVersion
-    api 'org.reactivestreams:reactive-streams:' + reactiveStreamsVersion
-
-    testImplementation 'org.slf4j:slf4j-simple:' + slf4jVersion
-    testImplementation 'org.awaitility:awaitility:2.0.0'
-    testImplementation "org.hamcrest:hamcrest:2.2"
-    testImplementation 'io.projectreactor:reactor-core:3.6.6'
-    testImplementation 'com.github.ben-manes.caffeine:caffeine:2.9.0'
-    testImplementation platform('org.junit:junit-bom:5.10.2')
-    testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.jupiter:junit-jupiter-params'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
-    testImplementation 'io.projectreactor:reactor-core:3.6.6'
+    api "org.slf4j:slf4j-api:$slf4j_version"
+    api "org.reactivestreams:reactive-streams:$reactive_streams_version"
 }
 
 task sourcesJar(type: Jar) {
     dependsOn classes
-    classifier 'sources'
+    archiveClassifier.set('sources')
     from sourceSets.main.allSource
-}
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from javadoc.destinationDir
 }
 
 javadoc {
     options.encoding = 'UTF-8'
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    archiveClassifier.set('javadoc')
+    from javadoc.destinationDir
 }
 
 artifacts {
@@ -102,11 +89,32 @@ artifacts {
     archives javadocJar
 }
 
-test {
-    testLogging {
-        exceptionFormat = 'full'
+testing {
+    suites {
+        test {
+            useJUnitJupiter(junit_version)
+            dependencies {
+                // Testing dependencies
+                implementation platform("org.junit:junit-bom:$junit_version")
+                implementation 'org.junit.jupiter:junit-jupiter-api'
+                implementation 'org.junit.jupiter:junit-jupiter-params'
+                implementation 'org.junit.jupiter:junit-jupiter-engine'
+                implementation "org.slf4j:slf4j-simple:$slf4j_version"
+                implementation "org.awaitility:awaitility:$awaitility_version"
+                implementation "org.hamcrest:hamcrest:$hamcrest_version"
+                implementation "io.projectreactor:reactor-core:$reactor_core_version"
+                implementation "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+            }
+
+            targets.configureEach {
+                testTask.configure {
+                    testLogging {
+                        exceptionFormat = 'full'
+                    }
+                }
+            }
+        }
     }
-    useJUnitPlatform()
 }
 
 publishing {
@@ -180,9 +188,15 @@ tasks.withType(PublishToMavenRepository) {
     dependsOn build
 }
 
-
-task myWrapper(type: Wrapper) {
-    gradleVersion = '6.6.1'
-    distributionUrl = "https://services.gradle.org/distributions/gradle-${gradleVersion}-all.zip"
+def isNonStable = { String version ->
+    def stableKeyword = ['RELEASE', 'FINAL', 'GA'].any { it -> version.toUpperCase().contains(it) }
+    def regex = /^[0-9,.v-]+(-r)?$/
+    return !stableKeyword && !(version ==~ regex)
 }
 
+// https://github.com/ben-manes/gradle-versions-plugin
+tasks.named("dependencyUpdates").configure {
+    rejectVersionIf {
+        isNonStable(it.candidate.version)
+    }
+}

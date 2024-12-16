@@ -4,7 +4,7 @@
 [![Latest Release](https://maven-badges.herokuapp.com/maven-central/com.graphql-java/java-dataloader/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.graphql-java/java-dataloader/) 
 [![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/graphql-java/java-dataloader/blob/master/LICENSE)
 
-This small and simple utility library is a pure Java 8 port of [Facebook DataLoader](https://github.com/facebook/dataloader). 
+This small and simple utility library is a pure Java 11 port of [Facebook DataLoader](https://github.com/facebook/dataloader). 
 
 It can serve as integral part of your application's data layer to provide a
 consistent API over various back-ends and reduce message communication overhead through batching and caching.
@@ -15,7 +15,7 @@ are resolved independently and, with a true graph of objects, you may be fetchin
 A naive implementation of graphql data fetchers can easily lead to the dreaded  "n+1" fetch problem. 
 
 Most of the code is ported directly from Facebook's reference implementation, with one IMPORTANT adaptation to make
-it work for Java 8. ([more on this below](#manual-dispatching)).
+it work for Java 11. ([more on this below](#manual-dispatching)).
 
 Before reading on, be sure to take a short dive into the
 [original documentation](https://github.com/facebook/dataloader/blob/master/README.md) provided by Lee Byron (@leebyron)
@@ -774,10 +774,10 @@ This library was originally written for use within a [VertX world](http://vertx.
 itself.  All the heavy lifting has been done by this project : [vertx-dataloader](https://github.com/engagingspaces/vertx-dataloader)
 including the extensive testing (which itself came from Facebook).
 
-This particular port was done to reduce the dependency on Vertx and to write a pure Java 8 implementation with no dependencies and also
+This particular port was done to reduce the dependency on Vertx and to write a pure Java 11 implementation with no dependencies and also
 to use the more normative Java CompletableFuture.  
 
-[vertx-core](http://vertx.io/docs/vertx-core/java/) is not a lightweight library by any means so having a pure Java 8 implementation is 
+[vertx-core](http://vertx.io/docs/vertx-core/java/) is not a lightweight library by any means so having a pure Java 11 implementation is 
 very desirable.
 
 
