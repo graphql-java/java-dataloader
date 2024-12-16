@@ -67,7 +67,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.graphql-java:java-dataloader: 3.3.0'
+    compile 'com.graphql-java:java-dataloader: 3.4.0'
 }
 ```
 
