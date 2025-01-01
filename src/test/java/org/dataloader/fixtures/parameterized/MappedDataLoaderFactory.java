@@ -2,15 +2,19 @@ package org.dataloader.fixtures.parameterized;
 
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
+import org.dataloader.fixtures.TestKit;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.dataloader.DataLoaderFactory.newMappedDataLoader;
 import static org.dataloader.fixtures.TestKit.futureError;
 
@@ -25,6 +29,18 @@ public class MappedDataLoaderFactory implements TestDataLoaderFactory {
             keys.forEach(k -> map.put(k, k));
             return completedFuture(map);
         }, options);
+    }
+
+    @Override
+    public <K> DataLoader<K, K> idLoaderDelayed(
+            DataLoaderOptions options, List<Collection<K>> loadCalls, Duration delay) {
+        return newMappedDataLoader(keys -> CompletableFuture.supplyAsync(() -> {
+            TestKit.snooze(delay.toMillis());
+            loadCalls.add(new ArrayList<>(keys));
+            Map<K, K> map = new HashMap<>();
+            keys.forEach(k -> map.put(k, k));
+            return map;
+        }));
     }
 
     @Override

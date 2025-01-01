@@ -4,10 +4,13 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dataloader.fixtures.CaffeineValueCache;
 import org.dataloader.fixtures.CustomValueCache;
+import org.dataloader.fixtures.parameterized.TestDataLoaderFactory;
 import org.dataloader.impl.DataLoaderAssertionException;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -18,7 +21,6 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderOptions.newOptions;
-import static org.dataloader.fixtures.TestKit.idLoader;
 import static org.dataloader.fixtures.TestKit.snooze;
 import static org.dataloader.fixtures.TestKit.sort;
 import static org.dataloader.impl.CompletableFutureKit.failedFuture;
@@ -30,11 +32,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DataLoaderValueCacheTest {
 
-    @Test
-    public void test_by_default_we_have_no_value_caching() {
-        List<List<String>> loadCalls = new ArrayList<>();
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    public void test_by_default_we_have_no_value_caching(TestDataLoaderFactory factory) {
+        List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions();
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
         CompletableFuture<String> fB = identityLoader.load("b");
@@ -64,12 +67,13 @@ public class DataLoaderValueCacheTest {
         assertThat(loadCalls, equalTo(emptyList()));
     }
 
-    @Test
-    public void should_accept_a_remote_value_store_for_caching() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    public void should_accept_a_remote_value_store_for_caching(TestDataLoaderFactory factory) {
         CustomValueCache customValueCache = new CustomValueCache();
-        List<List<String>> loadCalls = new ArrayList<>();
+        List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setValueCache(customValueCache);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         // Fetches as expected
 
@@ -108,8 +112,9 @@ public class DataLoaderValueCacheTest {
         assertArrayEquals(customValueCache.store.keySet().toArray(), emptyList().toArray());
     }
 
-    @Test
-    public void can_use_caffeine_for_caching() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    public void can_use_caffeine_for_caching(TestDataLoaderFactory factory) {
         //
         // Mostly to prove that some other CACHE library could be used
         // as the backing value cache.  Not really Caffeine specific.
@@ -121,9 +126,9 @@ public class DataLoaderValueCacheTest {
 
         ValueCache<String, Object> caffeineValueCache = new CaffeineValueCache(caffeineCache);
 
-        List<List<String>> loadCalls = new ArrayList<>();
+        List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setValueCache(caffeineValueCache);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         // Fetches as expected
 
@@ -148,8 +153,9 @@ public class DataLoaderValueCacheTest {
         assertArrayEquals(caffeineCache.asMap().keySet().toArray(), asList("a", "b", "c").toArray());
     }
 
-    @Test
-    public void will_invoke_loader_if_CACHE_GET_call_throws_exception() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    public void will_invoke_loader_if_CACHE_GET_call_throws_exception(TestDataLoaderFactory factory) {
         CustomValueCache customValueCache = new CustomValueCache() {
 
             @Override
@@ -163,9 +169,9 @@ public class DataLoaderValueCacheTest {
         customValueCache.set("a", "Not From Cache");
         customValueCache.set("b", "From Cache");
 
-        List<List<String>> loadCalls = new ArrayList<>();
+        List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setValueCache(customValueCache);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
         CompletableFuture<String> fB = identityLoader.load("b");
@@ -178,8 +184,9 @@ public class DataLoaderValueCacheTest {
         assertThat(loadCalls, equalTo(singletonList(singletonList("a"))));
     }
 
-    @Test
-    public void will_still_work_if_CACHE_SET_call_throws_exception() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    public void will_still_work_if_CACHE_SET_call_throws_exception(TestDataLoaderFactory factory) {
         CustomValueCache customValueCache = new CustomValueCache() {
             @Override
             public CompletableFuture<Object> set(String key, Object value) {
@@ -190,9 +197,9 @@ public class DataLoaderValueCacheTest {
             }
         };
 
-        List<List<String>> loadCalls = new ArrayList<>();
+        List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setValueCache(customValueCache);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
         CompletableFuture<String> fB = identityLoader.load("b");
@@ -206,8 +213,9 @@ public class DataLoaderValueCacheTest {
         assertArrayEquals(customValueCache.store.keySet().toArray(), singletonList("b").toArray());
     }
 
-    @Test
-    public void caching_can_take_some_time_complete() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    public void caching_can_take_some_time_complete(TestDataLoaderFactory factory) {
         CustomValueCache customValueCache = new CustomValueCache() {
 
             @Override
@@ -228,9 +236,9 @@ public class DataLoaderValueCacheTest {
         };
 
 
-        List<List<String>> loadCalls = new ArrayList<>();
+        List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setValueCache(customValueCache);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
         CompletableFuture<String> fB = identityLoader.load("b");
@@ -247,8 +255,9 @@ public class DataLoaderValueCacheTest {
         assertThat(loadCalls, equalTo(singletonList(asList("missC", "missD"))));
     }
 
-    @Test
-    public void batch_caching_works_as_expected() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    public void batch_caching_works_as_expected(TestDataLoaderFactory factory) {
         CustomValueCache customValueCache = new CustomValueCache() {
 
             @Override
@@ -269,9 +278,9 @@ public class DataLoaderValueCacheTest {
         };
 
 
-        List<List<String>> loadCalls = new ArrayList<>();
+        List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setValueCache(customValueCache);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
         CompletableFuture<String> fB = identityLoader.load("b");
@@ -293,8 +302,9 @@ public class DataLoaderValueCacheTest {
         assertThat(values, equalTo(asList("missC", "missD")));
     }
 
-    @Test
-    public void assertions_will_be_thrown_if_the_cache_does_not_follow_contract() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    public void assertions_will_be_thrown_if_the_cache_does_not_follow_contract(TestDataLoaderFactory factory) {
         CustomValueCache customValueCache = new CustomValueCache() {
 
             @Override
@@ -312,9 +322,9 @@ public class DataLoaderValueCacheTest {
             }
         };
 
-        List<List<String>> loadCalls = new ArrayList<>();
+        List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setValueCache(customValueCache);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
         CompletableFuture<String> fB = identityLoader.load("b");
@@ -335,8 +345,9 @@ public class DataLoaderValueCacheTest {
     }
 
 
-    @Test
-    public void if_caching_is_off_its_never_hit() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    public void if_caching_is_off_its_never_hit(TestDataLoaderFactory factory) {
         AtomicInteger getCalls = new AtomicInteger();
         CustomValueCache customValueCache = new CustomValueCache() {
 
@@ -347,9 +358,9 @@ public class DataLoaderValueCacheTest {
             }
         };
 
-        List<List<String>> loadCalls = new ArrayList<>();
+        List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setValueCache(customValueCache).setCachingEnabled(false);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
         CompletableFuture<String> fB = identityLoader.load("b");
@@ -368,8 +379,9 @@ public class DataLoaderValueCacheTest {
         assertTrue(customValueCache.asMap().isEmpty());
     }
 
-    @Test
-    public void if_everything_is_cached_no_batching_happens() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    public void if_everything_is_cached_no_batching_happens(TestDataLoaderFactory factory) {
         AtomicInteger getCalls = new AtomicInteger();
         AtomicInteger setCalls = new AtomicInteger();
         CustomValueCache customValueCache = new CustomValueCache() {
@@ -390,9 +402,9 @@ public class DataLoaderValueCacheTest {
         customValueCache.asMap().put("b", "cachedB");
         customValueCache.asMap().put("c", "cachedC");
 
-        List<List<String>> loadCalls = new ArrayList<>();
+        List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setValueCache(customValueCache).setCachingEnabled(true);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
         CompletableFuture<String> fB = identityLoader.load("b");
@@ -410,8 +422,9 @@ public class DataLoaderValueCacheTest {
     }
 
 
-    @Test
-    public void if_batching_is_off_it_still_can_cache() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    public void if_batching_is_off_it_still_can_cache(TestDataLoaderFactory factory) {
         AtomicInteger getCalls = new AtomicInteger();
         AtomicInteger setCalls = new AtomicInteger();
         CustomValueCache customValueCache = new CustomValueCache() {
@@ -430,9 +443,9 @@ public class DataLoaderValueCacheTest {
         };
         customValueCache.asMap().put("a", "cachedA");
 
-        List<List<String>> loadCalls = new ArrayList<>();
+        List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setValueCache(customValueCache).setCachingEnabled(true).setBatchingEnabled(false);
-        DataLoader<String, String> identityLoader = idLoader(options, loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
         CompletableFuture<String> fB = identityLoader.load("b");

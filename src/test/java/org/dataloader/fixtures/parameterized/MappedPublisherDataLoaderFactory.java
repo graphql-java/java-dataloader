@@ -3,14 +3,17 @@ package org.dataloader.fixtures.parameterized;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.Try;
+import org.dataloader.fixtures.TestKit;
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -18,6 +21,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.dataloader.DataLoaderFactory.newMappedPublisherDataLoader;
 import static org.dataloader.DataLoaderFactory.newMappedPublisherDataLoaderWithTry;
+import static org.dataloader.DataLoaderFactory.newPublisherDataLoader;
 
 public class MappedPublisherDataLoaderFactory implements TestDataLoaderFactory, TestReactiveDataLoaderFactory {
 
@@ -29,6 +33,20 @@ public class MappedPublisherDataLoaderFactory implements TestDataLoaderFactory, 
             Map<K, K> map = new HashMap<>();
             keys.forEach(k -> map.put(k, k));
             Flux.fromIterable(map.entrySet()).subscribe(subscriber);
+        }, options);
+    }
+
+    @Override
+    public <K> DataLoader<K, K> idLoaderDelayed(
+            DataLoaderOptions options, List<Collection<K>> loadCalls, Duration delay) {
+        return newMappedPublisherDataLoader((keys, subscriber) -> {
+            CompletableFuture.runAsync(() -> {
+                TestKit.snooze(delay.toMillis());
+                loadCalls.add(new ArrayList<>(keys));
+                Map<K, K> map = new HashMap<>();
+                keys.forEach(k -> map.put(k, k));
+                Flux.fromIterable(map.entrySet()).subscribe(subscriber);
+            });
         }, options);
     }
 
