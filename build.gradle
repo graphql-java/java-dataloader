@@ -65,7 +65,6 @@ jar {
 }
 
 dependencies {
-    api "org.slf4j:slf4j-api:$slf4j_version"
     api "org.reactivestreams:reactive-streams:$reactive_streams_version"
 }
 
@@ -99,7 +98,6 @@ testing {
                 implementation 'org.junit.jupiter:junit-jupiter-api'
                 implementation 'org.junit.jupiter:junit-jupiter-params'
                 implementation 'org.junit.jupiter:junit-jupiter-engine'
-                implementation "org.slf4j:slf4j-simple:$slf4j_version"
                 implementation "org.awaitility:awaitility:$awaitility_version"
                 implementation "org.hamcrest:hamcrest:$hamcrest_version"
                 implementation "io.projectreactor:reactor-core:$reactor_core_version"
