@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class DataLoaderValueCacheTest {
 
     @ParameterizedTest
-    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void test_by_default_we_have_no_value_caching(TestDataLoaderFactory factory) {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions();
@@ -68,7 +68,7 @@ public class DataLoaderValueCacheTest {
     }
 
     @ParameterizedTest
-    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_accept_a_remote_value_store_for_caching(TestDataLoaderFactory factory) {
         CustomValueCache customValueCache = new CustomValueCache();
         List<Collection<String>> loadCalls = new ArrayList<>();
@@ -113,7 +113,7 @@ public class DataLoaderValueCacheTest {
     }
 
     @ParameterizedTest
-    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void can_use_caffeine_for_caching(TestDataLoaderFactory factory) {
         //
         // Mostly to prove that some other CACHE library could be used
@@ -154,7 +154,7 @@ public class DataLoaderValueCacheTest {
     }
 
     @ParameterizedTest
-    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void will_invoke_loader_if_CACHE_GET_call_throws_exception(TestDataLoaderFactory factory) {
         CustomValueCache customValueCache = new CustomValueCache() {
 
@@ -185,7 +185,7 @@ public class DataLoaderValueCacheTest {
     }
 
     @ParameterizedTest
-    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void will_still_work_if_CACHE_SET_call_throws_exception(TestDataLoaderFactory factory) {
         CustomValueCache customValueCache = new CustomValueCache() {
             @Override
@@ -214,7 +214,7 @@ public class DataLoaderValueCacheTest {
     }
 
     @ParameterizedTest
-    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void caching_can_take_some_time_complete(TestDataLoaderFactory factory) {
         CustomValueCache customValueCache = new CustomValueCache() {
 
@@ -256,7 +256,7 @@ public class DataLoaderValueCacheTest {
     }
 
     @ParameterizedTest
-    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void batch_caching_works_as_expected(TestDataLoaderFactory factory) {
         CustomValueCache customValueCache = new CustomValueCache() {
 
@@ -303,7 +303,7 @@ public class DataLoaderValueCacheTest {
     }
 
     @ParameterizedTest
-    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void assertions_will_be_thrown_if_the_cache_does_not_follow_contract(TestDataLoaderFactory factory) {
         CustomValueCache customValueCache = new CustomValueCache() {
 
@@ -346,7 +346,7 @@ public class DataLoaderValueCacheTest {
 
 
     @ParameterizedTest
-    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void if_caching_is_off_its_never_hit(TestDataLoaderFactory factory) {
         AtomicInteger getCalls = new AtomicInteger();
         CustomValueCache customValueCache = new CustomValueCache() {
@@ -380,7 +380,7 @@ public class DataLoaderValueCacheTest {
     }
 
     @ParameterizedTest
-    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void if_everything_is_cached_no_batching_happens(TestDataLoaderFactory factory) {
         AtomicInteger getCalls = new AtomicInteger();
         AtomicInteger setCalls = new AtomicInteger();
@@ -423,7 +423,7 @@ public class DataLoaderValueCacheTest {
 
 
     @ParameterizedTest
-    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#getWithoutPublisher")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void if_batching_is_off_it_still_can_cache(TestDataLoaderFactory factory) {
         AtomicInteger getCalls = new AtomicInteger();
         AtomicInteger setCalls = new AtomicInteger();

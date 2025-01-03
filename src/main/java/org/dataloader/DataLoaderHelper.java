@@ -390,6 +390,9 @@ class DataLoaderHelper<K, V> {
                         missedKeyIndexes.add(i);
                         missedKeys.add(keys.get(i));
                         missedKeyContexts.add(keyContexts.get(i));
+                        missedQueuedFutures.add(queuedFutures.get(i));
+                    } else {
+                        queuedFutures.get(i).complete(cacheGet.get());
                     }
                 }
             }
