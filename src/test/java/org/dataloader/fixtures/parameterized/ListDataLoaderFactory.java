@@ -4,9 +4,11 @@ import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.fixtures.TestKit;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -19,6 +21,15 @@ public class ListDataLoaderFactory implements TestDataLoaderFactory {
             loadCalls.add(new ArrayList<>(keys));
             return completedFuture(keys);
         }, options);
+    }
+
+    @Override
+    public <K> DataLoader<K, K> idLoaderDelayed(DataLoaderOptions options, List<Collection<K>> loadCalls, Duration delay) {
+        return newDataLoader(keys -> CompletableFuture.supplyAsync(() -> {
+            TestKit.snooze(delay.toMillis());
+            loadCalls.add(new ArrayList<>(keys));
+            return keys;
+        }));
     }
 
     @Override

@@ -29,10 +29,8 @@ import org.dataloader.fixtures.parameterized.TestDataLoaderFactory;
 import org.dataloader.fixtures.parameterized.TestReactiveDataLoaderFactory;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.impl.DataLoaderAssertionException;
-import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.*;
@@ -41,21 +39,14 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.*;
 import static java.util.concurrent.CompletableFuture.*;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
-import static org.dataloader.DataLoaderFactory.newMappedDataLoader;
-import static org.dataloader.DataLoaderFactory.newMappedPublisherDataLoader;
-import static org.dataloader.DataLoaderFactory.newMappedPublisherDataLoaderWithTry;
-import static org.dataloader.DataLoaderFactory.newPublisherDataLoader;
-import static org.dataloader.DataLoaderFactory.newPublisherDataLoaderWithTry;
 import static org.dataloader.DataLoaderOptions.newOptions;
 import static org.dataloader.fixtures.TestKit.areAllDone;
 import static org.dataloader.fixtures.TestKit.listFrom;
@@ -63,7 +54,6 @@ import static org.dataloader.impl.CompletableFutureKit.cause;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for {@link DataLoader}.
@@ -125,7 +115,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Support_loading_multiple_keys_in_one_call_via_list(TestDataLoaderFactory factory) {
         AtomicBoolean success = new AtomicBoolean();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
@@ -141,7 +131,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Support_loading_multiple_keys_in_one_call_via_map(TestDataLoaderFactory factory) {
         AtomicBoolean success = new AtomicBoolean();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
@@ -161,7 +151,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Resolve_to_empty_list_when_no_keys_supplied(TestDataLoaderFactory factory) {
         AtomicBoolean success = new AtomicBoolean();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
@@ -176,7 +166,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Resolve_to_empty_map_when_no_keys_supplied(TestDataLoaderFactory factory) {
         AtomicBoolean success = new AtomicBoolean();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
@@ -191,7 +181,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Return_zero_entries_dispatched_when_no_keys_supplied_via_list(TestDataLoaderFactory factory) {
         AtomicBoolean success = new AtomicBoolean();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
@@ -206,7 +196,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Return_zero_entries_dispatched_when_no_keys_supplied_via_map(TestDataLoaderFactory factory) {
         AtomicBoolean success = new AtomicBoolean();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), new ArrayList<>());
@@ -221,7 +211,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Batch_multiple_requests(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -237,7 +227,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Return_number_of_batched_entries(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -252,7 +242,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Coalesce_identical_requests(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -269,7 +259,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Cache_repeated_requests(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -305,7 +295,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Not_redispatch_previous_load(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -323,7 +313,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Cache_on_redispatch(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -348,7 +338,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Clear_single_value_in_loader(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -377,7 +367,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Clear_all_values_in_loader(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -405,7 +395,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Allow_priming_the_cache(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -424,7 +414,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Not_prime_keys_that_already_exist(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -453,7 +443,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Allow_to_forcefully_prime_the_cache(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -482,7 +472,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Allow_priming_the_cache_with_a_future(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -501,7 +491,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_not_Cache_failed_fetches_on_complete_failure(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> errorLoader = factory.idLoaderBlowsUps(new DataLoaderOptions(), loadCalls);
@@ -523,7 +513,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Resolve_to_error_to_indicate_failure(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Object> evenLoader = factory.idLoaderOddEvenExceptions(new DataLoaderOptions(), loadCalls);
@@ -546,7 +536,7 @@ public class DataLoaderTest {
     // Accept any kind of key.
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Represent_failures_and_successes_simultaneously(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         AtomicBoolean success = new AtomicBoolean();
         List<Collection<Integer>> loadCalls = new ArrayList<>();
@@ -573,7 +563,7 @@ public class DataLoaderTest {
     // Accepts options
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Cache_failed_fetches(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Object> errorLoader = factory.idLoaderAllExceptions(new DataLoaderOptions(), loadCalls);
@@ -596,7 +586,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_NOT_Cache_failed_fetches_if_told_not_too(TestDataLoaderFactory factory) {
         DataLoaderOptions options = DataLoaderOptions.newOptions().setCachingExceptionsEnabled(false);
         List<Collection<Integer>> loadCalls = new ArrayList<>();
@@ -623,7 +613,7 @@ public class DataLoaderTest {
     // Accepts object key in custom cacheKey function
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Handle_priming_the_cache_with_an_error(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -640,7 +630,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Clear_values_from_cache_after_errors(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> errorLoader = factory.idLoaderBlowsUps(new DataLoaderOptions(), loadCalls);
@@ -676,7 +666,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Propagate_error_to_all_loads(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> errorLoader = factory.idLoaderBlowsUps(new DataLoaderOptions(), loadCalls);
@@ -700,7 +690,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Accept_objects_as_keys(TestDataLoaderFactory factory) {
         List<Collection<Object>> loadCalls = new ArrayList<>();
         DataLoader<Object, Object> identityLoader = factory.idLoader(new DataLoaderOptions(), loadCalls);
@@ -742,7 +732,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Disable_caching(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader =
@@ -780,7 +770,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_work_with_duplicate_keys_when_caching_disabled(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader =
@@ -803,7 +793,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_work_with_duplicate_keys_when_caching_enabled(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader =
@@ -824,7 +814,7 @@ public class DataLoaderTest {
     // It is resilient to job queue ordering
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Accept_objects_with_a_complex_key(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
@@ -846,7 +836,7 @@ public class DataLoaderTest {
     // Helper methods
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Clear_objects_with_complex_key(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
@@ -871,7 +861,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Accept_objects_with_different_order_of_keys(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
@@ -894,7 +884,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Allow_priming_the_cache_with_an_object_key(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn());
@@ -916,7 +906,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Accept_a_custom_cache_map_implementation(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         CustomCacheMap customMap = new CustomCacheMap();
         List<Collection<String>> loadCalls = new ArrayList<>();
@@ -968,7 +958,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_degrade_gracefully_if_cache_get_throws(TestDataLoaderFactory factory) {
         CacheMap<String, Object> cache = new ThrowingCacheMap();
         DataLoaderOptions options = newOptions().setCachingEnabled(true).setCacheMap(cache);
@@ -983,7 +973,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void batching_disabled_should_dispatch_immediately(TestDataLoaderFactory factory) {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setBatchingEnabled(false);
@@ -1012,7 +1002,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void batching_disabled_and_caching_disabled_should_dispatch_immediately_and_forget(TestDataLoaderFactory factory) {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoaderOptions options = newOptions().setBatchingEnabled(false).setCachingEnabled(false);
@@ -1044,7 +1034,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void batches_multiple_requests_with_max_batch_size(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(newOptions().setMaxBatchSize(2), loadCalls);
@@ -1066,7 +1056,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void can_split_max_batch_sizes_correctly(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Integer> identityLoader = factory.idLoader(newOptions().setMaxBatchSize(5), loadCalls);
@@ -1089,7 +1079,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Batch_loads_occurring_within_futures(TestDataLoaderFactory factory) {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader = factory.idLoader(newOptions(), loadCalls);
@@ -1122,7 +1112,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_blowup_after_N_keys(TestDataLoaderFactory factory) {
         if (!(factory instanceof TestReactiveDataLoaderFactory)) {
             return;
@@ -1148,7 +1138,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void when_values_size_are_less_then_key_size(TestDataLoaderFactory factory) {
         //
         // what happens if we want 4 values but are only given 2 back say
@@ -1183,7 +1173,7 @@ public class DataLoaderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("dataLoaderFactories")
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void when_values_size_are_more_then_key_size(TestDataLoaderFactory factory) {
         //
         // what happens if we want 4 values but only given 6 back say
@@ -1306,15 +1296,6 @@ public class DataLoaderTest {
         public CompletableFuture<Object> get(String key) {
             throw new RuntimeException("Cache implementation failed.");
         }
-    }
-
-    private static Stream<Arguments> dataLoaderFactories() {
-        return Stream.of(
-                Arguments.of(Named.of("List DataLoader", new ListDataLoaderFactory())),
-                Arguments.of(Named.of("Mapped DataLoader", new MappedDataLoaderFactory())),
-                Arguments.of(Named.of("Publisher DataLoader", new PublisherDataLoaderFactory())),
-                Arguments.of(Named.of("Mapped Publisher DataLoader", new MappedPublisherDataLoaderFactory()))
-        );
     }
 }
 

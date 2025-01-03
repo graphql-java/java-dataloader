@@ -2,13 +2,15 @@ package org.dataloader.registries;
 
 import org.awaitility.core.ConditionTimeoutException;
 import org.dataloader.DataLoader;
-import org.dataloader.DataLoaderFactory;
 import org.dataloader.DataLoaderRegistry;
-import org.dataloader.fixtures.TestKit;
+import org.dataloader.fixtures.parameterized.TestDataLoaderFactory;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -20,7 +22,6 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
 import static org.awaitility.Duration.TWO_SECONDS;
-import static org.dataloader.fixtures.TestKit.keysAsValues;
 import static org.dataloader.fixtures.TestKit.snooze;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -36,17 +37,18 @@ public class ScheduledDataLoaderRegistryTest {
     DispatchPredicate neverDispatch = (key, dl) -> false;
 
 
-    @Test
-    public void basic_setup_works_like_a_normal_dlr() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
+    public void basic_setup_works_like_a_normal_dlr(TestDataLoaderFactory factory) {
 
-        List<List<String>> aCalls = new ArrayList<>();
-        List<List<String>> bCalls = new ArrayList<>();
+        List<Collection<String>> aCalls = new ArrayList<>();
+        List<Collection<String>> bCalls = new ArrayList<>();
 
-        DataLoader<String, String> dlA = TestKit.idLoader(aCalls);
+        DataLoader<String, String> dlA = factory.idLoader(aCalls);
         dlA.load("AK1");
         dlA.load("AK2");
 
-        DataLoader<String, String> dlB = TestKit.idLoader(bCalls);
+        DataLoader<String, String> dlB = factory.idLoader(bCalls);
         dlB.load("BK1");
         dlB.load("BK2");
 
@@ -68,11 +70,12 @@ public class ScheduledDataLoaderRegistryTest {
         assertThat(bCalls, equalTo(singletonList(asList("BK1", "BK2"))));
     }
 
-    @Test
-    public void predicate_always_false() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
+    public void predicate_always_false(TestDataLoaderFactory factory) {
 
-        List<List<String>> calls = new ArrayList<>();
-        DataLoader<String, String> dlA = DataLoaderFactory.newDataLoader(keysAsValues(calls));
+        List<Collection<String>> calls = new ArrayList<>();
+        DataLoader<String, String> dlA =  factory.idLoader(calls);
         dlA.load("K1");
         dlA.load("K2");
 
@@ -98,15 +101,16 @@ public class ScheduledDataLoaderRegistryTest {
         assertThat(calls.size(), equalTo(0));
     }
 
-    @Test
-    public void predicate_that_eventually_returns_true() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
+    public void predicate_that_eventually_returns_true(TestDataLoaderFactory factory) {
 
 
         AtomicInteger counter = new AtomicInteger();
         DispatchPredicate neverDispatch = (key, dl) -> counter.incrementAndGet() > 5;
 
-        List<List<String>> calls = new ArrayList<>();
-        DataLoader<String, String> dlA = DataLoaderFactory.newDataLoader(keysAsValues(calls));
+        List<Collection<String>> calls = new ArrayList<>();
+        DataLoader<String, String> dlA = factory.idLoader(calls);
         CompletableFuture<String> p1 = dlA.load("K1");
         CompletableFuture<String> p2 = dlA.load("K2");
 
@@ -130,10 +134,11 @@ public class ScheduledDataLoaderRegistryTest {
         assertTrue(p2.isDone());
     }
 
-    @Test
-    public void dispatchAllWithCountImmediately() {
-        List<List<String>> calls = new ArrayList<>();
-        DataLoader<String, String> dlA = DataLoaderFactory.newDataLoader(keysAsValues(calls));
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
+    public void dispatchAllWithCountImmediately(TestDataLoaderFactory factory) {
+        List<Collection<String>> calls = new ArrayList<>();
+        DataLoader<String, String> dlA = factory.idLoader(calls);
         dlA.load("K1");
         dlA.load("K2");
 
@@ -148,10 +153,11 @@ public class ScheduledDataLoaderRegistryTest {
         assertThat(calls, equalTo(singletonList(asList("K1", "K2"))));
     }
 
-    @Test
-    public void dispatchAllImmediately() {
-        List<List<String>> calls = new ArrayList<>();
-        DataLoader<String, String> dlA = DataLoaderFactory.newDataLoader(keysAsValues(calls));
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
+    public void dispatchAllImmediately(TestDataLoaderFactory factory) {
+        List<Collection<String>> calls = new ArrayList<>();
+        DataLoader<String, String> dlA = factory.idLoader(calls);
         dlA.load("K1");
         dlA.load("K2");
 
@@ -165,13 +171,14 @@ public class ScheduledDataLoaderRegistryTest {
         assertThat(calls, equalTo(singletonList(asList("K1", "K2"))));
     }
 
-    @Test
-    public void rescheduleNow() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
+    public void rescheduleNow(TestDataLoaderFactory factory) {
         AtomicInteger i = new AtomicInteger();
         DispatchPredicate countingPredicate = (dataLoaderKey, dataLoader) -> i.incrementAndGet() > 5;
 
-        List<List<String>> calls = new ArrayList<>();
-        DataLoader<String, String> dlA = DataLoaderFactory.newDataLoader(keysAsValues(calls));
+        List<Collection<String>> calls = new ArrayList<>();
+        DataLoader<String, String> dlA = factory.idLoader(calls);
         dlA.load("K1");
         dlA.load("K2");
 
@@ -189,13 +196,14 @@ public class ScheduledDataLoaderRegistryTest {
         assertThat(calls, equalTo(singletonList(asList("K1", "K2"))));
     }
 
-    @Test
-    public void it_will_take_out_the_schedule_once_it_dispatches() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
+    public void it_will_take_out_the_schedule_once_it_dispatches(TestDataLoaderFactory factory) {
         AtomicInteger counter = new AtomicInteger();
         DispatchPredicate countingPredicate = (dataLoaderKey, dataLoader) -> counter.incrementAndGet() > 5;
 
-        List<List<String>> calls = new ArrayList<>();
-        DataLoader<String, String> dlA = DataLoaderFactory.newDataLoader(keysAsValues(calls));
+        List<Collection<String>> calls = new ArrayList<>();
+        DataLoader<String, String> dlA = factory.idLoader(calls);
         dlA.load("K1");
         dlA.load("K2");
 
@@ -231,15 +239,16 @@ public class ScheduledDataLoaderRegistryTest {
         assertThat(calls, equalTo(asList(asList("K1", "K2"), asList("K3", "K4"))));
     }
 
-    @Test
-    public void close_is_a_one_way_door() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
+    public void close_is_a_one_way_door(TestDataLoaderFactory factory) {
         AtomicInteger counter = new AtomicInteger();
         DispatchPredicate countingPredicate = (dataLoaderKey, dataLoader) -> {
             counter.incrementAndGet();
             return false;
         };
 
-        DataLoader<String, String> dlA = TestKit.idLoader();
+        DataLoader<String, String> dlA = factory.idLoader();
         dlA.load("K1");
         dlA.load("K2");
 
@@ -276,12 +285,13 @@ public class ScheduledDataLoaderRegistryTest {
         assertEquals(counter.get(), countThen + 1);
     }
 
-    @Test
-    public void can_tick_after_first_dispatch_for_chain_data_loaders() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
+    public void can_tick_after_first_dispatch_for_chain_data_loaders(TestDataLoaderFactory factory) {
 
         // delays much bigger than the tick rate will mean multiple calls to dispatch
-        DataLoader<String, String> dlA = TestKit.idLoaderAsync(Duration.ofMillis(100));
-        DataLoader<String, String> dlB = TestKit.idLoaderAsync(Duration.ofMillis(200));
+        DataLoader<String, String> dlA = factory.idLoaderDelayed(Duration.ofMillis(100));
+        DataLoader<String, String> dlB = factory.idLoaderDelayed(Duration.ofMillis(200));
 
         CompletableFuture<String> chainedCF = dlA.load("AK1").thenCompose(dlB::load);
 
@@ -306,12 +316,13 @@ public class ScheduledDataLoaderRegistryTest {
         registry.close();
     }
 
-    @Test
-    public void chain_data_loaders_will_hang_if_not_in_ticker_mode() {
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
+    public void chain_data_loaders_will_hang_if_not_in_ticker_mode(TestDataLoaderFactory factory) {
 
         // delays much bigger than the tick rate will mean multiple calls to dispatch
-        DataLoader<String, String> dlA = TestKit.idLoaderAsync(Duration.ofMillis(100));
-        DataLoader<String, String> dlB = TestKit.idLoaderAsync(Duration.ofMillis(200));
+        DataLoader<String, String> dlA = factory.idLoaderDelayed(Duration.ofMillis(100));
+        DataLoader<String, String> dlB = factory.idLoaderDelayed(Duration.ofMillis(200));
 
         CompletableFuture<String> chainedCF = dlA.load("AK1").thenCompose(dlB::load);
 

@@ -3,13 +3,17 @@ package org.dataloader.fixtures.parameterized;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.Try;
+import org.dataloader.fixtures.TestKit;
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
+import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.dataloader.DataLoaderFactory.newPublisherDataLoader;
 import static org.dataloader.DataLoaderFactory.newPublisherDataLoaderWithTry;
 
@@ -21,6 +25,17 @@ public class PublisherDataLoaderFactory implements TestDataLoaderFactory, TestRe
         return newPublisherDataLoader((keys, subscriber) -> {
             loadCalls.add(new ArrayList<>(keys));
             Flux.fromIterable(keys).subscribe(subscriber);
+        }, options);
+    }
+
+    @Override
+    public <K> DataLoader<K, K> idLoaderDelayed(DataLoaderOptions options, List<Collection<K>> loadCalls, Duration delay) {
+        return newPublisherDataLoader((keys, subscriber) -> {
+            CompletableFuture.runAsync(() -> {
+                TestKit.snooze(delay.toMillis());
+                loadCalls.add(new ArrayList<>(keys));
+                Flux.fromIterable(keys).subscribe(subscriber);
+            });
         }, options);
     }
 
