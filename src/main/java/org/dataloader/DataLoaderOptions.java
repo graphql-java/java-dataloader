@@ -18,6 +18,8 @@ package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
 import org.dataloader.impl.Assertions;
+import org.dataloader.instrumentation.DataLoaderInstrumentation;
+import org.dataloader.instrumentation.DataLoaderInstrumentationHelper;
 import org.dataloader.scheduler.BatchLoaderScheduler;
 import org.dataloader.stats.NoOpStatisticsCollector;
 import org.dataloader.stats.StatisticsCollector;
@@ -48,6 +50,7 @@ public class DataLoaderOptions {
     private BatchLoaderContextProvider environmentProvider;
     private ValueCacheOptions valueCacheOptions;
     private BatchLoaderScheduler batchLoaderScheduler;
+    private DataLoaderInstrumentation instrumentation;
 
     /**
      * Creates a new data loader options with default settings.
@@ -61,6 +64,7 @@ public class DataLoaderOptions {
         environmentProvider = NULL_PROVIDER;
         valueCacheOptions = ValueCacheOptions.newOptions();
         batchLoaderScheduler = null;
+        instrumentation = DataLoaderInstrumentationHelper.NOOP_INSTRUMENTATION;
     }
 
     /**
@@ -80,7 +84,8 @@ public class DataLoaderOptions {
         this.statisticsCollector = other.statisticsCollector;
         this.environmentProvider = other.environmentProvider;
         this.valueCacheOptions = other.valueCacheOptions;
-        batchLoaderScheduler = other.batchLoaderScheduler;
+        this.batchLoaderScheduler = other.batchLoaderScheduler;
+        this.instrumentation = other.instrumentation;
     }
 
     /**
@@ -103,7 +108,6 @@ public class DataLoaderOptions {
      * Sets the option that determines whether batch loading is enabled.
      *
      * @param batchingEnabled {@code true} to enable batch loading, {@code false} otherwise
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setBatchingEnabled(boolean batchingEnabled) {
@@ -124,7 +128,6 @@ public class DataLoaderOptions {
      * Sets the option that determines whether caching is enabled.
      *
      * @param cachingEnabled {@code true} to enable caching, {@code false} otherwise
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setCachingEnabled(boolean cachingEnabled) {
@@ -134,7 +137,7 @@ public class DataLoaderOptions {
 
     /**
      * Option that determines whether to cache exceptional values (the default), or not.
-     *
+     * <p>
      * For short-lived caches (that is request caches) it makes sense to cache exceptions since
      * it's likely the key is still poisoned.  However, if you have long-lived caches, then it may make
      * sense to set this to false since the downstream system may have recovered from its failure
@@ -150,7 +153,6 @@ public class DataLoaderOptions {
      * Sets the option that determines whether exceptional values are cache enabled.
      *
      * @param cachingExceptionsEnabled {@code true} to enable caching exceptional values, {@code false} otherwise
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setCachingExceptionsEnabled(boolean cachingExceptionsEnabled) {
@@ -173,7 +175,6 @@ public class DataLoaderOptions {
      * Sets the function to use for creating the cache key, if caching is enabled.
      *
      * @param cacheKeyFunction the cache key function to use
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setCacheKeyFunction(CacheKey<?> cacheKeyFunction) {
@@ -196,7 +197,6 @@ public class DataLoaderOptions {
      * Sets the cache map implementation to use for caching, if caching is enabled.
      *
      * @param cacheMap the cache map instance
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setCacheMap(CacheMap<?, ?> cacheMap) {
@@ -219,7 +219,6 @@ public class DataLoaderOptions {
      * before they are split into multiple class
      *
      * @param maxBatchSize the maximum batch size
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setMaxBatchSize(int maxBatchSize) {
@@ -240,7 +239,6 @@ public class DataLoaderOptions {
      * a common value
      *
      * @param statisticsCollector the statistics collector to use
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setStatisticsCollector(Supplier<StatisticsCollector> statisticsCollector) {
@@ -259,7 +257,6 @@ public class DataLoaderOptions {
      * Sets the batch loader environment provider that will be used to give context to batch load functions
      *
      * @param contextProvider the batch loader context provider
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setBatchLoaderContextProvider(BatchLoaderContextProvider contextProvider) {
@@ -282,7 +279,6 @@ public class DataLoaderOptions {
      * Sets the value cache implementation to use for caching values, if caching is enabled.
      *
      * @param valueCache the value cache instance
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setValueCache(ValueCache<?, ?> valueCache) {
@@ -301,7 +297,6 @@ public class DataLoaderOptions {
      * Sets the {@link ValueCacheOptions} that control how the {@link ValueCache} will be used
      *
      * @param valueCacheOptions the value cache options
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setValueCacheOptions(ValueCacheOptions valueCacheOptions) {
@@ -321,11 +316,28 @@ public class DataLoaderOptions {
      * to some future time.
      *
      * @param batchLoaderScheduler the scheduler
-     *
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setBatchLoaderScheduler(BatchLoaderScheduler batchLoaderScheduler) {
         this.batchLoaderScheduler = batchLoaderScheduler;
+        return this;
+    }
+
+    /**
+     * @return the {@link DataLoaderInstrumentation} to use
+     */
+    public DataLoaderInstrumentation getInstrumentation() {
+        return instrumentation;
+    }
+
+    /**
+     * Sets in a new {@link DataLoaderInstrumentation}
+     *
+     * @param instrumentation the new {@link DataLoaderInstrumentation}
+     * @return the data loader options for fluent coding
+     */
+    public DataLoaderOptions setInstrumentation(DataLoaderInstrumentation instrumentation) {
+        this.instrumentation = nonNull(instrumentation);
         return this;
     }
 }
