@@ -25,9 +25,15 @@ import org.dataloader.stats.StatisticsCollector;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import static org.dataloader.impl.Assertions.nonNull;
 
@@ -54,7 +60,6 @@ import static org.dataloader.impl.Assertions.nonNull;
  *
  * @param <K> type parameter indicating the type of the data load keys
  * @param <V> type parameter indicating the type of the data that is returned
- *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
@@ -65,6 +70,8 @@ public class DataLoader<K, V> {
     private final StatisticsCollector stats;
     private final CacheMap<Object, V> futureCache;
     private final ValueCache<K, V> valueCache;
+    private final DataLoaderOptions options;
+    private final Object batchLoadFunction;
 
     /**
      * Creates new DataLoader with the specified batch loader function and default options
@@ -73,9 +80,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -90,9 +95,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -114,9 +117,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -133,9 +134,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @see DataLoaderFactory#newDataLoaderWithTry(BatchLoader)
      * @deprecated use {@link DataLoaderFactory} instead
      */
@@ -151,9 +150,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -168,9 +165,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -192,9 +187,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -211,9 +204,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @see DataLoaderFactory#newDataLoaderWithTry(BatchLoader)
      * @deprecated use {@link DataLoaderFactory} instead
      */
@@ -229,9 +220,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -246,9 +235,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -271,9 +258,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -290,9 +275,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @see DataLoaderFactory#newDataLoaderWithTry(BatchLoader)
      * @deprecated use {@link DataLoaderFactory} instead
      */
@@ -308,9 +291,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -325,9 +306,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -349,9 +328,7 @@ public class DataLoader<K, V> {
      * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -368,9 +345,7 @@ public class DataLoader<K, V> {
      * @param options           the options to use
      * @param <K>               the key type
      * @param <V>               the value type
-     *
      * @return a new DataLoader
-     *
      * @see DataLoaderFactory#newDataLoaderWithTry(BatchLoader)
      * @deprecated use {@link DataLoaderFactory} instead
      */
@@ -383,7 +358,6 @@ public class DataLoader<K, V> {
      * Creates a new data loader with the provided batch load function, and default options.
      *
      * @param batchLoadFunction the batch load function to use
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -396,7 +370,6 @@ public class DataLoader<K, V> {
      *
      * @param batchLoadFunction the batch load function to use
      * @param options           the batch load options
-     *
      * @deprecated use {@link DataLoaderFactory} instead
      */
     @Deprecated
@@ -416,6 +389,8 @@ public class DataLoader<K, V> {
         this.valueCache = determineValueCache(loaderOptions);
         // order of keys matter in data loader
         this.stats = nonNull(loaderOptions.getStatisticsCollector());
+        this.batchLoadFunction = nonNull(batchLoadFunction);
+        this.options = loaderOptions;
 
         this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.valueCache, this.stats, clock);
     }
@@ -429,6 +404,32 @@ public class DataLoader<K, V> {
     @SuppressWarnings("unchecked")
     private ValueCache<K, V> determineValueCache(DataLoaderOptions loaderOptions) {
         return (ValueCache<K, V>) loaderOptions.valueCache().orElseGet(ValueCache::defaultValueCache);
+    }
+
+    /**
+     * @return the options used to build this {@link DataLoader}
+     */
+    public DataLoaderOptions getOptions() {
+        return options;
+    }
+
+    /**
+     * @return the batch load interface used to build this {@link DataLoader}
+     */
+    public Object getBatchLoadFunction() {
+        return batchLoadFunction;
+    }
+
+    /**
+     * This allows you to change the current {@link DataLoader} and turn it into a new one
+     *
+     * @param builderConsumer the {@link DataLoaderFactory.Builder} consumer for changing the {@link DataLoader}
+     * @return a newly built {@link DataLoader} instance
+     */
+    public DataLoader<K, V> transform(Consumer<DataLoaderFactory.Builder<K, V>> builderConsumer) {
+        DataLoaderFactory.Builder<K, V> builder = DataLoaderFactory.builder(this);
+        builderConsumer.accept(builder);
+        return builder.build();
     }
 
     /**
@@ -457,7 +458,6 @@ public class DataLoader<K, V> {
      * and returned from cache).
      *
      * @param key the key to load
-     *
      * @return the future of the value
      */
     public CompletableFuture<V> load(K key) {
@@ -475,7 +475,6 @@ public class DataLoader<K, V> {
      * NOTE : This will NOT cause a data load to happen. You must call {@link #load(Object)} for that to happen.
      *
      * @param key the key to check
-     *
      * @return an Optional to the future of the value
      */
     public Optional<CompletableFuture<V>> getIfPresent(K key) {
@@ -494,7 +493,6 @@ public class DataLoader<K, V> {
      * NOTE : This will NOT cause a data load to happen.  You must call {@link #load(Object)} for that to happen.
      *
      * @param key the key to check
-     *
      * @return an Optional to the future of the value
      */
     public Optional<CompletableFuture<V>> getIfCompleted(K key) {
@@ -514,7 +512,6 @@ public class DataLoader<K, V> {
      *
      * @param key        the key to load
      * @param keyContext a context object that is specific to this key
-     *
      * @return the future of the value
      */
     public CompletableFuture<V> load(K key, Object keyContext) {
@@ -530,7 +527,6 @@ public class DataLoader<K, V> {
      * and returned from cache).
      *
      * @param keys the list of keys to load
-     *
      * @return the composite future of the list of values
      */
     public CompletableFuture<List<V>> loadMany(List<K> keys) {
@@ -550,7 +546,6 @@ public class DataLoader<K, V> {
      *
      * @param keys        the list of keys to load
      * @param keyContexts the list of key calling context objects
-     *
      * @return the composite future of the list of values
      */
     public CompletableFuture<List<V>> loadMany(List<K> keys, List<Object> keyContexts) {
@@ -583,7 +578,6 @@ public class DataLoader<K, V> {
      * {@link org.dataloader.MappedBatchLoaderWithContext} to help retrieve data.
      *
      * @param keysAndContexts the map of keys to their respective contexts
-     *
      * @return the composite future of the map of keys and values
      */
     public CompletableFuture<Map<K, V>> loadMany(Map<K, ?> keysAndContexts) {
@@ -656,7 +650,6 @@ public class DataLoader<K, V> {
      * on the next load request.
      *
      * @param key the key to remove
-     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clear(K key) {
@@ -670,7 +663,6 @@ public class DataLoader<K, V> {
      *
      * @param key     the key to remove
      * @param handler a handler that will be called after the async remote clear completes
-     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clear(K key, BiConsumer<Void, Throwable> handler) {
@@ -696,7 +688,6 @@ public class DataLoader<K, V> {
      * Clears the entire cache map of the loader, and of the cached value store.
      *
      * @param handler a handler that will be called after the async remote clear all completes
-     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clearAll(BiConsumer<Void, Throwable> handler) {
@@ -714,7 +705,6 @@ public class DataLoader<K, V> {
      *
      * @param key   the key
      * @param value the value
-     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, V value) {
@@ -726,7 +716,6 @@ public class DataLoader<K, V> {
      *
      * @param key   the key
      * @param error the exception to prime instead of a value
-     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, Exception error) {
@@ -740,7 +729,6 @@ public class DataLoader<K, V> {
      *
      * @param key   the key
      * @param value the value
-     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, CompletableFuture<V> value) {
@@ -760,7 +748,6 @@ public class DataLoader<K, V> {
      * If no cache key function is present in {@link DataLoaderOptions}, then the returned value equals the input key.
      *
      * @param key the input key
-     *
      * @return the cache key after the input is transformed with the cache key function
      */
     public Object getCacheKey(K key) {
@@ -779,6 +766,7 @@ public class DataLoader<K, V> {
 
     /**
      * Gets the cacheMap associated with this data loader passed in via {@link DataLoaderOptions#cacheMap()}
+     *
      * @return the cacheMap of this data loader
      */
     public CacheMap<Object, V> getCacheMap() {
@@ -788,6 +776,7 @@ public class DataLoader<K, V> {
 
     /**
      * Gets the valueCache associated with this data loader passed in via {@link DataLoaderOptions#valueCache()}
+     *
      * @return the valueCache of this data loader
      */
     public ValueCache<K, V> getValueCache() {
