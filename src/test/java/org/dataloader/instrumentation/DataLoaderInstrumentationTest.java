@@ -6,13 +6,14 @@ import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderFactory;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.DispatchResult;
+import org.dataloader.fixtures.Stopwatch;
 import org.dataloader.fixtures.TestKit;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.awaitility.Awaitility.await;
@@ -30,7 +31,7 @@ class DataLoaderInstrumentationTest {
 
     @Test
     void canMonitorDispatching() {
-        AtomicLong timer = new AtomicLong();
+        Stopwatch stopwatch = Stopwatch.stopwatchUnStarted();
         AtomicReference<DataLoader<?, ?>> dlRef = new AtomicReference<>();
 
         DataLoaderInstrumentation instrumentation = new DataLoaderInstrumentation() {
@@ -38,12 +39,11 @@ class DataLoaderInstrumentationTest {
             @Override
             public DataLoaderInstrumentationContext<DispatchResult<?>> beginDispatch(DataLoader<?, ?> dataLoader) {
                 dlRef.set(dataLoader);
-
-                long then = System.currentTimeMillis();
+                stopwatch.start();
                 return new DataLoaderInstrumentationContext<>() {
                     @Override
                     public void onCompleted(DispatchResult<?> result, Throwable t) {
-                        timer.set(System.currentTimeMillis() - then);
+                        stopwatch.stop();
                     }
                 };
             }
@@ -54,24 +54,32 @@ class DataLoaderInstrumentationTest {
             }
         };
 
-        DataLoaderOptions options = new DataLoaderOptions().setInstrumentation(instrumentation).setMaxBatchSize(5);
+        DataLoaderOptions options = new DataLoaderOptions()
+                .setInstrumentation(instrumentation)
+                .setMaxBatchSize(5);
 
         DataLoader<String, String> dl = DataLoaderFactory.newDataLoader(snoozingBatchLoader, options);
 
+        List<String> keys = new ArrayList<>();
         for (int i = 0; i < 20; i++) {
-             dl.load("X"+ i);
+            String key = "X" + i;
+            keys.add(key);
+            dl.load(key);
         }
 
         CompletableFuture<List<String>> dispatch = dl.dispatch();
 
         await().until(dispatch::isDone);
-        assertThat(timer.get(), greaterThan(150L)); // we must have called batch load 4 times
+        // we must have called batch load 4 times at 100ms snooze  per call
+        // but its in parallel via supplyAsync
+        assertThat(stopwatch.elapsed(), greaterThan(75L));
         assertThat(dlRef.get(), is(dl));
+        assertThat(dispatch.join(), equalTo(keys));
     }
 
     @Test
     void canMonitorBatchLoading() {
-        AtomicLong timer = new AtomicLong();
+        Stopwatch stopwatch = Stopwatch.stopwatchUnStarted();
         AtomicReference<BatchLoaderEnvironment> beRef = new AtomicReference<>();
         AtomicReference<DataLoader<?, ?>> dlRef = new AtomicReference<>();
 
@@ -82,11 +90,11 @@ class DataLoaderInstrumentationTest {
                 dlRef.set(dataLoader);
                 beRef.set(environment);
 
-                long then = System.currentTimeMillis();
+                stopwatch.start();
                 return new DataLoaderInstrumentationContext<>() {
                     @Override
                     public void onCompleted(List<?> result, Throwable t) {
-                        timer.set(System.currentTimeMillis() - then);
+                        stopwatch.stop();
                     }
                 };
             }
@@ -95,13 +103,13 @@ class DataLoaderInstrumentationTest {
         DataLoaderOptions options = new DataLoaderOptions().setInstrumentation(instrumentation);
         DataLoader<String, String> dl = DataLoaderFactory.newDataLoader(snoozingBatchLoader, options);
 
-        dl.load("A");
-        dl.load("B");
+        dl.load("A", "kcA");
+        dl.load("B", "kcB");
 
         CompletableFuture<List<String>> dispatch = dl.dispatch();
 
         await().until(dispatch::isDone);
-        assertThat(timer.get(), greaterThan(50L));
+        assertThat(stopwatch.elapsed(), greaterThan(50L));
         assertThat(dlRef.get(), is(dl));
         assertThat(beRef.get().getKeyContexts().keySet(), equalTo(Set.of("A", "B")));
     }
