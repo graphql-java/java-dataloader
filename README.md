@@ -750,6 +750,65 @@ When ticker mode is **true** the `ScheduledDataLoaderRegistry` algorithm is as f
         * If it returns **true**, then `dataLoader.dispatch()` is called **and** a task is scheduled to re-evaluate this specific dataloader in the near future
 * The re-evaluation tasks are run periodically according to the `registry.getScheduleDuration()`
 
+## Instrumenting the data loader code
+
+A `DataLoader` can have a `DataLoaderInstrumentation` associated with it.  This callback interface is intended to provide
+insight into working of the `DataLoader` such as how long it takes to run or to allow for logging of key events.
+
+You set the `DataLoaderInstrumentation` into the `DataLoaderOptions` at build time.
+
+```java
+
+
+        DataLoaderInstrumentation timingInstrumentation = new DataLoaderInstrumentation() {
+            @Override
+            public DataLoaderInstrumentationContext<DispatchResult<?>> beginDispatch(DataLoader<?, ?> dataLoader) {
+                long then = System.currentTimeMillis();
+                return DataLoaderInstrumentationHelper.whenCompleted((result, err) -> {
+                    long ms = System.currentTimeMillis() - then;
+                    System.out.println(format("dispatch time: %d ms", ms));
+                });
+            }
+
+            @Override
+            public DataLoaderInstrumentationContext<List<?>> beginBatchLoader(DataLoader<?, ?> dataLoader, List<?> keys, BatchLoaderEnvironment environment) {
+                long then = System.currentTimeMillis();
+                return DataLoaderInstrumentationHelper.whenCompleted((result, err) -> {
+                    long ms = System.currentTimeMillis() - then;
+                    System.out.println(format("batch loader time: %d ms", ms));
+                });
+            }
+        };
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setInstrumentation(timingInstrumentation);
+        DataLoader<String, User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader, options);
+        
+```
+
+The example shows how long the overall `DataLoader` dispatch takes or how long the batch loader takes to run.
+
+### Instrumenting the DataLoaderRegistry
+
+You can also associate a `DataLoaderInstrumentation` with a `DataLoaderRegistry`.  Every `DataLoader` registered will be changed so that the registry
+`DataLoaderInstrumentation` is associated with it.  This allows you to set just the one `DataLoaderInstrumentation` in place and it applies to all 
+data loaders.
+
+```java
+    DataLoader<String, User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader);
+    DataLoader<String, User> teamsDataLoader = DataLoaderFactory.newDataLoader(teamsBatchLoader);
+    
+    DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
+            .instrumentation(timingInstrumentation)
+            .register("users", userDataLoader)
+            .register("teams", teamsDataLoader)
+            .build();
+    
+    DataLoader<String, User> changedUsersDataLoader = registry.getDataLoader("users");
+```
+
+The `timingInstrumentation` here will be associated with the `DataLoader` under the key  `users` and the key `teams`.  Note that since
+DataLoader is immutable, a new changed object is created so you must use the registry to get the `DataLoader`.  
+
+
 ## Other information sources
 
 - [Facebook DataLoader Github repo](https://github.com/facebook/dataloader)
