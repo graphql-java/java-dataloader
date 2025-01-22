@@ -1,5 +1,7 @@
 package org.dataloader.instrumentation;
 
+import org.dataloader.annotations.PublicSpi;
+
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -10,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
  * This pattern of construction of an object then call back is intended to allow "timers" to be created that can instrument what has
  * just happened or "loggers" to be called to record what has happened.
  */
+@PublicSpi
 public interface DataLoaderInstrumentationContext<T> {
     /**
      * This is invoked when the instrumentation step is initially dispatched.  Note this is NOT

@@ -3,8 +3,10 @@ package org.dataloader.instrumentation;
 import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.DataLoader;
 import org.dataloader.DispatchResult;
+import org.dataloader.annotations.PublicApi;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -14,6 +16,7 @@ import java.util.stream.Collectors;
  * This {@link DataLoaderInstrumentation} can chain together multiple instrumentations and have them all called in
  * the order of the provided list.
  */
+@PublicApi
 public class ChainedDataLoaderInstrumentation implements DataLoaderInstrumentation {
     private final List<DataLoaderInstrumentation> instrumentations;
 
@@ -25,6 +28,10 @@ public class ChainedDataLoaderInstrumentation implements DataLoaderInstrumentati
         this.instrumentations = List.copyOf(instrumentations);
     }
 
+    public List<DataLoaderInstrumentation> getInstrumentations() {
+        return instrumentations;
+    }
+
     /**
      * Adds a new {@link DataLoaderInstrumentation} to the list and creates a new {@link ChainedDataLoaderInstrumentation}
      *
@@ -32,8 +39,33 @@ public class ChainedDataLoaderInstrumentation implements DataLoaderInstrumentati
      * @return a new ChainedDataLoaderInstrumentation object
      */
     public ChainedDataLoaderInstrumentation add(DataLoaderInstrumentation instrumentation) {
-        ArrayList<DataLoaderInstrumentation> list = new ArrayList<>(instrumentations);
+        ArrayList<DataLoaderInstrumentation> list = new ArrayList<>(this.instrumentations);
         list.add(instrumentation);
+        return new ChainedDataLoaderInstrumentation(list);
+    }
+
+    /**
+     * Prepends a new {@link DataLoaderInstrumentation} to the list and creates a new {@link ChainedDataLoaderInstrumentation}
+     *
+     * @param instrumentation the one to add
+     * @return a new ChainedDataLoaderInstrumentation object
+     */
+    public ChainedDataLoaderInstrumentation prepend(DataLoaderInstrumentation instrumentation) {
+        ArrayList<DataLoaderInstrumentation> list = new ArrayList<>();
+        list.add(instrumentation);
+        list.addAll(this.instrumentations);
+        return new ChainedDataLoaderInstrumentation(list);
+    }
+
+    /**
+     * Adds a collection of {@link DataLoaderInstrumentation} to the list and creates a new {@link ChainedDataLoaderInstrumentation}
+     *
+     * @param instrumentations the new ones to add
+     * @return a new ChainedDataLoaderInstrumentation object
+     */
+    public ChainedDataLoaderInstrumentation addAll(Collection<DataLoaderInstrumentation> instrumentations) {
+        ArrayList<DataLoaderInstrumentation> list = new ArrayList<>(this.instrumentations);
+        list.addAll(instrumentations);
         return new ChainedDataLoaderInstrumentation(list);
     }
 

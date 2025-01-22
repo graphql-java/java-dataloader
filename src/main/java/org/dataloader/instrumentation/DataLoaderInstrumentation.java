@@ -3,12 +3,14 @@ package org.dataloader.instrumentation;
 import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.DataLoader;
 import org.dataloader.DispatchResult;
+import org.dataloader.annotations.PublicSpi;
 
 import java.util.List;
 
 /**
  * This interface is called when certain actions happen inside a data loader
  */
+@PublicSpi
 public interface DataLoaderInstrumentation {
     /**
      * This call back is done just before the {@link DataLoader#dispatch()} is invoked,

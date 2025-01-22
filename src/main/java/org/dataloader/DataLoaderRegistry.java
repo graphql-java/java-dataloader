@@ -1,6 +1,9 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
+import org.dataloader.instrumentation.ChainedDataLoaderInstrumentation;
+import org.dataloader.instrumentation.DataLoaderInstrumentation;
+import org.dataloader.instrumentation.DataLoaderInstrumentationHelper;
 import org.dataloader.stats.Statistics;
 
 import java.util.ArrayList;
@@ -21,25 +24,81 @@ import java.util.function.Function;
 @PublicApi
 public class DataLoaderRegistry {
     protected final Map<String, DataLoader<?, ?>> dataLoaders = new ConcurrentHashMap<>();
+    protected final DataLoaderInstrumentation instrumentation;
+
 
     public DataLoaderRegistry() {
+        instrumentation = null;
     }
 
     private DataLoaderRegistry(Builder builder) {
-        this.dataLoaders.putAll(builder.dataLoaders);
+        instrument(builder.instrumentation, builder.dataLoaders);
+        this.instrumentation = builder.instrumentation;
     }
 
+    private void instrument(DataLoaderInstrumentation registryInstrumentation, Map<String, DataLoader<?, ?>> incomingDataLoaders) {
+        this.dataLoaders.putAll(incomingDataLoaders);
+        if (registryInstrumentation != null) {
+            this.dataLoaders.replaceAll((k, existingDL) -> instrumentDL(registryInstrumentation, existingDL));
+        }
+    }
+
+    /**
+     * Can be called to tweak a {@link DataLoader} so that it has the registry {@link DataLoaderInstrumentation} added as the first one.
+     *
+     * @param registryInstrumentation the common registry {@link DataLoaderInstrumentation}
+     * @param existingDL              the existing data loader
+     * @return a new {@link DataLoader} or the same one if there is nothing to change
+     */
+    private static DataLoader<?, ?> instrumentDL(DataLoaderInstrumentation registryInstrumentation, DataLoader<?, ?> existingDL) {
+        if (registryInstrumentation == null) {
+            return existingDL;
+        }
+        DataLoaderOptions options = existingDL.getOptions();
+        DataLoaderInstrumentation existingInstrumentation = options.getInstrumentation();
+        // if they have any instrumentations then add to it
+        if (existingInstrumentation != null) {
+            if (existingInstrumentation == registryInstrumentation) {
+                // nothing to change
+                return existingDL;
+            }
+            if (existingInstrumentation == DataLoaderInstrumentationHelper.NOOP_INSTRUMENTATION) {
+                // replace it with the registry one
+                return mkInstrumentedDataLoader(existingDL, options, registryInstrumentation);
+            }
+            if (existingInstrumentation instanceof ChainedDataLoaderInstrumentation) {
+                // avoids calling a chained inside a chained
+                DataLoaderInstrumentation newInstrumentation = ((ChainedDataLoaderInstrumentation) existingInstrumentation).prepend(registryInstrumentation);
+                return mkInstrumentedDataLoader(existingDL, options, newInstrumentation);
+            } else {
+                DataLoaderInstrumentation newInstrumentation = new ChainedDataLoaderInstrumentation().add(registryInstrumentation).add(existingInstrumentation);
+                return mkInstrumentedDataLoader(existingDL, options, newInstrumentation);
+            }
+        } else {
+            return mkInstrumentedDataLoader(existingDL, options, registryInstrumentation);
+        }
+    }
+
+    private static DataLoader<?, ?> mkInstrumentedDataLoader(DataLoader<?, ?> existingDL, DataLoaderOptions options, DataLoaderInstrumentation newInstrumentation) {
+        return existingDL.transform(builder -> {
+            options.setInstrumentation(newInstrumentation);
+            builder.options(options);
+        });
+    }
+
+    public DataLoaderInstrumentation getInstrumentation() {
+        return instrumentation;
+    }
 
     /**
      * This will register a new dataloader
      *
      * @param key        the key to put the data loader under
      * @param dataLoader the data loader to register
-     *
      * @return this registry
      */
     public DataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader) {
-        dataLoaders.put(key, dataLoader);
+        dataLoaders.put(key, instrumentDL(instrumentation, dataLoader));
         return this;
     }
 
@@ -54,13 +113,15 @@ public class DataLoaderRegistry {
      * @param mappingFunction the function to compute a data loader
      * @param <K>             the type of keys
      * @param <V>             the type of values
-     *
      * @return a data loader
      */
     @SuppressWarnings("unchecked")
     public <K, V> DataLoader<K, V> computeIfAbsent(final String key,
                                                    final Function<String, DataLoader<?, ?>> mappingFunction) {
-        return (DataLoader<K, V>) dataLoaders.computeIfAbsent(key, mappingFunction);
+        return (DataLoader<K, V>) dataLoaders.computeIfAbsent(key, (k) -> {
+            DataLoader<?, ?> dl = mappingFunction.apply(k);
+            return instrumentDL(instrumentation, dl);
+        });
     }
 
     /**
@@ -68,7 +129,6 @@ public class DataLoaderRegistry {
      * and return a new combined registry
      *
      * @param registry the registry to combine into this registry
-     *
      * @return a new combined registry
      */
     public DataLoaderRegistry combine(DataLoaderRegistry registry) {
@@ -97,7 +157,6 @@ public class DataLoaderRegistry {
      * This will unregister a new dataloader
      *
      * @param key the key of the data loader to unregister
-     *
      * @return this registry
      */
     public DataLoaderRegistry unregister(String key) {
@@ -111,7 +170,6 @@ public class DataLoaderRegistry {
      * @param key the key of the data loader
      * @param <K> the type of keys
      * @param <V> the type of values
-     *
      * @return a data loader or null if its not present
      */
     @SuppressWarnings("unchecked")
@@ -182,13 +240,13 @@ public class DataLoaderRegistry {
     public static class Builder {
 
         private final Map<String, DataLoader<?, ?>> dataLoaders = new HashMap<>();
+        private DataLoaderInstrumentation instrumentation;
 
         /**
          * This will register a new dataloader
          *
          * @param key        the key to put the data loader under
          * @param dataLoader the data loader to register
-         *
          * @return this builder for a fluent pattern
          */
         public Builder register(String key, DataLoader<?, ?> dataLoader) {
@@ -201,11 +259,15 @@ public class DataLoaderRegistry {
          * from a previous {@link DataLoaderRegistry}
          *
          * @param otherRegistry the previous {@link DataLoaderRegistry}
-         *
          * @return this builder for a fluent pattern
          */
         public Builder registerAll(DataLoaderRegistry otherRegistry) {
             dataLoaders.putAll(otherRegistry.dataLoaders);
+            return this;
+        }
+
+        public Builder instrumentation(DataLoaderInstrumentation instrumentation) {
+            this.instrumentation = instrumentation;
             return this;
         }
 

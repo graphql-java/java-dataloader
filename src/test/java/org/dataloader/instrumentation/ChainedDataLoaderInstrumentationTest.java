@@ -1,17 +1,15 @@
 package org.dataloader.instrumentation;
 
-import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderFactory;
 import org.dataloader.DataLoaderOptions;
-import org.dataloader.DispatchResult;
 import org.dataloader.fixtures.TestKit;
 import org.dataloader.fixtures.parameterized.TestDataLoaderFactory;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -22,65 +20,16 @@ import static org.hamcrest.Matchers.equalTo;
 
 class ChainedDataLoaderInstrumentationTest {
 
-    static class CapturingInstrumentation implements DataLoaderInstrumentation {
-        String name;
-        List<String> methods = new ArrayList<>();
-
-        public CapturingInstrumentation(String name) {
-            this.name = name;
-        }
-
-        @Override
-        public DataLoaderInstrumentationContext<DispatchResult<?>> beginDispatch(DataLoader<?, ?> dataLoader) {
-            methods.add(name + "_beginDispatch");
-            return new DataLoaderInstrumentationContext<>() {
-                @Override
-                public void onDispatched() {
-                    methods.add(name + "_beginDispatch_onDispatched");
-                }
-
-                @Override
-                public void onCompleted(DispatchResult<?> result, Throwable t) {
-                    methods.add(name + "_beginDispatch_onCompleted");
-                }
-            };
-        }
-
-        @Override
-        public DataLoaderInstrumentationContext<List<?>> beginBatchLoader(DataLoader<?, ?> dataLoader, List<?> keys, BatchLoaderEnvironment environment) {
-            methods.add(name + "_beginBatchLoader");
-            return new DataLoaderInstrumentationContext<>() {
-                @Override
-                public void onDispatched() {
-                    methods.add(name + "_beginBatchLoader_onDispatched");
-                }
-
-                @Override
-                public void onCompleted(List<?> result, Throwable t) {
-                    methods.add(name + "_beginBatchLoader_onCompleted");
-                }
-            };
-        }
-    }
+    CapturingInstrumentation capturingA;
+    CapturingInstrumentation capturingB;
+    CapturingInstrumentation capturingButReturnsNull;
 
 
-    static class CapturingInstrumentationReturnsNull extends CapturingInstrumentation {
-
-        public CapturingInstrumentationReturnsNull(String name) {
-            super(name);
-        }
-
-        @Override
-        public DataLoaderInstrumentationContext<DispatchResult<?>> beginDispatch(DataLoader<?, ?> dataLoader) {
-            methods.add(name + "_beginDispatch");
-            return null;
-        }
-
-        @Override
-        public DataLoaderInstrumentationContext<List<?>> beginBatchLoader(DataLoader<?, ?> dataLoader, List<?> keys, BatchLoaderEnvironment environment) {
-            methods.add(name + "_beginBatchLoader");
-            return null;
-        }
+    @BeforeEach
+    void setUp() {
+        capturingA = new CapturingInstrumentation("A");
+        capturingB = new CapturingInstrumentation("B");
+        capturingButReturnsNull = new CapturingInstrumentationReturnsNull("NULL");
     }
 
     @Test
@@ -128,9 +77,6 @@ class ChainedDataLoaderInstrumentationTest {
     @ParameterizedTest
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void canChainTogetherManyInstrumentationsWithDifferentBatchLoaders(TestDataLoaderFactory factory) {
-        CapturingInstrumentation capturingA = new CapturingInstrumentation("A");
-        CapturingInstrumentation capturingB = new CapturingInstrumentation("B");
-        CapturingInstrumentation capturingButReturnsNull = new CapturingInstrumentationReturnsNull("NULL");
 
         ChainedDataLoaderInstrumentation chainedItn = new ChainedDataLoaderInstrumentation()
                 .add(capturingA)
@@ -162,5 +108,13 @@ class ChainedDataLoaderInstrumentationTest {
 
         // it returned null on all its contexts - nothing to call back on
         assertThat(capturingButReturnsNull.methods, equalTo(List.of("NULL_beginDispatch", "NULL_beginBatchLoader")));
+    }
+
+    @Test
+    void addition_works() {
+        ChainedDataLoaderInstrumentation chainedItn = new ChainedDataLoaderInstrumentation()
+                .add(capturingA).prepend(capturingB).addAll(List.of(capturingButReturnsNull));
+
+        assertThat(chainedItn.getInstrumentations(), equalTo(List.of(capturingB, capturingA, capturingButReturnsNull)));
     }
 }
