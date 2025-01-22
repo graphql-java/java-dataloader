@@ -427,4 +427,22 @@ public class ReadmeExamples {
         DataLoader<String, User> changedUsersDataLoader = registry.getDataLoader("users");
 
     }
+
+    private void combiningRegistryExample() {
+        DataLoader<String, User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader);
+        DataLoader<String, User> teamsDataLoader = DataLoaderFactory.newDataLoader(teamsBatchLoader);
+
+        DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
+                .register("users", userDataLoader)
+                .register("teams", teamsDataLoader)
+                .build();
+
+        DataLoaderRegistry registryCombined = DataLoaderRegistry.newRegistry()
+                .instrumentation(timingInstrumentation)
+                .registerAll(registry)
+                .build();
+
+        DataLoader<String, User> changedUsersDataLoader = registryCombined.getDataLoader("users");
+
+    }
 }
