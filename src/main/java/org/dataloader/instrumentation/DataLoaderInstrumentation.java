@@ -11,7 +11,7 @@ import java.util.List;
  */
 public interface DataLoaderInstrumentation {
     /**
-     * This call back is done just before the {@link DataLoader#dispatch()} is invoked
+     * This call back is done just before the {@link DataLoader#dispatch()} is invoked,
      * and it completes when the dispatch call promise is done.
      *
      * @param dataLoader the {@link DataLoader} in question
@@ -22,7 +22,7 @@ public interface DataLoaderInstrumentation {
     }
 
     /**
-     * This call back is done just before the batch loader of a {@link DataLoader} is invoked.  Remember a batch loader
+     * This call back is done just before the `batch loader` of a {@link DataLoader} is invoked.  Remember a batch loader
      * could be called multiple times during a dispatch event (because of max batch sizes)
      *
      * @param dataLoader  the {@link DataLoader} in question

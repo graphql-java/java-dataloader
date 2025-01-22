@@ -12,13 +12,15 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface DataLoaderInstrumentationContext<T> {
     /**
-     * This is invoked when the instrumentation step is initially dispatched
+     * This is invoked when the instrumentation step is initially dispatched.  Note this is NOT
+     * the same time as the {@link DataLoaderInstrumentation}`beginXXX()` starts, but rather after all the inner
+     * work has been done.
      */
     default void onDispatched() {
     }
 
     /**
-     * This is invoked when the instrumentation step is fully completed
+     * This is invoked when the instrumentation step is fully completed.
      *
      * @param result the result of the step (which may be null)
      * @param t      this exception will be non-null if an exception was thrown during the step
