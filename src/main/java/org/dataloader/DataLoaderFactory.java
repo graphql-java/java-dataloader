@@ -561,7 +561,7 @@ public class DataLoaderFactory {
             return this;
         }
 
-        DataLoader<K, V> build() {
+        public DataLoader<K, V> build() {
             return mkDataLoader(batchLoadFunction, options);
         }
     }

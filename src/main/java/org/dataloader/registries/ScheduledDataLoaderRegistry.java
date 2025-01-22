@@ -3,6 +3,7 @@ package org.dataloader.registries;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderRegistry;
 import org.dataloader.annotations.ExperimentalApi;
+import org.dataloader.instrumentation.DataLoaderInstrumentation;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -64,8 +65,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     private volatile boolean closed;
 
     private ScheduledDataLoaderRegistry(Builder builder) {
-        super();
-        this.dataLoaders.putAll(builder.dataLoaders);
+        super(builder.dataLoaders, builder.instrumentation);
         this.scheduledExecutorService = builder.scheduledExecutorService;
         this.defaultExecutorUsed = builder.defaultExecutorUsed;
         this.schedule = builder.schedule;
@@ -271,6 +271,8 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         private boolean defaultExecutorUsed = false;
         private Duration schedule = Duration.ofMillis(10);
         private boolean tickerMode = false;
+        private DataLoaderInstrumentation instrumentation;
+
 
         /**
          * If you provide a {@link ScheduledExecutorService} then it will NOT be shutdown when
@@ -360,6 +362,11 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
          */
         public Builder tickerMode(boolean tickerMode) {
             this.tickerMode = tickerMode;
+            return this;
+        }
+
+        public Builder instrumentation(DataLoaderInstrumentation instrumentation) {
+            this.instrumentation = instrumentation;
             return this;
         }
 

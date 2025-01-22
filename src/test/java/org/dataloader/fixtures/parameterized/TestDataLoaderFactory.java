@@ -25,6 +25,10 @@ public interface TestDataLoaderFactory {
 
     // Convenience methods
 
+    default <K> DataLoader<K, K> idLoader(DataLoaderOptions options) {
+        return idLoader(options, new ArrayList<>());
+    }
+
     default <K> DataLoader<K, K> idLoader(List<Collection<K>> calls) {
         return idLoader(null, calls);
     }

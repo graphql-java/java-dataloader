@@ -3,6 +3,8 @@ package org.dataloader;
 import org.dataloader.annotations.GuardedBy;
 import org.dataloader.annotations.Internal;
 import org.dataloader.impl.CompletableFutureKit;
+import org.dataloader.instrumentation.DataLoaderInstrumentation;
+import org.dataloader.instrumentation.DataLoaderInstrumentationContext;
 import org.dataloader.reactive.ReactiveSupport;
 import org.dataloader.scheduler.BatchLoaderScheduler;
 import org.dataloader.stats.StatisticsCollector;
@@ -34,6 +36,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.dataloader.impl.Assertions.assertState;
 import static org.dataloader.impl.Assertions.nonNull;
+import static org.dataloader.instrumentation.DataLoaderInstrumentationHelper.ctxOrNoopCtx;
 
 /**
  * This helps break up the large DataLoader class functionality, and it contains the logic to dispatch the
@@ -167,6 +170,8 @@ class DataLoaderHelper<K, V> {
     }
 
     DispatchResult<V> dispatch() {
+        DataLoaderInstrumentationContext<DispatchResult<?>> instrCtx = ctxOrNoopCtx(instrumentation().beginDispatch(dataLoader));
+
         boolean batchingEnabled = loaderOptions.batchingEnabled();
         final List<K> keys;
         final List<Object> callContexts;
@@ -175,7 +180,8 @@ class DataLoaderHelper<K, V> {
             int queueSize = loaderQueue.size();
             if (queueSize == 0) {
                 lastDispatchTime.set(now());
-                return emptyDispatchResult();
+                instrCtx.onDispatched();
+                return endDispatchCtx(instrCtx, emptyDispatchResult());
             }
 
             // we copy the pre-loaded set of futures ready for dispatch
@@ -192,7 +198,8 @@ class DataLoaderHelper<K, V> {
             lastDispatchTime.set(now());
         }
         if (!batchingEnabled) {
-            return emptyDispatchResult();
+            instrCtx.onDispatched();
+            return endDispatchCtx(instrCtx, emptyDispatchResult());
         }
         final int totalEntriesHandled = keys.size();
         //
@@ -213,7 +220,15 @@ class DataLoaderHelper<K, V> {
         } else {
             futureList = dispatchQueueBatch(keys, callContexts, queuedFutures);
         }
-        return new DispatchResult<>(futureList, totalEntriesHandled);
+        instrCtx.onDispatched();
+        return endDispatchCtx(instrCtx, new DispatchResult<>(futureList, totalEntriesHandled));
+    }
+
+    private DispatchResult<V> endDispatchCtx(DataLoaderInstrumentationContext<DispatchResult<?>> instrCtx, DispatchResult<V> dispatchResult) {
+        // once the CF completes, we can tell the instrumentation
+        dispatchResult.getPromisedResults()
+                .whenComplete((result, throwable) -> instrCtx.onCompleted(dispatchResult, throwable));
+        return dispatchResult;
     }
 
     private CompletableFuture<List<V>> sliceIntoBatchesOfBatches(List<K> keys, List<CompletableFuture<V>> queuedFutures, List<Object> callContexts, int maxBatchSize) {
@@ -427,11 +442,14 @@ class DataLoaderHelper<K, V> {
     }
 
     CompletableFuture<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures) {
+        Object context = loaderOptions.getBatchLoaderContextProvider().getContext();
+        BatchLoaderEnvironment environment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
+                .context(context).keyContexts(keys, keyContexts).build();
+
+        DataLoaderInstrumentationContext<List<?>> instrCtx = ctxOrNoopCtx(instrumentation().beginBatchLoader(dataLoader, keys, environment));
+
         CompletableFuture<List<V>> batchLoad;
         try {
-            Object context = loaderOptions.getBatchLoaderContextProvider().getContext();
-            BatchLoaderEnvironment environment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
-                    .context(context).keyContexts(keys, keyContexts).build();
             if (isMapLoader()) {
                 batchLoad = invokeMapBatchLoader(keys, environment);
             } else if (isPublisher()) {
@@ -441,11 +459,15 @@ class DataLoaderHelper<K, V> {
             } else {
                 batchLoad = invokeListBatchLoader(keys, environment);
             }
+            instrCtx.onDispatched();
         } catch (Exception e) {
+            instrCtx.onDispatched();
             batchLoad = CompletableFutureKit.failedFuture(e);
         }
+        batchLoad.whenComplete(instrCtx::onCompleted);
         return batchLoad;
     }
+
 
     @SuppressWarnings("unchecked")
     private CompletableFuture<List<V>> invokeListBatchLoader(List<K> keys, BatchLoaderEnvironment environment) {
@@ -573,6 +595,10 @@ class DataLoaderHelper<K, V> {
 
     private boolean isMappedPublisher() {
         return batchLoadFunction instanceof MappedBatchPublisher;
+    }
+
+    private DataLoaderInstrumentation instrumentation() {
+        return loaderOptions.getInstrumentation();
     }
 
     int dispatchDepth() {
