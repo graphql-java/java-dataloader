@@ -18,7 +18,7 @@ import static org.dataloader.DataLoaderOptions.newOptions;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-class ChainedDataLoaderInstrumentationTest {
+public class ChainedDataLoaderInstrumentationTest {
 
     CapturingInstrumentation capturingA;
     CapturingInstrumentation capturingB;

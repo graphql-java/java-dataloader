@@ -19,28 +19,45 @@ import java.util.function.Function;
 /**
  * This allows data loaders to be registered together into a single place, so
  * they can be dispatched as one.  It also allows you to retrieve data loaders by
- * name from a central place
+ * name from a central place.
+ * <p>
+ * Notes on {@link DataLoaderInstrumentation} : A {@link DataLoaderRegistry} can have an instrumentation
+ * associated with it.  As each {@link DataLoader} is added to the registry, the {@link DataLoaderInstrumentation}
+ * of the registry is applied to that {@link DataLoader}.
+ * <p>
+ * The {@link DataLoader} is changed and hence the object in the registry is not the
+ * same one as was originally registered.  So you MUST get access to the {@link DataLoader} via {@link DataLoaderRegistry#getDataLoader(String)} methods
+ * and not use the original {@link DataLoader} object.
+ * <p>
+ * If the {@link DataLoader} has no {@link DataLoaderInstrumentation} then the registry one is added to it.  If it does have one already
+ * then a {@link ChainedDataLoaderInstrumentation} is created with the registry {@link DataLoaderInstrumentation} in it first and then any other
+ * {@link DataLoaderInstrumentation}s added after that.
  */
 @PublicApi
 public class DataLoaderRegistry {
-    protected final Map<String, DataLoader<?, ?>> dataLoaders = new ConcurrentHashMap<>();
+    protected final Map<String, DataLoader<?, ?>> dataLoaders;
     protected final DataLoaderInstrumentation instrumentation;
 
 
     public DataLoaderRegistry() {
-        instrumentation = null;
+        this(new ConcurrentHashMap<>(),null);
     }
 
     private DataLoaderRegistry(Builder builder) {
-        instrument(builder.instrumentation, builder.dataLoaders);
-        this.instrumentation = builder.instrumentation;
+        this(builder.dataLoaders,builder.instrumentation);
     }
 
-    private void instrument(DataLoaderInstrumentation registryInstrumentation, Map<String, DataLoader<?, ?>> incomingDataLoaders) {
-        this.dataLoaders.putAll(incomingDataLoaders);
+    protected DataLoaderRegistry(Map<String, DataLoader<?, ?>> dataLoaders,  DataLoaderInstrumentation instrumentation ) {
+        this.dataLoaders = instrumentDLs(dataLoaders, instrumentation);
+        this.instrumentation = instrumentation;
+    }
+
+    private Map<String, DataLoader<?, ?>> instrumentDLs(Map<String, DataLoader<?, ?>> incomingDataLoaders, DataLoaderInstrumentation registryInstrumentation) {
+        Map<String, DataLoader<?, ?>> dataLoaders = new ConcurrentHashMap<>(incomingDataLoaders);
         if (registryInstrumentation != null) {
-            this.dataLoaders.replaceAll((k, existingDL) -> instrumentDL(registryInstrumentation, existingDL));
+            dataLoaders.replaceAll((k, existingDL) -> instrumentDL(registryInstrumentation, existingDL));
         }
+        return dataLoaders;
     }
 
     /**

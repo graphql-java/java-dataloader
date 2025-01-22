@@ -4,6 +4,7 @@ import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderRegistry;
 import org.dataloader.fixtures.TestKit;
 import org.dataloader.fixtures.parameterized.TestDataLoaderFactory;
+import org.dataloader.registries.ScheduledDataLoaderRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -18,7 +19,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 
-class DataLoaderRegistryInstrumentationTest {
+public class DataLoaderRegistryInstrumentationTest {
     DataLoader<String, String> dlX;
     DataLoader<String, String> dlY;
     DataLoader<String, String> dlZ;
@@ -177,6 +178,29 @@ class DataLoaderRegistryInstrumentationTest {
         assertThat(instrumentations, equalTo(List.of(instrA, instrB)));
     }
 
+    @SuppressWarnings("resource")
+    @Test
+    void canInstrumentScheduledRegistryViaBuilder() {
+
+        assertThat(dlX.getOptions().getInstrumentation(), equalTo(DataLoaderInstrumentationHelper.NOOP_INSTRUMENTATION));
+
+        ScheduledDataLoaderRegistry registry = ScheduledDataLoaderRegistry.newScheduledRegistry()
+                .instrumentation(chainedInstrA)
+                .register("X", dlX)
+                .register("Y", dlY)
+                .register("Z", dlZ)
+                .build();
+
+        assertThat(registry.getInstrumentation(), equalTo(chainedInstrA));
+
+        for (String key : List.of("X", "Y", "Z")) {
+            DataLoaderInstrumentation instrumentation = registry.getDataLoader(key).getOptions().getInstrumentation();
+            assertThat(instrumentation, instanceOf(ChainedDataLoaderInstrumentation.class));
+            List<DataLoaderInstrumentation> instrumentations = ((ChainedDataLoaderInstrumentation) instrumentation).getInstrumentations();
+            assertThat(instrumentations, equalTo(List.of(instrA)));
+        }
+    }
+
     @ParameterizedTest
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void endToEndIntegrationTest(TestDataLoaderFactory factory) {
@@ -200,6 +224,5 @@ class DataLoaderRegistryInstrumentationTest {
         assertThat(instrA.methods, equalTo(List.of("A_beginDispatch",
                 "A_beginBatchLoader", "A_beginBatchLoader_onDispatched", "A_beginBatchLoader_onCompleted",
                 "A_beginDispatch_onDispatched", "A_beginDispatch_onCompleted")));
-
     }
 }

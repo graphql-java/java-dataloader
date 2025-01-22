@@ -22,7 +22,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 
-class DataLoaderInstrumentationTest {
+public class DataLoaderInstrumentationTest {
 
     BatchLoader<String, String> snoozingBatchLoader = keys -> CompletableFuture.supplyAsync(() -> {
         TestKit.snooze(100);
