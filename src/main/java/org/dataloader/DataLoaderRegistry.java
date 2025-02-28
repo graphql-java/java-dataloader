@@ -31,7 +31,8 @@ import java.util.function.Function;
  * <p>
  * If the {@link DataLoader} has no {@link DataLoaderInstrumentation} then the registry one is added to it.  If it does have one already
  * then a {@link ChainedDataLoaderInstrumentation} is created with the registry {@link DataLoaderInstrumentation} in it first and then any other
- * {@link DataLoaderInstrumentation}s added after that.
+ * {@link DataLoaderInstrumentation}s added after that.  If the registry {@link DataLoaderInstrumentation} instance and {@link DataLoader} {@link DataLoaderInstrumentation} instance
+ * are the same object, then nothing is changed, since the same instrumentation code is being run.
  */
 @PublicApi
 public class DataLoaderRegistry {
@@ -40,14 +41,14 @@ public class DataLoaderRegistry {
 
 
     public DataLoaderRegistry() {
-        this(new ConcurrentHashMap<>(),null);
+        this(new ConcurrentHashMap<>(), null);
     }
 
     private DataLoaderRegistry(Builder builder) {
-        this(builder.dataLoaders,builder.instrumentation);
+        this(builder.dataLoaders, builder.instrumentation);
     }
 
-    protected DataLoaderRegistry(Map<String, DataLoader<?, ?>> dataLoaders,  DataLoaderInstrumentation instrumentation ) {
+    protected DataLoaderRegistry(Map<String, DataLoader<?, ?>> dataLoaders, DataLoaderInstrumentation instrumentation) {
         this.dataLoaders = instrumentDLs(dataLoaders, instrumentation);
         this.instrumentation = instrumentation;
     }
@@ -97,12 +98,16 @@ public class DataLoaderRegistry {
     }
 
     private static DataLoader<?, ?> mkInstrumentedDataLoader(DataLoader<?, ?> existingDL, DataLoaderOptions options, DataLoaderInstrumentation newInstrumentation) {
-        return existingDL.transform(builder -> {
-            options.setInstrumentation(newInstrumentation);
-            builder.options(options);
-        });
+        return existingDL.transform(builder -> builder.options(setInInstrumentation(options, newInstrumentation)));
     }
 
+    private static DataLoaderOptions setInInstrumentation(DataLoaderOptions options, DataLoaderInstrumentation newInstrumentation) {
+        return options.transform(optionsBuilder -> optionsBuilder.setInstrumentation(newInstrumentation));
+    }
+
+    /**
+     * @return the {@link DataLoaderInstrumentation} associated with this registry which can be null
+     */
     public DataLoaderInstrumentation getInstrumentation() {
         return instrumentation;
     }

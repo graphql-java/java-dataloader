@@ -86,6 +86,7 @@ public class DataLoaderOptions {
         this.environmentProvider = builder.environmentProvider;
         this.valueCacheOptions = builder.valueCacheOptions;
         this.batchLoaderScheduler = builder.batchLoaderScheduler;
+        this.instrumentation = builder.instrumentation;
     }
 
     /**
@@ -174,7 +175,7 @@ public class DataLoaderOptions {
      * Sets the option that determines whether batch loading is enabled.
      *
      * @param batchingEnabled {@code true} to enable batch loading, {@code false} otherwise
-     * @return the data loader options for fluent coding
+     * @return a new data loader options instance for fluent coding
      */
     public DataLoaderOptions setBatchingEnabled(boolean batchingEnabled) {
         return builder().setBatchingEnabled(batchingEnabled).build();
@@ -193,7 +194,7 @@ public class DataLoaderOptions {
      * Sets the option that determines whether caching is enabled.
      *
      * @param cachingEnabled {@code true} to enable caching, {@code false} otherwise
-     * @return the data loader options for fluent coding
+     * @return a new data loader options instance for fluent coding
      */
     public DataLoaderOptions setCachingEnabled(boolean cachingEnabled) {
         return builder().setCachingEnabled(cachingEnabled).build();
@@ -217,7 +218,7 @@ public class DataLoaderOptions {
      * Sets the option that determines whether exceptional values are cache enabled.
      *
      * @param cachingExceptionsEnabled {@code true} to enable caching exceptional values, {@code false} otherwise
-     * @return the data loader options for fluent coding
+     * @return a new data loader options instance for fluent coding
      */
     public DataLoaderOptions setCachingExceptionsEnabled(boolean cachingExceptionsEnabled) {
         return builder().setCachingExceptionsEnabled(cachingExceptionsEnabled).build();
@@ -238,7 +239,7 @@ public class DataLoaderOptions {
      * Sets the function to use for creating the cache key, if caching is enabled.
      *
      * @param cacheKeyFunction the cache key function to use
-     * @return the data loader options for fluent coding
+     * @return a new data loader options instance for fluent coding
      */
     public DataLoaderOptions setCacheKeyFunction(CacheKey<?> cacheKeyFunction) {
         return builder().setCacheKeyFunction(cacheKeyFunction).build();
@@ -259,7 +260,7 @@ public class DataLoaderOptions {
      * Sets the cache map implementation to use for caching, if caching is enabled.
      *
      * @param cacheMap the cache map instance
-     * @return the data loader options for fluent coding
+     * @return a new data loader options instance for fluent coding
      */
     public DataLoaderOptions setCacheMap(CacheMap<?, ?> cacheMap) {
         return builder().setCacheMap(cacheMap).build();
@@ -280,7 +281,7 @@ public class DataLoaderOptions {
      * before they are split into multiple class
      *
      * @param maxBatchSize the maximum batch size
-     * @return the data loader options for fluent coding
+     * @return a new data loader options instance for fluent coding
      */
     public DataLoaderOptions setMaxBatchSize(int maxBatchSize) {
         return builder().setMaxBatchSize(maxBatchSize).build();
@@ -299,7 +300,7 @@ public class DataLoaderOptions {
      * a common value
      *
      * @param statisticsCollector the statistics collector to use
-     * @return the data loader options for fluent coding
+     * @return a new data loader options instance for fluent coding
      */
     public DataLoaderOptions setStatisticsCollector(Supplier<StatisticsCollector> statisticsCollector) {
         return builder().setStatisticsCollector(nonNull(statisticsCollector)).build();
@@ -316,7 +317,7 @@ public class DataLoaderOptions {
      * Sets the batch loader environment provider that will be used to give context to batch load functions
      *
      * @param contextProvider the batch loader context provider
-     * @return the data loader options for fluent coding
+     * @return a new data loader options instance for fluent coding
      */
     public DataLoaderOptions setBatchLoaderContextProvider(BatchLoaderContextProvider contextProvider) {
         return builder().setBatchLoaderContextProvider(nonNull(contextProvider)).build();
@@ -337,7 +338,7 @@ public class DataLoaderOptions {
      * Sets the value cache implementation to use for caching values, if caching is enabled.
      *
      * @param valueCache the value cache instance
-     * @return the data loader options for fluent coding
+     * @return a new data loader options instance for fluent coding
      */
     public DataLoaderOptions setValueCache(ValueCache<?, ?> valueCache) {
         return builder().setValueCache(valueCache).build();
@@ -354,7 +355,7 @@ public class DataLoaderOptions {
      * Sets the {@link ValueCacheOptions} that control how the {@link ValueCache} will be used
      *
      * @param valueCacheOptions the value cache options
-     * @return the data loader options for fluent coding
+     * @return a new data loader options instance for fluent coding
      */
     public DataLoaderOptions setValueCacheOptions(ValueCacheOptions valueCacheOptions) {
         return builder().setValueCacheOptions(nonNull(valueCacheOptions)).build();
@@ -372,10 +373,27 @@ public class DataLoaderOptions {
      * to some future time.
      *
      * @param batchLoaderScheduler the scheduler
-     * @return the data loader options for fluent coding
+     * @return a new data loader options instance for fluent coding
      */
     public DataLoaderOptions setBatchLoaderScheduler(BatchLoaderScheduler batchLoaderScheduler) {
         return builder().setBatchLoaderScheduler(batchLoaderScheduler).build();
+    }
+
+    /**
+     * @return the {@link DataLoaderInstrumentation} to use
+     */
+    public DataLoaderInstrumentation getInstrumentation() {
+        return instrumentation;
+    }
+
+    /**
+     * Sets in a new {@link DataLoaderInstrumentation}
+     *
+     * @param instrumentation the new {@link DataLoaderInstrumentation}
+     * @return a new data loader options instance for fluent coding
+     */
+    public DataLoaderOptions setInstrumentation(DataLoaderInstrumentation instrumentation) {
+        return builder().setInstrumentation(instrumentation).build();
     }
 
     private Builder builder() {
@@ -394,6 +412,7 @@ public class DataLoaderOptions {
         private BatchLoaderContextProvider environmentProvider;
         private ValueCacheOptions valueCacheOptions;
         private BatchLoaderScheduler batchLoaderScheduler;
+        private DataLoaderInstrumentation instrumentation;
 
         public Builder() {
             this(new DataLoaderOptions()); // use the defaults of the DataLoaderOptions for this builder
@@ -411,6 +430,7 @@ public class DataLoaderOptions {
             this.environmentProvider = other.environmentProvider;
             this.valueCacheOptions = other.valueCacheOptions;
             this.batchLoaderScheduler = other.batchLoaderScheduler;
+            this.instrumentation = other.instrumentation;
         }
 
         public Builder setBatchingEnabled(boolean batchingEnabled) {
@@ -468,27 +488,14 @@ public class DataLoaderOptions {
             return this;
         }
 
+        public Builder setInstrumentation(DataLoaderInstrumentation instrumentation) {
+            this.instrumentation = nonNull(instrumentation);
+            return this;
+        }
+
         public DataLoaderOptions build() {
             return new DataLoaderOptions(this);
         }
 
-    }
-
-    /**
-     * @return the {@link DataLoaderInstrumentation} to use
-     */
-    public DataLoaderInstrumentation getInstrumentation() {
-        return instrumentation;
-    }
-
-    /**
-     * Sets in a new {@link DataLoaderInstrumentation}
-     *
-     * @param instrumentation the new {@link DataLoaderInstrumentation}
-     * @return the data loader options for fluent coding
-     */
-    public DataLoaderOptions setInstrumentation(DataLoaderInstrumentation instrumentation) {
-        this.instrumentation = nonNull(instrumentation);
-        return this;
     }
 }

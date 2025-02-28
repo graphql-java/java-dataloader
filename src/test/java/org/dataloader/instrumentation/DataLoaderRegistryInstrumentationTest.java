@@ -1,6 +1,7 @@
 package org.dataloader.instrumentation;
 
 import org.dataloader.DataLoader;
+import org.dataloader.DataLoaderOptions;
 import org.dataloader.DataLoaderRegistry;
 import org.dataloader.fixtures.TestKit;
 import org.dataloader.fixtures.parameterized.TestDataLoaderFactory;
@@ -119,9 +120,9 @@ public class DataLoaderRegistryInstrumentationTest {
 
     @Test
     void wontDoAnyThingIfThereTheyAreTheSameInstrumentationAlready() {
-        DataLoader<String, String> newX = dlX.transform(builder -> dlX.getOptions().setInstrumentation(instrA));
-        DataLoader<String, String> newY = dlX.transform(builder -> dlY.getOptions().setInstrumentation(instrA));
-        DataLoader<String, String> newZ = dlX.transform(builder -> dlY.getOptions().setInstrumentation(instrA));
+        DataLoader<String, String> newX = dlX.transform(builder -> builder.options(dlX.getOptions().setInstrumentation(instrA)));
+        DataLoader<String, String> newY = dlX.transform(builder ->  builder.options(dlY.getOptions().setInstrumentation(instrA)));
+        DataLoader<String, String> newZ = dlX.transform(builder ->  builder.options(dlZ.getOptions().setInstrumentation(instrA)));
         DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
                 .instrumentation(instrA)
                 .register("X", newX)
@@ -144,7 +145,8 @@ public class DataLoaderRegistryInstrumentationTest {
 
     @Test
     void ifTheDLHasAInstrumentationThenItsTurnedIntoAChainedOne() {
-        DataLoader<String, String> newX = dlX.transform(builder -> dlX.getOptions().setInstrumentation(instrA));
+        DataLoaderOptions options = dlX.getOptions().setInstrumentation(instrA);
+        DataLoader<String, String> newX = dlX.transform(builder -> builder.options(options));
 
         DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
                 .instrumentation(instrB)
@@ -162,7 +164,8 @@ public class DataLoaderRegistryInstrumentationTest {
 
     @Test
     void chainedInstrumentationsWillBeCombined() {
-        DataLoader<String, String> newX = dlX.transform(builder -> builder.options(dlX.getOptions().setInstrumentation(chainedInstrB)));
+        DataLoaderOptions options = dlX.getOptions().setInstrumentation(chainedInstrB);
+        DataLoader<String, String> newX = dlX.transform(builder -> builder.options(options));
 
         DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
                 .instrumentation(instrA)
