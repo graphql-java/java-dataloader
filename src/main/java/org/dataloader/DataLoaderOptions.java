@@ -17,20 +17,22 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
-import org.dataloader.impl.Assertions;
 import org.dataloader.instrumentation.DataLoaderInstrumentation;
 import org.dataloader.instrumentation.DataLoaderInstrumentationHelper;
 import org.dataloader.scheduler.BatchLoaderScheduler;
 import org.dataloader.stats.NoOpStatisticsCollector;
 import org.dataloader.stats.StatisticsCollector;
 
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static org.dataloader.impl.Assertions.nonNull;
 
 /**
- * Configuration options for {@link DataLoader} instances.
+ * Configuration options for {@link DataLoader} instances.  This is an immutable class so each time
+ * you change a value it returns a new object.
  *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  */
@@ -38,19 +40,21 @@ import static org.dataloader.impl.Assertions.nonNull;
 public class DataLoaderOptions {
 
     private static final BatchLoaderContextProvider NULL_PROVIDER = () -> null;
+    private static final Supplier<StatisticsCollector> NOOP_COLLECTOR = NoOpStatisticsCollector::new;
+    private static final ValueCacheOptions DEFAULT_VALUE_CACHE_OPTIONS = ValueCacheOptions.newOptions();
 
-    private boolean batchingEnabled;
-    private boolean cachingEnabled;
-    private boolean cachingExceptionsEnabled;
-    private CacheKey<?> cacheKeyFunction;
-    private CacheMap<?, ?> cacheMap;
-    private ValueCache<?, ?> valueCache;
-    private int maxBatchSize;
-    private Supplier<StatisticsCollector> statisticsCollector;
-    private BatchLoaderContextProvider environmentProvider;
-    private ValueCacheOptions valueCacheOptions;
-    private BatchLoaderScheduler batchLoaderScheduler;
-    private DataLoaderInstrumentation instrumentation;
+    private final boolean batchingEnabled;
+    private final boolean cachingEnabled;
+    private final boolean cachingExceptionsEnabled;
+    private final CacheKey<?> cacheKeyFunction;
+    private final CacheMap<?, ?> cacheMap;
+    private final ValueCache<?, ?> valueCache;
+    private final int maxBatchSize;
+    private final Supplier<StatisticsCollector> statisticsCollector;
+    private final BatchLoaderContextProvider environmentProvider;
+    private final ValueCacheOptions valueCacheOptions;
+    private final BatchLoaderScheduler batchLoaderScheduler;
+    private final DataLoaderInstrumentation instrumentation;
 
     /**
      * Creates a new data loader options with default settings.
@@ -59,12 +63,29 @@ public class DataLoaderOptions {
         batchingEnabled = true;
         cachingEnabled = true;
         cachingExceptionsEnabled = true;
+        cacheKeyFunction = null;
+        cacheMap = null;
+        valueCache = null;
         maxBatchSize = -1;
-        statisticsCollector = NoOpStatisticsCollector::new;
+        statisticsCollector = NOOP_COLLECTOR;
         environmentProvider = NULL_PROVIDER;
-        valueCacheOptions = ValueCacheOptions.newOptions();
+        valueCacheOptions = DEFAULT_VALUE_CACHE_OPTIONS;
         batchLoaderScheduler = null;
         instrumentation = DataLoaderInstrumentationHelper.NOOP_INSTRUMENTATION;
+    }
+
+    private DataLoaderOptions(Builder builder) {
+        this.batchingEnabled = builder.batchingEnabled;
+        this.cachingEnabled = builder.cachingEnabled;
+        this.cachingExceptionsEnabled = builder.cachingExceptionsEnabled;
+        this.cacheKeyFunction = builder.cacheKeyFunction;
+        this.cacheMap = builder.cacheMap;
+        this.valueCache = builder.valueCache;
+        this.maxBatchSize = builder.maxBatchSize;
+        this.statisticsCollector = builder.statisticsCollector;
+        this.environmentProvider = builder.environmentProvider;
+        this.valueCacheOptions = builder.valueCacheOptions;
+        this.batchLoaderScheduler = builder.batchLoaderScheduler;
     }
 
     /**
@@ -96,6 +117,51 @@ public class DataLoaderOptions {
     }
 
     /**
+     * @return a new default data loader options {@link Builder} that you can then customize
+     */
+    public static DataLoaderOptions.Builder newOptionsBuilder() {
+        return new DataLoaderOptions.Builder();
+    }
+
+    /**
+     * @param otherOptions the options to copy
+     * @return a new default data loader options {@link Builder} from the specified one that you can then customize
+     */
+    public static DataLoaderOptions.Builder newDataLoaderOptions(DataLoaderOptions otherOptions) {
+        return new DataLoaderOptions.Builder(otherOptions);
+    }
+
+    /**
+     * Will transform the current options in to a builder ands allow you to build a new set of options
+     *
+     * @param builderConsumer the consumer of a builder that has this objects starting values
+     * @return a new {@link DataLoaderOptions} object
+     */
+    public DataLoaderOptions transform(Consumer<Builder> builderConsumer) {
+        Builder builder = newOptionsBuilder();
+        builderConsumer.accept(builder);
+        return builder.build();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        DataLoaderOptions that = (DataLoaderOptions) o;
+        return batchingEnabled == that.batchingEnabled
+                && cachingEnabled == that.cachingEnabled
+                && cachingExceptionsEnabled == that.cachingExceptionsEnabled
+                && maxBatchSize == that.maxBatchSize
+                && Objects.equals(cacheKeyFunction, that.cacheKeyFunction) &&
+                Objects.equals(cacheMap, that.cacheMap) &&
+                Objects.equals(valueCache, that.valueCache) &&
+                Objects.equals(statisticsCollector, that.statisticsCollector) &&
+                Objects.equals(environmentProvider, that.environmentProvider) &&
+                Objects.equals(valueCacheOptions, that.valueCacheOptions) &&
+                Objects.equals(batchLoaderScheduler, that.batchLoaderScheduler);
+    }
+
+
+    /**
      * Option that determines whether to use batching (the default), or not.
      *
      * @return {@code true} when batching is enabled, {@code false} otherwise
@@ -111,8 +177,7 @@ public class DataLoaderOptions {
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setBatchingEnabled(boolean batchingEnabled) {
-        this.batchingEnabled = batchingEnabled;
-        return this;
+        return builder().setBatchingEnabled(batchingEnabled).build();
     }
 
     /**
@@ -131,8 +196,7 @@ public class DataLoaderOptions {
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setCachingEnabled(boolean cachingEnabled) {
-        this.cachingEnabled = cachingEnabled;
-        return this;
+        return builder().setCachingEnabled(cachingEnabled).build();
     }
 
     /**
@@ -156,8 +220,7 @@ public class DataLoaderOptions {
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setCachingExceptionsEnabled(boolean cachingExceptionsEnabled) {
-        this.cachingExceptionsEnabled = cachingExceptionsEnabled;
-        return this;
+        return builder().setCachingExceptionsEnabled(cachingExceptionsEnabled).build();
     }
 
     /**
@@ -178,8 +241,7 @@ public class DataLoaderOptions {
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setCacheKeyFunction(CacheKey<?> cacheKeyFunction) {
-        this.cacheKeyFunction = cacheKeyFunction;
-        return this;
+        return builder().setCacheKeyFunction(cacheKeyFunction).build();
     }
 
     /**
@@ -200,8 +262,7 @@ public class DataLoaderOptions {
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setCacheMap(CacheMap<?, ?> cacheMap) {
-        this.cacheMap = cacheMap;
-        return this;
+        return builder().setCacheMap(cacheMap).build();
     }
 
     /**
@@ -222,8 +283,7 @@ public class DataLoaderOptions {
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setMaxBatchSize(int maxBatchSize) {
-        this.maxBatchSize = maxBatchSize;
-        return this;
+        return builder().setMaxBatchSize(maxBatchSize).build();
     }
 
     /**
@@ -242,8 +302,7 @@ public class DataLoaderOptions {
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setStatisticsCollector(Supplier<StatisticsCollector> statisticsCollector) {
-        this.statisticsCollector = nonNull(statisticsCollector);
-        return this;
+        return builder().setStatisticsCollector(nonNull(statisticsCollector)).build();
     }
 
     /**
@@ -260,8 +319,7 @@ public class DataLoaderOptions {
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setBatchLoaderContextProvider(BatchLoaderContextProvider contextProvider) {
-        this.environmentProvider = nonNull(contextProvider);
-        return this;
+        return builder().setBatchLoaderContextProvider(nonNull(contextProvider)).build();
     }
 
     /**
@@ -282,8 +340,7 @@ public class DataLoaderOptions {
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setValueCache(ValueCache<?, ?> valueCache) {
-        this.valueCache = valueCache;
-        return this;
+        return builder().setValueCache(valueCache).build();
     }
 
     /**
@@ -300,8 +357,7 @@ public class DataLoaderOptions {
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setValueCacheOptions(ValueCacheOptions valueCacheOptions) {
-        this.valueCacheOptions = Assertions.nonNull(valueCacheOptions);
-        return this;
+        return builder().setValueCacheOptions(nonNull(valueCacheOptions)).build();
     }
 
     /**
@@ -319,8 +375,103 @@ public class DataLoaderOptions {
      * @return the data loader options for fluent coding
      */
     public DataLoaderOptions setBatchLoaderScheduler(BatchLoaderScheduler batchLoaderScheduler) {
-        this.batchLoaderScheduler = batchLoaderScheduler;
-        return this;
+        return builder().setBatchLoaderScheduler(batchLoaderScheduler).build();
+    }
+
+    private Builder builder() {
+        return new Builder(this);
+    }
+
+    public static class Builder {
+        private boolean batchingEnabled;
+        private boolean cachingEnabled;
+        private boolean cachingExceptionsEnabled;
+        private CacheKey<?> cacheKeyFunction;
+        private CacheMap<?, ?> cacheMap;
+        private ValueCache<?, ?> valueCache;
+        private int maxBatchSize;
+        private Supplier<StatisticsCollector> statisticsCollector;
+        private BatchLoaderContextProvider environmentProvider;
+        private ValueCacheOptions valueCacheOptions;
+        private BatchLoaderScheduler batchLoaderScheduler;
+
+        public Builder() {
+            this(new DataLoaderOptions()); // use the defaults of the DataLoaderOptions for this builder
+        }
+
+        Builder(DataLoaderOptions other) {
+            this.batchingEnabled = other.batchingEnabled;
+            this.cachingEnabled = other.cachingEnabled;
+            this.cachingExceptionsEnabled = other.cachingExceptionsEnabled;
+            this.cacheKeyFunction = other.cacheKeyFunction;
+            this.cacheMap = other.cacheMap;
+            this.valueCache = other.valueCache;
+            this.maxBatchSize = other.maxBatchSize;
+            this.statisticsCollector = other.statisticsCollector;
+            this.environmentProvider = other.environmentProvider;
+            this.valueCacheOptions = other.valueCacheOptions;
+            this.batchLoaderScheduler = other.batchLoaderScheduler;
+        }
+
+        public Builder setBatchingEnabled(boolean batchingEnabled) {
+            this.batchingEnabled = batchingEnabled;
+            return this;
+        }
+
+        public Builder setCachingEnabled(boolean cachingEnabled) {
+            this.cachingEnabled = cachingEnabled;
+            return this;
+        }
+
+        public Builder setCachingExceptionsEnabled(boolean cachingExceptionsEnabled) {
+            this.cachingExceptionsEnabled = cachingExceptionsEnabled;
+            return this;
+        }
+
+        public Builder setCacheKeyFunction(CacheKey<?> cacheKeyFunction) {
+            this.cacheKeyFunction = cacheKeyFunction;
+            return this;
+        }
+
+        public Builder setCacheMap(CacheMap<?, ?> cacheMap) {
+            this.cacheMap = cacheMap;
+            return this;
+        }
+
+        public Builder setValueCache(ValueCache<?, ?> valueCache) {
+            this.valueCache = valueCache;
+            return this;
+        }
+
+        public Builder setMaxBatchSize(int maxBatchSize) {
+            this.maxBatchSize = maxBatchSize;
+            return this;
+        }
+
+        public Builder setStatisticsCollector(Supplier<StatisticsCollector> statisticsCollector) {
+            this.statisticsCollector = statisticsCollector;
+            return this;
+        }
+
+        public Builder setBatchLoaderContextProvider(BatchLoaderContextProvider environmentProvider) {
+            this.environmentProvider = environmentProvider;
+            return this;
+        }
+
+        public Builder setValueCacheOptions(ValueCacheOptions valueCacheOptions) {
+            this.valueCacheOptions = valueCacheOptions;
+            return this;
+        }
+
+        public Builder setBatchLoaderScheduler(BatchLoaderScheduler batchLoaderScheduler) {
+            this.batchLoaderScheduler = batchLoaderScheduler;
+            return this;
+        }
+
+        public DataLoaderOptions build() {
+            return new DataLoaderOptions(this);
+        }
+
     }
 
     /**
