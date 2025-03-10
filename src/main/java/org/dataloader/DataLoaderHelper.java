@@ -429,7 +429,11 @@ class DataLoaderHelper<K, V> {
                     for (int i = 0; i < missedValues.size(); i++) {
                         V v = missedValues.get(i);
                         Integer listIndex = missedKeyIndexes.get(i);
-                        valuesInKeyOrder.set(listIndex, Try.succeeded(v));
+                        if (v instanceof Try) {
+                            valuesInKeyOrder.set(listIndex, (Try<V>) v);
+                        } else {
+                            valuesInKeyOrder.set(listIndex, Try.succeeded(v));
+                        }
                     }
                     List<V> assembledValues = valuesInKeyOrder.stream().map(Try::get).collect(toList());
                     //
