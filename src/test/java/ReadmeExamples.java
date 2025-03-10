@@ -6,12 +6,17 @@ import org.dataloader.CacheMap;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderFactory;
 import org.dataloader.DataLoaderOptions;
+import org.dataloader.DataLoaderRegistry;
+import org.dataloader.DispatchResult;
 import org.dataloader.MappedBatchLoaderWithContext;
 import org.dataloader.MappedBatchPublisher;
 import org.dataloader.Try;
 import org.dataloader.fixtures.SecurityCtx;
 import org.dataloader.fixtures.User;
 import org.dataloader.fixtures.UserManager;
+import org.dataloader.instrumentation.DataLoaderInstrumentation;
+import org.dataloader.instrumentation.DataLoaderInstrumentationContext;
+import org.dataloader.instrumentation.DataLoaderInstrumentationHelper;
 import org.dataloader.registries.DispatchPredicate;
 import org.dataloader.registries.ScheduledDataLoaderRegistry;
 import org.dataloader.scheduler.BatchLoaderScheduler;
@@ -228,6 +233,7 @@ public class ReadmeExamples {
     }
 
     BatchLoader<String, User> userBatchLoader;
+    BatchLoader<String, User> teamsBatchLoader;
 
     private void disableCache() {
         DataLoaderFactory.newDataLoader(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
@@ -378,6 +384,65 @@ public class ReadmeExamples {
                 .schedule(Duration.ofMillis(10))
                 .tickerMode(true) // ticker mode is on
                 .build();
+
+    }
+
+    private DataLoaderInstrumentation timingInstrumentation = DataLoaderInstrumentationHelper.NOOP_INSTRUMENTATION;
+
+    private void instrumentationExample() {
+
+        DataLoaderInstrumentation timingInstrumentation = new DataLoaderInstrumentation() {
+            @Override
+            public DataLoaderInstrumentationContext<DispatchResult<?>> beginDispatch(DataLoader<?, ?> dataLoader) {
+                long then = System.currentTimeMillis();
+                return DataLoaderInstrumentationHelper.whenCompleted((result, err) -> {
+                    long ms = System.currentTimeMillis() - then;
+                    System.out.println(format("dispatch time: %d ms", ms));
+                });
+            }
+
+            @Override
+            public DataLoaderInstrumentationContext<List<?>> beginBatchLoader(DataLoader<?, ?> dataLoader, List<?> keys, BatchLoaderEnvironment environment) {
+                long then = System.currentTimeMillis();
+                return DataLoaderInstrumentationHelper.whenCompleted((result, err) -> {
+                    long ms = System.currentTimeMillis() - then;
+                    System.out.println(format("batch loader time: %d ms", ms));
+                });
+            }
+        };
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setInstrumentation(timingInstrumentation);
+        DataLoader<String, User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader, options);
+    }
+
+    private void registryExample() {
+        DataLoader<String, User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader);
+        DataLoader<String, User> teamsDataLoader = DataLoaderFactory.newDataLoader(teamsBatchLoader);
+
+        DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
+                .instrumentation(timingInstrumentation)
+                .register("users", userDataLoader)
+                .register("teams", teamsDataLoader)
+                .build();
+
+        DataLoader<String, User> changedUsersDataLoader = registry.getDataLoader("users");
+
+    }
+
+    private void combiningRegistryExample() {
+        DataLoader<String, User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader);
+        DataLoader<String, User> teamsDataLoader = DataLoaderFactory.newDataLoader(teamsBatchLoader);
+
+        DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
+                .register("users", userDataLoader)
+                .register("teams", teamsDataLoader)
+                .build();
+
+        DataLoaderRegistry registryCombined = DataLoaderRegistry.newRegistry()
+                .instrumentation(timingInstrumentation)
+                .registerAll(registry)
+                .build();
+
+        DataLoader<String, User> changedUsersDataLoader = registryCombined.getDataLoader("users");
 
     }
 }
