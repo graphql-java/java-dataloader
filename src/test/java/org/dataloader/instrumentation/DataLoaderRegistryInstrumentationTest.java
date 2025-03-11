@@ -224,7 +224,7 @@ public class DataLoaderRegistryInstrumentationTest {
         await().until(loadA::isDone);
         assertThat(loadA.join(), equalTo("A"));
 
-        assertThat(instrA.methods, equalTo(List.of("A_beginDispatch",
+        assertThat(instrA.notLoads(), equalTo(List.of("A_beginDispatch",
                 "A_beginBatchLoader", "A_beginBatchLoader_onDispatched", "A_beginBatchLoader_onCompleted",
                 "A_beginDispatch_onDispatched", "A_beginDispatch_onCompleted")));
     }

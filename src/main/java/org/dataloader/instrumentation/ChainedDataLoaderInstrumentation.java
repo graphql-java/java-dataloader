@@ -69,6 +69,12 @@ public class ChainedDataLoaderInstrumentation implements DataLoaderInstrumentati
         return new ChainedDataLoaderInstrumentation(list);
     }
 
+
+    @Override
+    public DataLoaderInstrumentationContext<Object> beginLoad(DataLoader<?, ?> dataLoader, Object key, Object loadContext) {
+        return chainedCtx(it -> it.beginLoad(dataLoader, key, loadContext));
+    }
+
     @Override
     public DataLoaderInstrumentationContext<DispatchResult<?>> beginDispatch(DataLoader<?, ?> dataLoader) {
         return chainedCtx(it -> it.beginDispatch(dataLoader));

@@ -148,12 +148,16 @@ class DataLoaderHelper<K, V> {
             boolean cachingEnabled = loaderOptions.cachingEnabled();
 
             stats.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(key, loadContext));
-
+            DataLoaderInstrumentationContext<Object> ctx = ctxOrNoopCtx(instrumentation().beginLoad(dataLoader, key,loadContext));
+            CompletableFuture<V> cf;
             if (cachingEnabled) {
-                return loadFromCache(key, loadContext, batchingEnabled);
+                cf = loadFromCache(key, loadContext, batchingEnabled);
             } else {
-                return queueOrInvokeLoader(key, loadContext, batchingEnabled, false);
+                cf = queueOrInvokeLoader(key, loadContext, batchingEnabled, false);
             }
+            ctx.onDispatched();
+            cf.whenComplete(ctx::onCompleted);
+            return cf;
         }
     }
 

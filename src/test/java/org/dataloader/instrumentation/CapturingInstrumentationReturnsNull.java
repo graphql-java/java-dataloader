@@ -13,6 +13,12 @@ class CapturingInstrumentationReturnsNull extends CapturingInstrumentation {
     }
 
     @Override
+    public DataLoaderInstrumentationContext<Object> beginLoad(DataLoader<?, ?> dataLoader, Object key, Object loadContext) {
+        methods.add(name + "_beginLoad" +"_k:" + key);
+        return null;
+    }
+
+    @Override
     public DataLoaderInstrumentationContext<DispatchResult<?>> beginDispatch(DataLoader<?, ?> dataLoader) {
         methods.add(name + "_beginDispatch");
         return null;

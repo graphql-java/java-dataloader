@@ -6,13 +6,47 @@ import org.dataloader.DispatchResult;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 class CapturingInstrumentation implements DataLoaderInstrumentation {
-    String name;
-    List<String> methods = new ArrayList<>();
+    protected String name;
+    protected List<String> methods = new ArrayList<>();
 
     public CapturingInstrumentation(String name) {
         this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public List<String> methods() {
+        return methods;
+    }
+
+    public List<String> notLoads() {
+        return methods.stream().filter(method -> !method.contains("beginLoad")).collect(Collectors.toList());
+    }
+
+    public List<String> onlyLoads() {
+        return methods.stream().filter(method -> method.contains("beginLoad")).collect(Collectors.toList());
+    }
+
+
+    @Override
+    public DataLoaderInstrumentationContext<Object> beginLoad(DataLoader<?, ?> dataLoader, Object key, Object loadContext) {
+        methods.add(name + "_beginLoad" +"_k:" + key);
+        return new DataLoaderInstrumentationContext<>() {
+            @Override
+            public void onDispatched() {
+                methods.add(name + "_beginLoad_onDispatched"+"_k:" + key);
+            }
+
+            @Override
+            public void onCompleted(Object result, Throwable t) {
+                methods.add(name + "_beginLoad_onCompleted"+"_k:" + key);
+            }
+        };
     }
 
     @Override

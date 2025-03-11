@@ -30,6 +30,61 @@ public class DataLoaderInstrumentationTest {
     });
 
     @Test
+    void canMonitorLoading() {
+        AtomicReference<DataLoader<?, ?>> dlRef = new AtomicReference<>();
+
+        CapturingInstrumentation instrumentation = new CapturingInstrumentation("x") {
+
+            @Override
+            public DataLoaderInstrumentationContext<Object> beginLoad(DataLoader<?, ?> dataLoader, Object key, Object loadContext) {
+                DataLoaderInstrumentationContext<Object> superCtx = super.beginLoad(dataLoader, key, loadContext);
+                dlRef.set(dataLoader);
+                return superCtx;
+            }
+
+            @Override
+            public DataLoaderInstrumentationContext<List<?>> beginBatchLoader(DataLoader<?, ?> dataLoader, List<?> keys, BatchLoaderEnvironment environment) {
+                return DataLoaderInstrumentationHelper.noOpCtx();
+            }
+        };
+
+        DataLoaderOptions options = new DataLoaderOptions()
+                .setInstrumentation(instrumentation)
+                .setMaxBatchSize(5);
+
+        DataLoader<String, String> dl = DataLoaderFactory.newDataLoader(snoozingBatchLoader, options);
+
+        List<String> keys = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            String key = "X" + i;
+            keys.add(key);
+            dl.load(key);
+        }
+
+        // load a key that is cached
+        dl.load("X0");
+
+        CompletableFuture<List<String>> dispatch = dl.dispatch();
+
+        await().until(dispatch::isDone);
+        assertThat(dlRef.get(), is(dl));
+        assertThat(dispatch.join(), equalTo(keys));
+
+        // the batch loading means they start and are instrumentation dispatched before they all end up completing
+        assertThat(instrumentation.onlyLoads(),
+                equalTo(List.of(
+                        "x_beginLoad_k:X0", "x_beginLoad_onDispatched_k:X0",
+                        "x_beginLoad_k:X1", "x_beginLoad_onDispatched_k:X1",
+                        "x_beginLoad_k:X2", "x_beginLoad_onDispatched_k:X2",
+                        "x_beginLoad_k:X0", "x_beginLoad_onDispatched_k:X0", // second cached call counts
+                        "x_beginLoad_onCompleted_k:X0",
+                        "x_beginLoad_onCompleted_k:X0", // each load call counts
+                        "x_beginLoad_onCompleted_k:X1", "x_beginLoad_onCompleted_k:X2")));
+
+    }
+
+
+    @Test
     void canMonitorDispatching() {
         Stopwatch stopwatch = Stopwatch.stopwatchUnStarted();
         AtomicReference<DataLoader<?, ?>> dlRef = new AtomicReference<>();
