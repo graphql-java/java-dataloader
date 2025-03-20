@@ -11,8 +11,8 @@ import org.dataloader.MappedBatchLoaderWithContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -60,6 +60,26 @@ public class TestKit {
         };
     }
 
+    public static BatchLoader<String, String> upperCaseBatchLoader() {
+        return keys -> CompletableFuture.completedFuture(keys.stream().map(String::toUpperCase).collect(toList()));
+    }
+
+    public static BatchLoader<String, String> lowerCaseBatchLoader() {
+        return keys -> CompletableFuture.completedFuture(keys.stream().map(String::toLowerCase).collect(toList()));
+    }
+
+    public static BatchLoader<String, String> reverseBatchLoader() {
+        return keys -> CompletableFuture.completedFuture(keys.stream().map(TestKit::reverse).collect(toList()));
+    }
+
+    public static String reverse(String s) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = s.length() - 1; i >= 0; i--) {
+            sb.append(s.charAt(i));
+        }
+        return sb.toString();
+    }
+
     public static <K, V> DataLoader<K, V> idLoader() {
         return idLoader(null, new ArrayList<>());
     }
@@ -104,7 +124,7 @@ public class TestKit {
 
     public static boolean areAllDone(CompletableFuture<?>... cfs) {
         for (CompletableFuture<?> cf : cfs) {
-            if (! cf.isDone()) {
+            if (!cf.isDone()) {
                 return false;
             }
         }
