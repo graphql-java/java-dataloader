@@ -109,6 +109,7 @@ public class CF<T> {
 
     public boolean complete(T value) {
         boolean success = result.compareAndSet(null, value);
+        fireDependentActions();
         return success;
     }
 
@@ -150,8 +151,6 @@ public class CF<T> {
         } catch (Throwable t) {
             encodeAndSetResult(t);
         }
-
-
     }
 
 
