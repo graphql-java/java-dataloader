@@ -5,6 +5,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 public class CF<T> {
 
@@ -68,6 +69,20 @@ public class CF<T> {
     public static <T> CF<T> newExceptionally(Throwable e) {
         CF<T> result = new CF<>();
         result.encodeAndSetResult(e);
+        return result;
+    }
+
+    public static <T> CF<T> supplyAsync(Supplier<T> supplier,
+                                        Executor executor) {
+
+        CF<T> result = new CF<>();
+        executor.execute(() -> {
+            try {
+                result.encodeAndSetResult(supplier.get());
+            } catch (Throwable ex) {
+                result.encodeAndSetResult(ex);
+            }
+        });
         return result;
     }
 
