@@ -6,10 +6,12 @@ import org.dataloader.impl.Assertions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 
 public class Orchestrator<K, V> {
 
+    private final Executor executor;
     private final Tracker tracker;
     private final DataLoader<K, V> startingDL;
     private final List<Step<?, ?>> steps = new ArrayList<>();
@@ -24,16 +26,26 @@ public class Orchestrator<K, V> {
      * @return a new {@link Orchestrator}
      */
     public static <K, V> Orchestrator<K, V> orchestrate(DataLoader<K, V> dataLoader) {
-        return new Orchestrator<>(new Tracker(), dataLoader);
+        return new Orchestrator<>(new Tracker(), dataLoader, ImmediateExecutor.INSTANCE);
+    }
+
+    // TODO - make this a builder
+    public static <K, V> Orchestrator<K, V> orchestrate(DataLoader<K, V> dataLoader, Executor executor) {
+        return new Orchestrator<>(new Tracker(), dataLoader, executor);
+    }
+
+    private Orchestrator(Tracker tracker, DataLoader<K, V> dataLoader, Executor executor) {
+        this.tracker = tracker;
+        this.startingDL = dataLoader;
+        this.executor = executor;
     }
 
     public Tracker getTracker() {
         return tracker;
     }
 
-    private Orchestrator(Tracker tracker, DataLoader<K, V> dataLoader) {
-        this.tracker = tracker;
-        this.startingDL = dataLoader;
+    public Executor getExecutor() {
+        return executor;
     }
 
 

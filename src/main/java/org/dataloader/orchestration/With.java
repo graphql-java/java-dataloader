@@ -31,6 +31,10 @@ public class With<K, V> {
     }
 
     public Step<V, V> thenLoad(Function<V, K> codeToRun) {
-        return Step.thenLoadImpl(orchestrator, castAs(dl), codeToRun);
+        return Step.thenLoadImpl(orchestrator, castAs(dl), codeToRun, false);
+    }
+
+    public Step<V, V> thenLoadAsync(Function<V, K> codeToRun) {
+        return Step.thenLoadImpl(orchestrator, castAs(dl), codeToRun, true);
     }
 }

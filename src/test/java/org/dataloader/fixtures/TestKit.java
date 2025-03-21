@@ -72,10 +72,27 @@ public class TestKit {
         return keys -> CompletableFuture.completedFuture(keys.stream().map(TestKit::reverse).collect(toList()));
     }
 
+    public static BatchLoader<String, String> alternateCaseBatchLoader() {
+        return keys -> CompletableFuture.completedFuture(keys.stream().map(TestKit::alternateCase).collect(toList()));
+    }
+
     public static String reverse(String s) {
         StringBuilder sb = new StringBuilder();
         for (int i = s.length() - 1; i >= 0; i--) {
             sb.append(s.charAt(i));
+        }
+        return sb.toString();
+    }
+
+    public static String alternateCase(String s) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i <= s.length()-1; i++) {
+            char c = s.charAt(i);
+            if (i % 2 == 0) {
+                sb.append(Character.toLowerCase(c));
+            } else {
+                sb.append(Character.toUpperCase(c));
+            }
         }
         return sb.toString();
     }

@@ -3,12 +3,18 @@ package org.dataloader.orchestration;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.DataLoaderRegistry;
+import org.dataloader.fixtures.TestKit;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Semaphore;
 
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
+import static org.dataloader.fixtures.TestKit.alternateCaseBatchLoader;
 import static org.dataloader.fixtures.TestKit.lowerCaseBatchLoader;
 import static org.dataloader.fixtures.TestKit.reverseBatchLoader;
 import static org.dataloader.fixtures.TestKit.upperCaseBatchLoader;
@@ -22,6 +28,7 @@ class OrchestratorTest {
     DataLoader<String, String> dlUpper = newDataLoader(upperCaseBatchLoader(), cachingAndBatchingOptions);
     DataLoader<String, String> dlLower = newDataLoader(lowerCaseBatchLoader(), cachingAndBatchingOptions);
     DataLoader<String, String> dlReverse = newDataLoader(reverseBatchLoader(), cachingAndBatchingOptions);
+    DataLoader<String, String> dlAlternateCase = newDataLoader(alternateCaseBatchLoader(), cachingAndBatchingOptions);
 
     @Test
     void canOrchestrate() {
@@ -30,6 +37,7 @@ class OrchestratorTest {
                 .register("upper", dlUpper)
                 .register("lower", dlLower)
                 .register("reverse", dlReverse)
+                .register("alternateCase", dlAlternateCase)
                 .build();
 
         Orchestrator<String, String> orchestrator = Orchestrator.orchestrate(dlUpper);
@@ -56,22 +64,25 @@ class OrchestratorTest {
                 .register("reverse", dlReverse)
                 .register("lower", dlLower)
                 .register("upper", dlUpper)
+                .register("alternateCase", dlAlternateCase)
                 .build();
 
-        Orchestrator<String, String> orchestrator = Orchestrator.orchestrate(dlUpper);
+        ForkJoinPool forkJoinPool = ForkJoinPool.commonPool();
+        Orchestrator<String, String> orchestrator = Orchestrator.orchestrate(dlUpper, forkJoinPool);
         CompletableFuture<String> cf = orchestrator.load("aBc", null)
                 .with(dlLower).thenLoad(key1 -> key1)
                 .with(dlReverse).thenLoad(key -> key)
+                .with(dlAlternateCase).thenLoadAsync(key -> key)
                 .toCompletableFuture();
 
-        registry.dispatchAll();
-
-        assertThat(cf.isDone(), equalTo(false));
-
-        assertThat(orchestrator.getTracker().getOutstandingLoadCount(),equalTo(2));
+        for (int i = 0; i < 10; i++) {
+            TestKit.snooze(50); // TODO - hack or now
+            registry.dispatchAll();
+            System.out.println("Waiting for " + i + " to complete...");
+        }
 
         await().until(cf::isDone);
 
-        assertThat(cf.join(), equalTo("cba"));
+        assertThat(cf.join(), equalTo("cBa"));
     }
 }
