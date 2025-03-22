@@ -2,6 +2,9 @@ package org.dataloader.orchestration;
 
 import org.dataloader.DataLoader;
 import org.dataloader.impl.Assertions;
+import org.dataloader.orchestration.executors.ImmediateExecutor;
+import org.dataloader.orchestration.observation.Tracker;
+import org.dataloader.orchestration.observation.TrackingObserver;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,19 +28,14 @@ public class Orchestrator<K, V> {
      * @param <V>        the value type
      * @return a new {@link Orchestrator}
      */
-    public static <K, V> Orchestrator<K, V> orchestrate(DataLoader<K, V> dataLoader) {
-        return new Orchestrator<>(new Tracker(), dataLoader, ImmediateExecutor.INSTANCE);
+    public static <K, V> Builder<K, V> orchestrate(DataLoader<K, V> dataLoader) {
+        return new Builder<>(dataLoader);
     }
 
-    // TODO - make this a builder
-    public static <K, V> Orchestrator<K, V> orchestrate(DataLoader<K, V> dataLoader, Executor executor) {
-        return new Orchestrator<>(new Tracker(), dataLoader, executor);
-    }
-
-    private Orchestrator(Tracker tracker, DataLoader<K, V> dataLoader, Executor executor) {
-        this.tracker = tracker;
-        this.startingDL = dataLoader;
-        this.executor = executor;
+    public Orchestrator(Builder<K, V> builder) {
+        this.tracker = new Tracker(builder.trackingObserver);
+        this.executor = builder.executor;
+        this.startingDL = builder.dataLoader;
     }
 
     public Tracker getTracker() {
@@ -79,6 +77,10 @@ public class Orchestrator<K, V> {
      */
     <VT> CompletableFuture<VT> execute() {
         Assertions.assertState(!steps.isEmpty(), () -> "How can the steps to run be empty??");
+
+        // tell the tracker we are under way
+        getTracker().startingExecution();
+
         int index = 0;
         Step<?, ?> firstStep = steps.get(index);
 
@@ -94,23 +96,47 @@ public class Orchestrator<K, V> {
             // side effect when this step is complete
             whenComplete(index, nextStep, nextCF);
         }
+
         return castAs(currentCF);
 
     }
 
-    private void whenComplete(int index, Step<?, ?> step, CompletableFuture<Object> cf) {
+    private void whenComplete(int stepIndex, Step<?, ?> step, CompletableFuture<Object> cf) {
         cf.whenComplete((v, throwable) -> {
-            getTracker().loadCallComplete(step.dataLoader());
-            // replace with instrumentation code
             if (throwable != null) {
                 // TODO - should we be cancelling future steps here - no need for dispatch tracking if they will never run
-                System.out.println("A throwable has been thrown on step  " + index + ": " + throwable.getMessage());
+                System.out.println("A throwable has been thrown on step  " + stepIndex + ": " + throwable.getMessage());
                 throwable.printStackTrace(System.out);
             } else {
-                System.out.println("step " + index + " returned : " + v);
+                System.out.println("step " + stepIndex + " returned : " + v);
             }
+            getTracker().loadCallComplete(stepIndex, step.dataLoader(), throwable);
         });
     }
 
+
+    public static class Builder<K, V> {
+        private Executor executor = ImmediateExecutor.INSTANCE;
+        private DataLoader<K, V> dataLoader;
+        private TrackingObserver trackingObserver;
+
+        Builder(DataLoader<K, V> dataLoader) {
+            this.dataLoader = dataLoader;
+        }
+
+        public Builder<K, V> executor(Executor executor) {
+            this.executor = executor;
+            return this;
+        }
+
+        public Builder<K, V> observer(TrackingObserver trackingObserver) {
+            this.trackingObserver = trackingObserver;
+            return this;
+        }
+
+        public Orchestrator<K, V> build() {
+            return new Orchestrator<>(this);
+        }
+    }
 
 }

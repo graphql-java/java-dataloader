@@ -1,9 +1,12 @@
-package org.dataloader.orchestration;
+package org.dataloader.orchestration.executors;
+
+import org.dataloader.annotations.Internal;
 
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
-class ObservingExecutor<T> implements Executor {
+@Internal
+public class ObservingExecutor<T> implements Executor {
 
     private final Executor delegate;
     private final T state;

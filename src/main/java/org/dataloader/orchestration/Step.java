@@ -1,6 +1,8 @@
 package org.dataloader.orchestration;
 
 import org.dataloader.DataLoader;
+import org.dataloader.orchestration.executors.ObservingExecutor;
+import org.dataloader.orchestration.observation.Tracker;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -46,9 +48,11 @@ public class Step<K, V> {
     }
 
     static <K, V> Step<K, V> loadImpl(Orchestrator<?, ?> orchestrator, DataLoader<Object, Object> dl, K key, Object keyContext) {
+        Tracker tracker = orchestrator.getTracker();
+        int stepIndex = tracker.getStepCount();
         Function<K, CompletableFuture<V>> codeToRun = k -> {
             CompletableFuture<V> cf = castAs(dl.load(key, keyContext));
-            orchestrator.getTracker().loadCall(dl);
+            orchestrator.getTracker().loadCall(stepIndex, dl);
             return cf;
         };
         Step<K, V> step = new Step<>(orchestrator, dl, codeToRun);
@@ -70,19 +74,21 @@ public class Step<K, V> {
     }
 
     private static <K, V> Function<V, CompletableFuture<V>> mkSyncLoadLambda(DataLoader<Object, Object> dl, Function<V, K> codeToRun, Tracker tracker) {
+        int stepIndex = tracker.getStepCount();
         return v -> {
             K key = codeToRun.apply(v);
             CompletableFuture<V> cf = castAs(dl.load(key));
-            tracker.loadCall(dl);
+            tracker.loadCall(stepIndex, dl);
             return cf;
         };
     }
 
     private static <K, V> Function<V, CompletableFuture<V>> mkAsyncLoadLambda(Orchestrator<?, ?> orchestrator, DataLoader<Object, Object> dl, Function<V, K> codeToRun, Tracker tracker) {
+        int stepIndex = tracker.getStepCount();
         return v -> {
             Executor executor = orchestrator.getExecutor();
             Consumer<String> callback = atSomePointWeNeedMoreStateButUsingStringForNowToMakeItCompile -> {
-                tracker.loadCall(dl);
+                tracker.loadCall(stepIndex, dl);
             };
             ObservingExecutor<String> observingExecutor = new ObservingExecutor<>(executor, "state", callback);
             Supplier<CompletableFuture<V>> dataLoaderCall = () -> {

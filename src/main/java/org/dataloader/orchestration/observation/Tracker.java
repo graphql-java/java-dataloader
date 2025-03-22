@@ -1,4 +1,4 @@
-package org.dataloader.orchestration;
+package org.dataloader.orchestration.observation;
 
 import org.dataloader.DataLoader;
 
@@ -14,6 +14,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Tracker {
     private final AtomicInteger stepCount = new AtomicInteger();
     private final Map<DataLoader<?,?>, AtomicInteger> counters = new HashMap<>();
+    private final TrackingObserver trackingObserver;
+
+    public Tracker(TrackingObserver trackingObserver) {
+        this.trackingObserver = trackingObserver;
+    }
 
     public int getOutstandingLoadCount(DataLoader<?,?> dl) {
         synchronized (this) {
@@ -35,19 +40,25 @@ public class Tracker {
         return stepCount.get();
     }
 
-    void incrementStepCount() {
+    public void incrementStepCount() {
         this.stepCount.incrementAndGet();
     }
 
-    void loadCall(DataLoader<?,?> dl) {
+    public void startingExecution() {
+        trackingObserver.onStart(this);
+    }
+
+    public void loadCall(int stepIndex, DataLoader<?,?> dl) {
         synchronized (this) {
             getDLCounter(dl).incrementAndGet();
+            trackingObserver.onLoad(this, stepIndex, dl);
         }
     }
 
-    void loadCallComplete(DataLoader<?,?> dl) {
+    public void loadCallComplete(int stepIndex, DataLoader<?,?> dl, Throwable throwable) {
         synchronized (this) {
             getDLCounter(dl).decrementAndGet();
+            trackingObserver.onLoadComplete(this,stepIndex,dl, throwable);
         }
     }
 
