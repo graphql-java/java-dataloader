@@ -88,9 +88,13 @@ public class CF<T> {
 
 
     public <U> CF<U> map(BiFunction<? super T, Throwable, ? extends U> fn) {
-        CF<U> newResult = new CF<>();
-        dependedActions.push(new CompleteAction<>(newResult, this, fn, null));
-        return newResult;
+        CF<U> newCF = new CF<>();
+        if (result.get() != null) {
+            newCF.completeViaMapper(fn, result.get());
+        } else {
+            dependedActions.push(new CompleteAction<>(newCF, this, fn, null));
+        }
+        return newCF;
     }
 
     public <U> CF<U> mapAsync(BiFunction<? super T, Throwable, ? extends U> fn, Executor executor) {
@@ -152,6 +156,5 @@ public class CF<T> {
             encodeAndSetResult(t);
         }
     }
-
 
 }
