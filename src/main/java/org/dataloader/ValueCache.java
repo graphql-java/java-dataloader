@@ -3,6 +3,7 @@ package org.dataloader;
 import org.dataloader.annotations.PublicSpi;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.impl.NoOpValueCache;
+import org.jspecify.annotations.NullMarked;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +39,7 @@ import java.util.concurrent.CompletableFuture;
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
 @PublicSpi
+@NullMarked
 public interface ValueCache<K, V> {
 
     /**

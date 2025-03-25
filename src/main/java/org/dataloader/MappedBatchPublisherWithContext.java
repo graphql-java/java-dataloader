@@ -1,5 +1,7 @@
 package org.dataloader;
 
+import org.dataloader.annotations.PublicSpi;
+import org.jspecify.annotations.NullMarked;
 import org.reactivestreams.Subscriber;
 
 import java.util.List;
@@ -13,6 +15,8 @@ import java.util.Map;
  * See {@link MappedBatchPublisher} for more details on the design invariants that you must implement in order to
  * use this interface.
  */
+@PublicSpi
+@NullMarked
 public interface MappedBatchPublisherWithContext<K, V> {
 
     /**

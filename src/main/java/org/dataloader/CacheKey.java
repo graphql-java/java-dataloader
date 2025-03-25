@@ -16,6 +16,9 @@
 
 package org.dataloader;
 
+import org.dataloader.annotations.PublicSpi;
+import org.jspecify.annotations.NullMarked;
+
 /**
  * Function that is invoked on input keys of type {@code K} to derive keys that are required by the {@link CacheMap}
  * implementation.
@@ -25,6 +28,8 @@ package org.dataloader;
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  */
 @FunctionalInterface
+@NullMarked
+@PublicSpi
 public interface CacheKey<K> {
 
     /**

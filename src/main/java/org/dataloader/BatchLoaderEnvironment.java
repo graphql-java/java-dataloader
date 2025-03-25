@@ -2,6 +2,8 @@ package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
 import org.dataloader.impl.Assertions;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,6 +16,7 @@ import java.util.Map;
  * of the calling users for example or database parameters that allow the data layer call to succeed.
  */
 @PublicApi
+@NullMarked
 public class BatchLoaderEnvironment {
 
     private final Object context;
@@ -34,7 +37,7 @@ public class BatchLoaderEnvironment {
      * @return a context object or null if there isn't one
      */
     @SuppressWarnings("unchecked")
-    public <T> T getContext() {
+    public <T> @Nullable T getContext() {
         return (T) context;
     }
 

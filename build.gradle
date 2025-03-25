@@ -66,6 +66,7 @@ jar {
 
 dependencies {
     api "org.reactivestreams:reactive-streams:$reactive_streams_version"
+    api "org.jspecify:jspecify:1.0.0"
 }
 
 task sourcesJar(type: Jar) {

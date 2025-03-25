@@ -1,10 +1,15 @@
 package org.dataloader;
 
+import org.dataloader.annotations.PublicSpi;
+import org.jspecify.annotations.NullMarked;
+
 /**
  * Options that control how the {@link ValueCache} is used by {@link DataLoader}
  *
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
+@PublicSpi
+@NullMarked
 public class ValueCacheOptions {
     private final boolean completeValueAfterCacheSet;
 

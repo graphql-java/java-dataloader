@@ -17,6 +17,8 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicSpi;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullMarked;
 
 import java.util.List;
 import java.util.concurrent.CompletionStage;
@@ -74,6 +76,7 @@ import java.util.concurrent.CompletionStage;
  */
 @FunctionalInterface
 @PublicSpi
+@NullMarked
 public interface BatchLoader<K, V> {
 
     /**
