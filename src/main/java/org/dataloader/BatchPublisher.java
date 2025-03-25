@@ -1,5 +1,8 @@
 package org.dataloader;
 
+import org.dataloader.annotations.PublicSpi;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 
 import java.util.List;
@@ -18,6 +21,8 @@ import java.util.List;
  * @param <V> type parameter indicating the type of values returned
  * @see BatchLoader for the non-reactive version
  */
+@NullMarked
+@PublicSpi
 public interface BatchPublisher<K, V> {
     /**
      * Called to batch the provided keys into a stream of values.  You <b>must</b> provide

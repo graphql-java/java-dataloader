@@ -1,6 +1,7 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicSpi;
+import org.jspecify.annotations.NullMarked;
 
 /**
  * A BatchLoaderContextProvider is used by the {@link org.dataloader.DataLoader} code to
@@ -8,6 +9,7 @@ import org.dataloader.annotations.PublicSpi;
  * case is for propagating user security credentials or database connection parameters for example.
  */
 @PublicSpi
+@NullMarked
 public interface BatchLoaderContextProvider {
     /**
      * @return a context object that may be needed in batch load calls

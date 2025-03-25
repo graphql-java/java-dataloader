@@ -1,6 +1,7 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicSpi;
+import org.jspecify.annotations.NullMarked;
 
 import java.util.List;
 import java.util.concurrent.CompletionStage;
@@ -14,6 +15,7 @@ import java.util.concurrent.CompletionStage;
  * use this interface.
  */
 @PublicSpi
+@NullMarked
 public interface BatchLoaderWithContext<K, V> {
     /**
      * Called to batch load the provided keys and return a promise to a list of values.  This default

@@ -16,6 +16,9 @@
 
 package org.dataloader;
 
+import org.dataloader.annotations.PublicSpi;
+import org.jspecify.annotations.NullMarked;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
@@ -28,6 +31,8 @@ import java.util.concurrent.CompletionStage;
  * See {@link MappedBatchLoader} for more details on the design invariants that you must implement in order to
  * use this interface.
  */
+@PublicSpi
+@NullMarked
 public interface MappedBatchLoaderWithContext<K, V> {
     /**
      * Called to batch load the provided keys and return a promise to a map of values.
