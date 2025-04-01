@@ -2,6 +2,9 @@ package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
 import org.dataloader.stats.Statistics;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -19,6 +22,7 @@ import java.util.function.Consumer;
  * @param <V> type parameter indicating the type of the data that is returned
  */
 @PublicApi
+@NullMarked
 public class DelegatingDataLoader<K, V> extends DataLoader<K, V> {
 
     protected final DataLoader<K, V> delegate;
@@ -57,7 +61,7 @@ public class DelegatingDataLoader<K, V> extends DataLoader<K, V> {
      * @return the future of the value
      */
     @Override
-    public CompletableFuture<V> load(K key, Object keyContext) {
+    public CompletableFuture<V> load(@NonNull K key, @Nullable Object keyContext) {
         return delegate.load(key, keyContext);
     }
 

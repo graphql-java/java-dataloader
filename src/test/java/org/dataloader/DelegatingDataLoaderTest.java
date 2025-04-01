@@ -1,6 +1,8 @@
 package org.dataloader;
 
 import org.dataloader.fixtures.TestKit;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -31,7 +33,7 @@ public class DelegatingDataLoaderTest {
         DataLoader<String, String> rawLoader = TestKit.idLoader();
         DelegatingDataLoader<String, String> delegatingDataLoader = new DelegatingDataLoader<>(rawLoader) {
             @Override
-            public CompletableFuture<String> load(String key, Object keyContext) {
+            public CompletableFuture<String> load(@NonNull String key, @Nullable Object keyContext) {
                 CompletableFuture<String> cf = super.load(key, keyContext);
                 return cf.thenApply(v -> "|" + v + "|");
             }

@@ -21,6 +21,7 @@ import org.dataloader.annotations.VisibleForTesting;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.stats.Statistics;
 import org.dataloader.stats.StatisticsCollector;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -517,8 +518,8 @@ public class DataLoader<K, V> {
      * @param keyContext a context object that is specific to this key
      * @return the future of the value
      */
-    public CompletableFuture<V> load(K key, Object keyContext) {
-        return helper.load(key, keyContext);
+    public CompletableFuture<V> load(@NonNull K key, @Nullable Object keyContext) {
+        return helper.load(nonNull(key), keyContext);
     }
 
     /**
