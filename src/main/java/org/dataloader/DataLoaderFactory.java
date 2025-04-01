@@ -1,6 +1,7 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A factory class to create {@link DataLoader}s
@@ -155,7 +156,7 @@ public class DataLoaderFactory {
      * @param <V>               the value type
      * @return a new DataLoader
      */
-    public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoader<K, V> batchLoadFunction, DataLoaderOptions options) {
+    public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoader<K, V> batchLoadFunction, @Nullable DataLoaderOptions options) {
         return mkDataLoader(batchLoadFunction, options);
     }
 

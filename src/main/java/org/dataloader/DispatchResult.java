@@ -1,6 +1,7 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
+import org.jspecify.annotations.NullMarked;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -12,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
  * @param <T> for two
  */
 @PublicApi
+@NullMarked
 public class DispatchResult<T> {
     private final CompletableFuture<List<T>> futureList;
     private final int keysCount;

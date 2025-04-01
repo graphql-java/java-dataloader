@@ -1,5 +1,7 @@
 package org.dataloader;
 
+import org.dataloader.annotations.PublicSpi;
+import org.jspecify.annotations.NullMarked;
 import org.reactivestreams.Subscriber;
 
 import java.util.List;
@@ -12,6 +14,8 @@ import java.util.List;
  * See {@link BatchPublisher} for more details on the design invariants that you must implement in order to
  * use this interface.
  */
+@NullMarked
+@PublicSpi
 public interface BatchPublisherWithContext<K, V> {
     /**
      * Called to batch the provided keys into a stream of values.  You <b>must</b> provide

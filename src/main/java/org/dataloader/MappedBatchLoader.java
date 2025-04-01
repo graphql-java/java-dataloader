@@ -16,6 +16,9 @@
 
 package org.dataloader;
 
+import org.dataloader.annotations.PublicSpi;
+import org.jspecify.annotations.NullMarked;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
@@ -54,6 +57,8 @@ import java.util.concurrent.CompletionStage;
  * @param <V> type parameter indicating the type of values returned
  *
  */
+@PublicSpi
+@NullMarked
 public interface MappedBatchLoader<K, V> {
 
     /**

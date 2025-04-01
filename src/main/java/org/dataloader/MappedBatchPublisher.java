@@ -1,5 +1,7 @@
 package org.dataloader;
 
+import org.dataloader.annotations.PublicSpi;
+import org.jspecify.annotations.NullMarked;
 import org.reactivestreams.Subscriber;
 
 import java.util.Map;
@@ -16,6 +18,8 @@ import java.util.Set;
  * @param <V> type parameter indicating the type of values returned
  * @see MappedBatchLoader for the non-reactive version
  */
+@PublicSpi
+@NullMarked
 public interface MappedBatchPublisher<K, V> {
     /**
      * Called to batch the provided keys into a stream of map entries of keys and values.

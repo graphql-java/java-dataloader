@@ -18,6 +18,8 @@ package org.dataloader;
 
 import org.dataloader.annotations.PublicSpi;
 import org.dataloader.impl.DefaultCacheMap;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
@@ -39,6 +41,7 @@ import java.util.concurrent.CompletableFuture;
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
 @PublicSpi
+@NullMarked
 public interface CacheMap<K, V> {
 
     /**
@@ -71,7 +74,7 @@ public interface CacheMap<K, V> {
      *
      * @return the cached value, or {@code null} if not found (depends on cache implementation)
      */
-    CompletableFuture<V> get(K key);
+    @Nullable  CompletableFuture<V> get(K key);
 
     /**
      * Gets a collection of CompletableFutures from the cache map.
