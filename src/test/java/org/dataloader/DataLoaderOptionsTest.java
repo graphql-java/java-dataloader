@@ -192,6 +192,8 @@ class DataLoaderOptionsTest {
 
         DataLoaderInstrumentation instrumentation1 = new DataLoaderInstrumentation() {
         };
+        DataLoaderInstrumentation instrumentation2 = new DataLoaderInstrumentation() {
+        };
         BatchLoaderContextProvider contextProvider1 = () -> null;
 
         DataLoaderOptions startingOptions = DataLoaderOptions.newOptionsBuilder().setBatchingEnabled(false)
@@ -205,7 +207,8 @@ class DataLoaderOptionsTest {
         assertThat(startingOptions.getInstrumentation(), equalTo(instrumentation1));
         assertThat(startingOptions.getBatchLoaderContextProvider(), equalTo(contextProvider1));
 
-        DataLoaderOptions newOptions = startingOptions.transform(builder -> builder.setBatchingEnabled(true));
+        DataLoaderOptions newOptions = startingOptions.transform(builder ->
+                builder.setBatchingEnabled(true).setInstrumentation(instrumentation2));
 
 
         // immutable
@@ -215,10 +218,13 @@ class DataLoaderOptionsTest {
         assertThat(startingOptions.getInstrumentation(), equalTo(instrumentation1));
         assertThat(startingOptions.getBatchLoaderContextProvider(), equalTo(contextProvider1));
 
-        // copied values
-        assertThat(newOptions.batchingEnabled(), equalTo(true));
+        // stayed the same
         assertThat(newOptions.cachingEnabled(), equalTo(false));
-        assertThat(newOptions.getInstrumentation(), equalTo(instrumentation1));
         assertThat(newOptions.getBatchLoaderContextProvider(), equalTo(contextProvider1));
+
+        // was changed
+        assertThat(newOptions.batchingEnabled(), equalTo(true));
+        assertThat(newOptions.getInstrumentation(), equalTo(instrumentation2));
+
     }
 }
