@@ -785,7 +785,7 @@ public class DataLoaderTest {
         assertThat(future1.get(), equalTo("A"));
         assertThat(future2.get(), equalTo("B"));
         assertThat(future3.get(), equalTo("A"));
-        if (factory instanceof MappedDataLoaderFactory || factory instanceof MappedPublisherDataLoaderFactory) {
+        if (factory.unwrap() instanceof MappedDataLoaderFactory || factory.unwrap() instanceof MappedPublisherDataLoaderFactory) {
             assertThat(loadCalls, equalTo(singletonList(asList("A", "B"))));
         } else {
             assertThat(loadCalls, equalTo(singletonList(asList("A", "B", "A"))));
@@ -1152,12 +1152,12 @@ public class DataLoaderTest {
 
         await().atMost(Duration.FIVE_SECONDS).until(() -> areAllDone(cf1, cf2, cf3, cf4));
 
-        if (factory instanceof ListDataLoaderFactory) {
+        if (factory.unwrap() instanceof ListDataLoaderFactory) {
             assertThat(cause(cf1), instanceOf(DataLoaderAssertionException.class));
             assertThat(cause(cf2), instanceOf(DataLoaderAssertionException.class));
             assertThat(cause(cf3), instanceOf(DataLoaderAssertionException.class));
             assertThat(cause(cf4), instanceOf(DataLoaderAssertionException.class));
-        } else if (factory instanceof PublisherDataLoaderFactory) {
+        } else if (factory.unwrap() instanceof PublisherDataLoaderFactory) {
             // some have completed progressively but the other never did
             assertThat(cf1.join(), equalTo("A"));
             assertThat(cf2.join(), equalTo("B"));
@@ -1187,7 +1187,7 @@ public class DataLoaderTest {
         await().atMost(Duration.FIVE_SECONDS).until(() -> areAllDone(cf1, cf2, cf3, cf4));
 
 
-        if (factory instanceof ListDataLoaderFactory) {
+        if (factory.unwrap() instanceof ListDataLoaderFactory) {
             assertThat(cause(cf1), instanceOf(DataLoaderAssertionException.class));
             assertThat(cause(cf2), instanceOf(DataLoaderAssertionException.class));
             assertThat(cause(cf3), instanceOf(DataLoaderAssertionException.class));
