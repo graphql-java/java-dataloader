@@ -22,18 +22,16 @@ import java.util.function.Consumer;
  * method.
  * <p>
  * For example the following allows you to change the returned value in some way :
- * <pre>
- * {@code
- *         DataLoader<String, String> rawLoader = createDataLoader();
- *         DelegatingDataLoader<String, String> delegatingDataLoader = new DelegatingDataLoader<>(rawLoader) {
- *             @Override
- *             public CompletableFuture<String> load(@NonNull String key, @Nullable Object keyContext) {
- *                 CompletableFuture<String> cf = super.load(key, keyContext);
- *                 return cf.thenApply(v -> "|" + v + "|");
- *             }
- *         };
- * }
- * </pre>
+ * <pre>{@code
+ * DataLoader<String, String> rawLoader = createDataLoader();
+ * DelegatingDataLoader<String, String> delegatingDataLoader = new DelegatingDataLoader<>(rawLoader) {
+ *    public CompletableFuture<String> load(@NonNull String key, @Nullable Object keyContext) {
+ *       CompletableFuture<String> cf = super.load(key, keyContext);
+ *       return cf.thenApply(v -> "|" + v + "|");
+ *    }
+ *};
+ *}</pre>
+ *
  * @param <K> type parameter indicating the type of the data load keys
  * @param <V> type parameter indicating the type of the data that is returned
  */
