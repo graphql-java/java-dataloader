@@ -46,19 +46,31 @@ public class DataLoaderBuilderTest {
 
     @Test
     void theDataLoaderCanTransform() {
-        DataLoader<String, Object> dataLoader1 = DataLoaderFactory.newDataLoader(batchLoader1, defaultOptions);
-        assertThat(dataLoader1.getOptions(), equalTo(defaultOptions));
-        assertThat(dataLoader1.getBatchLoadFunction(), equalTo(batchLoader1));
+        DataLoader<String, Object> dataLoaderOrig = DataLoaderFactory.newDataLoader(batchLoader1, defaultOptions);
+        assertThat(dataLoaderOrig.getOptions(), equalTo(defaultOptions));
+        assertThat(dataLoaderOrig.getBatchLoadFunction(), equalTo(batchLoader1));
         //
         // we can transform the data loader
         //
-        DataLoader<String, Object> dataLoader2 = dataLoader1.transform(it -> {
+        DataLoader<String, Object> dataLoaderTransformed = dataLoaderOrig.transform(it -> {
             it.options(differentOptions);
             it.batchLoadFunction(batchLoader2);
         });
 
-        assertThat(dataLoader2, not(equalTo(dataLoader1)));
-        assertThat(dataLoader2.getOptions(), equalTo(differentOptions));
-        assertThat(dataLoader2.getBatchLoadFunction(), equalTo(batchLoader2));
+        assertThat(dataLoaderTransformed, not(equalTo(dataLoaderOrig)));
+        assertThat(dataLoaderTransformed.getOptions(), equalTo(differentOptions));
+        assertThat(dataLoaderTransformed.getBatchLoadFunction(), equalTo(batchLoader2));
+
+        // can copy values
+        dataLoaderOrig = DataLoaderFactory.newDataLoader(batchLoader1, defaultOptions);
+
+        dataLoaderTransformed = dataLoaderOrig.transform(it -> {
+            it.batchLoadFunction(batchLoader2);
+        });
+
+        assertThat(dataLoaderTransformed, not(equalTo(dataLoaderOrig)));
+        assertThat(dataLoaderTransformed.getOptions(), equalTo(defaultOptions));
+        assertThat(dataLoaderTransformed.getBatchLoadFunction(), equalTo(batchLoader2));
+
     }
 }

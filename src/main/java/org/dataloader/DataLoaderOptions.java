@@ -139,7 +139,7 @@ public class DataLoaderOptions {
      * @return a new {@link DataLoaderOptions} object
      */
     public DataLoaderOptions transform(Consumer<Builder> builderConsumer) {
-        Builder builder = newOptionsBuilder();
+        Builder builder = newDataLoaderOptions(this);
         builderConsumer.accept(builder);
         return builder.build();
     }
