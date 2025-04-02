@@ -16,8 +16,24 @@ import java.util.function.Consumer;
 
 /**
  * This delegating {@link DataLoader} makes it easier to create wrappers of {@link DataLoader}s in case you want to change how
- * values are returned for example
- *
+ * values are returned for example.
+ * <p>
+ * The most common way would be to make a new {@link DelegatingDataLoader} subclass that overloads the {@link DelegatingDataLoader#load(Object, Object)}
+ * method.
+ * <p>
+ * For example the following allows you to change the returned value in some way :
+ * <pre>
+ * {@code
+ *         DataLoader<String, String> rawLoader = createDataLoader();
+ *         DelegatingDataLoader<String, String> delegatingDataLoader = new DelegatingDataLoader<>(rawLoader) {
+ *             @Override
+ *             public CompletableFuture<String> load(@NonNull String key, @Nullable Object keyContext) {
+ *                 CompletableFuture<String> cf = super.load(key, keyContext);
+ *                 return cf.thenApply(v -> "|" + v + "|");
+ *             }
+ *         };
+ * }
+ * </pre>
  * @param <K> type parameter indicating the type of the data load keys
  * @param <V> type parameter indicating the type of the data that is returned
  */
@@ -64,7 +80,6 @@ public class DelegatingDataLoader<K, V> extends DataLoader<K, V> {
     public CompletableFuture<V> load(@NonNull K key, @Nullable Object keyContext) {
         return delegate.load(key, keyContext);
     }
-
 
     @Override
     public DataLoader<K, V> transform(Consumer<DataLoaderFactory.Builder<K, V>> builderConsumer) {

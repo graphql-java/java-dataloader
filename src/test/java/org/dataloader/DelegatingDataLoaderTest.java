@@ -1,6 +1,7 @@
 package org.dataloader;
 
 import org.dataloader.fixtures.TestKit;
+import org.dataloader.fixtures.parameterized.DelegatingDataLoaderFactory;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -14,7 +15,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
- * There are WAY more tests via the {@link org.dataloader.fixtures.parameterized.DelegatingDataLoaderFactory}
+ * There are WAY more tests via the {@link DelegatingDataLoaderFactory}
  * parameterized tests.  All the basic {@link DataLoader} tests pass when wrapped in a {@link DelegatingDataLoader}
  */
 public class DelegatingDataLoaderTest {
