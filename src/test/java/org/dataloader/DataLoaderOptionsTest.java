@@ -2,9 +2,11 @@ package org.dataloader;
 
 import org.dataloader.impl.DefaultCacheMap;
 import org.dataloader.impl.NoOpValueCache;
+import org.dataloader.instrumentation.DataLoaderInstrumentation;
 import org.dataloader.scheduler.BatchLoaderScheduler;
 import org.dataloader.stats.NoOpStatisticsCollector;
 import org.dataloader.stats.StatisticsCollector;
+import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -183,5 +185,46 @@ class DataLoaderOptionsTest {
                 equalTo(10));
         assertThat(builtOptions.getStatisticsCollector(),
                 equalTo(testStatisticsCollectorSupplier.get()));
+    }
+
+    @Test
+    void canCopyExistingOptionValuesOnTransform() {
+
+        DataLoaderInstrumentation instrumentation1 = new DataLoaderInstrumentation() {
+        };
+        DataLoaderInstrumentation instrumentation2 = new DataLoaderInstrumentation() {
+        };
+        BatchLoaderContextProvider contextProvider1 = () -> null;
+
+        DataLoaderOptions startingOptions = DataLoaderOptions.newOptionsBuilder().setBatchingEnabled(false)
+                .setCachingEnabled(false)
+                .setInstrumentation(instrumentation1)
+                .setBatchLoaderContextProvider(contextProvider1)
+                .build();
+
+        assertThat(startingOptions.batchingEnabled(), equalTo(false));
+        assertThat(startingOptions.cachingEnabled(), equalTo(false));
+        assertThat(startingOptions.getInstrumentation(), equalTo(instrumentation1));
+        assertThat(startingOptions.getBatchLoaderContextProvider(), equalTo(contextProvider1));
+
+        DataLoaderOptions newOptions = startingOptions.transform(builder ->
+                builder.setBatchingEnabled(true).setInstrumentation(instrumentation2));
+
+
+        // immutable
+        assertThat(newOptions, CoreMatchers.not(startingOptions));
+        assertThat(startingOptions.batchingEnabled(), equalTo(false));
+        assertThat(startingOptions.cachingEnabled(), equalTo(false));
+        assertThat(startingOptions.getInstrumentation(), equalTo(instrumentation1));
+        assertThat(startingOptions.getBatchLoaderContextProvider(), equalTo(contextProvider1));
+
+        // stayed the same
+        assertThat(newOptions.cachingEnabled(), equalTo(false));
+        assertThat(newOptions.getBatchLoaderContextProvider(), equalTo(contextProvider1));
+
+        // was changed
+        assertThat(newOptions.batchingEnabled(), equalTo(true));
+        assertThat(newOptions.getInstrumentation(), equalTo(instrumentation2));
+
     }
 }

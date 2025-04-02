@@ -61,16 +61,21 @@ public class ChainedDataLoaderInstrumentationTest {
 
         DataLoader<String, String> dl = DataLoaderFactory.newDataLoader(TestKit.keysAsValues(), options);
 
-        dl.load("A");
-        dl.load("B");
+        dl.load("X");
+        dl.load("Y");
 
         CompletableFuture<List<String>> dispatch = dl.dispatch();
 
         await().until(dispatch::isDone);
 
-        assertThat(capturingA.methods, equalTo(List.of("A_beginDispatch",
+        assertThat(capturingA.notLoads(), equalTo(List.of("A_beginDispatch",
                 "A_beginBatchLoader", "A_beginBatchLoader_onDispatched", "A_beginBatchLoader_onCompleted",
                 "A_beginDispatch_onDispatched", "A_beginDispatch_onCompleted")));
+
+        assertThat(capturingA.onlyLoads(), equalTo(List.of(
+                "A_beginLoad_k:X", "A_beginLoad_onDispatched_k:X", "A_beginLoad_k:Y", "A_beginLoad_onDispatched_k:Y",
+                "A_beginLoad_onCompleted_k:X", "A_beginLoad_onCompleted_k:Y"
+        )));
     }
 
 
@@ -87,8 +92,8 @@ public class ChainedDataLoaderInstrumentationTest {
 
         DataLoader<String, String> dl = factory.idLoader(options);
 
-        dl.load("A");
-        dl.load("B");
+        dl.load("X");
+        dl.load("Y");
 
         CompletableFuture<List<String>> dispatch = dl.dispatch();
 
@@ -98,16 +103,21 @@ public class ChainedDataLoaderInstrumentationTest {
         // A_beginBatchLoader happens before A_beginDispatch_onDispatched because these are sync
         // and no async - a batch scheduler or async batch loader would change that
         //
-        assertThat(capturingA.methods, equalTo(List.of("A_beginDispatch",
+        assertThat(capturingA.notLoads(), equalTo(List.of("A_beginDispatch",
                 "A_beginBatchLoader", "A_beginBatchLoader_onDispatched", "A_beginBatchLoader_onCompleted",
                 "A_beginDispatch_onDispatched", "A_beginDispatch_onCompleted")));
 
-        assertThat(capturingB.methods, equalTo(List.of("B_beginDispatch",
+        assertThat(capturingA.onlyLoads(), equalTo(List.of(
+                "A_beginLoad_k:X", "A_beginLoad_onDispatched_k:X", "A_beginLoad_k:Y", "A_beginLoad_onDispatched_k:Y",
+                "A_beginLoad_onCompleted_k:X", "A_beginLoad_onCompleted_k:Y"
+        )));
+
+        assertThat(capturingB.notLoads(), equalTo(List.of("B_beginDispatch",
                 "B_beginBatchLoader", "B_beginBatchLoader_onDispatched", "B_beginBatchLoader_onCompleted",
                 "B_beginDispatch_onDispatched", "B_beginDispatch_onCompleted")));
 
         // it returned null on all its contexts - nothing to call back on
-        assertThat(capturingButReturnsNull.methods, equalTo(List.of("NULL_beginDispatch", "NULL_beginBatchLoader")));
+        assertThat(capturingButReturnsNull.notLoads(), equalTo(List.of("NULL_beginDispatch", "NULL_beginBatchLoader")));
     }
 
     @Test
