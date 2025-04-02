@@ -39,4 +39,8 @@ public interface TestDataLoaderFactory {
     default <K> DataLoader<K, K> idLoaderDelayed(Duration delay) {
         return idLoaderDelayed(null, new ArrayList<>(), delay);
     }
+
+    default TestDataLoaderFactory unwrap() {
+        return this;
+    }
 }
