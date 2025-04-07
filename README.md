@@ -64,7 +64,7 @@ Gradle users configure the `java-dataloader` dependency in `build.gradle`:
 
 ```
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
 dependencies {
