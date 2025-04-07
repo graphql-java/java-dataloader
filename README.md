@@ -1,7 +1,8 @@
 # java-dataloader
 
 [![Build](https://github.com/graphql-java/java-dataloader/actions/workflows/master.yml/badge.svg)](https://github.com/graphql-java/java-dataloader/actions/workflows/master.yml)
-[![Latest Release](https://maven-badges.herokuapp.com/maven-central/com.graphql-java/java-dataloader/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.graphql-java/java-dataloader/) 
+[![Latest Release](https://img.shields.io/maven-central/v/com.graphql-java/java-dataloader?versionPrefix=4.)](https://maven-badges.herokuapp.com/maven-central/com.graphql-java/graphql-java/)
+[![Latest Snapshot](https://img.shields.io/maven-central/v/com.graphql-java/java-dataloader?label=maven-central%20snapshot&versionPrefix=0)](https://maven-badges.herokuapp.com/maven-central/com.graphql-java/graphql-java/)
 [![Apache licensed](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://github.com/graphql-java/java-dataloader/blob/master/LICENSE)
 
 This small and simple utility library is a pure Java 11 port of [Facebook DataLoader](https://github.com/facebook/dataloader). 
@@ -67,7 +68,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.graphql-java:java-dataloader: 3.4.0'
+    compile 'com.graphql-java:java-dataloader: 4.0.0'
 }
 ```
 
