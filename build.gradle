@@ -68,6 +68,10 @@ jar {
 dependencies {
     api "org.reactivestreams:reactive-streams:$reactive_streams_version"
     api "org.jspecify:jspecify:1.0.0"
+
+    // this is needed for the idea jmh plugin to work correctly
+    jmh 'org.openjdk.jmh:jmh-core:1.37'
+    jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
 }
 
 task sourcesJar(type: Jar) {
