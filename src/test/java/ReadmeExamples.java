@@ -105,7 +105,7 @@ public class ReadmeExamples {
 
     private void callContextExample() {
         DataLoaderOptions options = DataLoaderOptions.newOptions()
-                .setBatchLoaderContextProvider(() -> SecurityCtx.getCallingUserCtx());
+                .withBatchLoaderContextProvider(() -> SecurityCtx.getCallingUserCtx());
 
         BatchLoaderWithContext<String, String> batchLoader = new BatchLoaderWithContext<String, String>() {
             @Override
@@ -120,7 +120,7 @@ public class ReadmeExamples {
 
     private void keyContextExample() {
         DataLoaderOptions options = DataLoaderOptions.newOptions()
-                .setBatchLoaderContextProvider(() -> SecurityCtx.getCallingUserCtx());
+                .withBatchLoaderContextProvider(() -> SecurityCtx.getCallingUserCtx());
 
         BatchLoaderWithContext<String, String> batchLoader = new BatchLoaderWithContext<String, String>() {
             @Override
@@ -236,7 +236,7 @@ public class ReadmeExamples {
     BatchLoader<String, User> teamsBatchLoader;
 
     private void disableCache() {
-        DataLoaderFactory.newDataLoader(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false));
+        DataLoaderFactory.newDataLoader(userBatchLoader, DataLoaderOptions.newOptions().withCachingEnabled(false));
 
 
         userDataLoader.load("A");
@@ -283,7 +283,7 @@ public class ReadmeExamples {
     private void customCache() {
 
         MyCustomCache customCache = new MyCustomCache();
-        DataLoaderOptions options = DataLoaderOptions.newOptions().setCacheMap(customCache);
+        DataLoaderOptions options = DataLoaderOptions.newOptions().withCacheMap(customCache);
         DataLoaderFactory.newDataLoader(userBatchLoader, options);
     }
 
@@ -311,7 +311,7 @@ public class ReadmeExamples {
 
     private void statsConfigExample() {
 
-        DataLoaderOptions options = DataLoaderOptions.newOptions().setStatisticsCollector(() -> new ThreadLocalStatisticsCollector());
+        DataLoaderOptions options = DataLoaderOptions.newOptions().withStatisticsCollector(() -> new ThreadLocalStatisticsCollector());
         DataLoader<String, User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader, options);
     }
 
@@ -410,7 +410,7 @@ public class ReadmeExamples {
                 });
             }
         };
-        DataLoaderOptions options = DataLoaderOptions.newOptions().setInstrumentation(timingInstrumentation);
+        DataLoaderOptions options = DataLoaderOptions.newOptions().withInstrumentation(timingInstrumentation);
         DataLoader<String, User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader, options);
     }
 

@@ -49,8 +49,8 @@ public class DataLoaderInstrumentationTest {
         };
 
         DataLoaderOptions options = new DataLoaderOptions()
-                .setInstrumentation(instrumentation)
-                .setMaxBatchSize(5);
+                .withInstrumentation(instrumentation)
+                .withMaxBatchSize(5);
 
         DataLoader<String, String> dl = DataLoaderFactory.newDataLoader(snoozingBatchLoader, options);
 
@@ -110,8 +110,8 @@ public class DataLoaderInstrumentationTest {
         };
 
         DataLoaderOptions options = new DataLoaderOptions()
-                .setInstrumentation(instrumentation)
-                .setMaxBatchSize(5);
+                .withInstrumentation(instrumentation)
+                .withMaxBatchSize(5);
 
         DataLoader<String, String> dl = DataLoaderFactory.newDataLoader(snoozingBatchLoader, options);
 
@@ -155,7 +155,7 @@ public class DataLoaderInstrumentationTest {
             }
         };
 
-        DataLoaderOptions options = new DataLoaderOptions().setInstrumentation(instrumentation);
+        DataLoaderOptions options = new DataLoaderOptions().withInstrumentation(instrumentation);
         DataLoader<String, String> dl = DataLoaderFactory.newDataLoader(snoozingBatchLoader, options);
 
         dl.load("A", "kcA");

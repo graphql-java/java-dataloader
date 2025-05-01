@@ -79,13 +79,13 @@ public class DataLoaderRegistryTest {
         DataLoaderRegistry registry = new DataLoaderRegistry();
 
         DataLoader<Object, Object> dlA = newDataLoader(identityBatchLoader,
-                DataLoaderOptions.newOptions().setStatisticsCollector(SimpleStatisticsCollector::new)
+                DataLoaderOptions.newOptions().withStatisticsCollector(SimpleStatisticsCollector::new)
         );
         DataLoader<Object, Object> dlB = newDataLoader(identityBatchLoader,
-                DataLoaderOptions.newOptions().setStatisticsCollector(SimpleStatisticsCollector::new)
+                DataLoaderOptions.newOptions().withStatisticsCollector(SimpleStatisticsCollector::new)
         );
         DataLoader<Object, Object> dlC = newDataLoader(identityBatchLoader,
-                DataLoaderOptions.newOptions().setStatisticsCollector(SimpleStatisticsCollector::new)
+                DataLoaderOptions.newOptions().withStatisticsCollector(SimpleStatisticsCollector::new)
         );
 
         registry.register("a", dlA).register("b", dlB).register("c", dlC);

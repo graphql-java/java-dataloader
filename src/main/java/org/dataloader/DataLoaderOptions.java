@@ -177,7 +177,7 @@ public class DataLoaderOptions {
      * @param batchingEnabled {@code true} to enable batch loading, {@code false} otherwise
      * @return a new data loader options instance for fluent coding
      */
-    public DataLoaderOptions setBatchingEnabled(boolean batchingEnabled) {
+    public DataLoaderOptions withBatchingEnabled(boolean batchingEnabled) {
         return builder().setBatchingEnabled(batchingEnabled).build();
     }
 
@@ -196,7 +196,7 @@ public class DataLoaderOptions {
      * @param cachingEnabled {@code true} to enable caching, {@code false} otherwise
      * @return a new data loader options instance for fluent coding
      */
-    public DataLoaderOptions setCachingEnabled(boolean cachingEnabled) {
+    public DataLoaderOptions withCachingEnabled(boolean cachingEnabled) {
         return builder().setCachingEnabled(cachingEnabled).build();
     }
 
@@ -220,7 +220,7 @@ public class DataLoaderOptions {
      * @param cachingExceptionsEnabled {@code true} to enable caching exceptional values, {@code false} otherwise
      * @return a new data loader options instance for fluent coding
      */
-    public DataLoaderOptions setCachingExceptionsEnabled(boolean cachingExceptionsEnabled) {
+    public DataLoaderOptions withCachingExceptionsEnabled(boolean cachingExceptionsEnabled) {
         return builder().setCachingExceptionsEnabled(cachingExceptionsEnabled).build();
     }
 
@@ -241,7 +241,7 @@ public class DataLoaderOptions {
      * @param cacheKeyFunction the cache key function to use
      * @return a new data loader options instance for fluent coding
      */
-    public DataLoaderOptions setCacheKeyFunction(CacheKey<?> cacheKeyFunction) {
+    public DataLoaderOptions withCacheKeyFunction(CacheKey<?> cacheKeyFunction) {
         return builder().setCacheKeyFunction(cacheKeyFunction).build();
     }
 
@@ -262,7 +262,7 @@ public class DataLoaderOptions {
      * @param cacheMap the cache map instance
      * @return a new data loader options instance for fluent coding
      */
-    public DataLoaderOptions setCacheMap(CacheMap<?, ?> cacheMap) {
+    public DataLoaderOptions withCacheMap(CacheMap<?, ?> cacheMap) {
         return builder().setCacheMap(cacheMap).build();
     }
 
@@ -283,7 +283,7 @@ public class DataLoaderOptions {
      * @param maxBatchSize the maximum batch size
      * @return a new data loader options instance for fluent coding
      */
-    public DataLoaderOptions setMaxBatchSize(int maxBatchSize) {
+    public DataLoaderOptions withMaxBatchSize(int maxBatchSize) {
         return builder().setMaxBatchSize(maxBatchSize).build();
     }
 
@@ -302,7 +302,7 @@ public class DataLoaderOptions {
      * @param statisticsCollector the statistics collector to use
      * @return a new data loader options instance for fluent coding
      */
-    public DataLoaderOptions setStatisticsCollector(Supplier<StatisticsCollector> statisticsCollector) {
+    public DataLoaderOptions withStatisticsCollector(Supplier<StatisticsCollector> statisticsCollector) {
         return builder().setStatisticsCollector(nonNull(statisticsCollector)).build();
     }
 
@@ -319,7 +319,7 @@ public class DataLoaderOptions {
      * @param contextProvider the batch loader context provider
      * @return a new data loader options instance for fluent coding
      */
-    public DataLoaderOptions setBatchLoaderContextProvider(BatchLoaderContextProvider contextProvider) {
+    public DataLoaderOptions withBatchLoaderContextProvider(BatchLoaderContextProvider contextProvider) {
         return builder().setBatchLoaderContextProvider(nonNull(contextProvider)).build();
     }
 
@@ -340,7 +340,7 @@ public class DataLoaderOptions {
      * @param valueCache the value cache instance
      * @return a new data loader options instance for fluent coding
      */
-    public DataLoaderOptions setValueCache(ValueCache<?, ?> valueCache) {
+    public DataLoaderOptions withValueCache(ValueCache<?, ?> valueCache) {
         return builder().setValueCache(valueCache).build();
     }
 
@@ -357,7 +357,7 @@ public class DataLoaderOptions {
      * @param valueCacheOptions the value cache options
      * @return a new data loader options instance for fluent coding
      */
-    public DataLoaderOptions setValueCacheOptions(ValueCacheOptions valueCacheOptions) {
+    public DataLoaderOptions withValueCacheOptions(ValueCacheOptions valueCacheOptions) {
         return builder().setValueCacheOptions(nonNull(valueCacheOptions)).build();
     }
 
@@ -375,7 +375,7 @@ public class DataLoaderOptions {
      * @param batchLoaderScheduler the scheduler
      * @return a new data loader options instance for fluent coding
      */
-    public DataLoaderOptions setBatchLoaderScheduler(BatchLoaderScheduler batchLoaderScheduler) {
+    public DataLoaderOptions withBatchLoaderScheduler(BatchLoaderScheduler batchLoaderScheduler) {
         return builder().setBatchLoaderScheduler(batchLoaderScheduler).build();
     }
 
@@ -392,7 +392,7 @@ public class DataLoaderOptions {
      * @param instrumentation the new {@link DataLoaderInstrumentation}
      * @return a new data loader options instance for fluent coding
      */
-    public DataLoaderOptions setInstrumentation(DataLoaderInstrumentation instrumentation) {
+    public DataLoaderOptions withInstrumentation(DataLoaderInstrumentation instrumentation) {
         return builder().setInstrumentation(instrumentation).build();
     }
 

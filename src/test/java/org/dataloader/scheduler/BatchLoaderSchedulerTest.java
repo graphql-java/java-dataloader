@@ -83,7 +83,7 @@ public class BatchLoaderSchedulerTest {
 
     @Test
     public void can_allow_a_simple_scheduler() {
-        DataLoaderOptions options = DataLoaderOptions.newOptions().setBatchLoaderScheduler(immediateScheduling);
+        DataLoaderOptions options = DataLoaderOptions.newOptions().withBatchLoaderScheduler(immediateScheduling);
 
         DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValues(), options);
 
@@ -92,7 +92,7 @@ public class BatchLoaderSchedulerTest {
 
     @Test
     public void can_allow_a_simple_scheduler_with_context() {
-        DataLoaderOptions options = DataLoaderOptions.newOptions().setBatchLoaderScheduler(immediateScheduling);
+        DataLoaderOptions options = DataLoaderOptions.newOptions().withBatchLoaderScheduler(immediateScheduling);
 
         DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValuesWithContext(), options);
 
@@ -101,7 +101,7 @@ public class BatchLoaderSchedulerTest {
 
     @Test
     public void can_allow_a_simple_scheduler_with_mapped_batch_load() {
-        DataLoaderOptions options = DataLoaderOptions.newOptions().setBatchLoaderScheduler(immediateScheduling);
+        DataLoaderOptions options = DataLoaderOptions.newOptions().withBatchLoaderScheduler(immediateScheduling);
 
         DataLoader<Integer, Integer> identityLoader = newMappedDataLoader(keysAsMapOfValues(), options);
 
@@ -110,7 +110,7 @@ public class BatchLoaderSchedulerTest {
 
     @Test
     public void can_allow_a_simple_scheduler_with_mapped_batch_load_with_context() {
-        DataLoaderOptions options = DataLoaderOptions.newOptions().setBatchLoaderScheduler(immediateScheduling);
+        DataLoaderOptions options = DataLoaderOptions.newOptions().withBatchLoaderScheduler(immediateScheduling);
 
         DataLoader<Integer, Integer> identityLoader = newMappedDataLoader(keysAsMapOfValuesWithContext(), options);
 
@@ -119,7 +119,7 @@ public class BatchLoaderSchedulerTest {
 
     @Test
     public void can_allow_an_async_scheduler() {
-        DataLoaderOptions options = DataLoaderOptions.newOptions().setBatchLoaderScheduler(delayedScheduling(50));
+        DataLoaderOptions options = DataLoaderOptions.newOptions().withBatchLoaderScheduler(delayedScheduling(50));
 
         DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValues(), options);
 
@@ -160,7 +160,7 @@ public class BatchLoaderSchedulerTest {
                 });
             }
         };
-        DataLoaderOptions options = DataLoaderOptions.newOptions().setBatchLoaderScheduler(funkyScheduler);
+        DataLoaderOptions options = DataLoaderOptions.newOptions().withBatchLoaderScheduler(funkyScheduler);
 
         DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValues(), options);
 

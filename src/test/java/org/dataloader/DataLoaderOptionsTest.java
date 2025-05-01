@@ -89,25 +89,25 @@ class DataLoaderOptionsTest {
 
     @Test
     void canBuildOk() {
-        assertThat(optionsDefault.setBatchingEnabled(false).batchingEnabled(),
+        assertThat(optionsDefault.withBatchingEnabled(false).batchingEnabled(),
                 equalTo(false));
-        assertThat(optionsDefault.setBatchLoaderScheduler(testBatchLoaderScheduler).getBatchLoaderScheduler(),
+        assertThat(optionsDefault.withBatchLoaderScheduler(testBatchLoaderScheduler).getBatchLoaderScheduler(),
                 equalTo(testBatchLoaderScheduler));
-        assertThat(optionsDefault.setBatchLoaderContextProvider(testBatchLoaderContextProvider).getBatchLoaderContextProvider(),
+        assertThat(optionsDefault.withBatchLoaderContextProvider(testBatchLoaderContextProvider).getBatchLoaderContextProvider(),
                 equalTo(testBatchLoaderContextProvider));
-        assertThat(optionsDefault.setCacheMap(testCacheMap).cacheMap().get(),
+        assertThat(optionsDefault.withCacheMap(testCacheMap).cacheMap().get(),
                 equalTo(testCacheMap));
-        assertThat(optionsDefault.setCachingEnabled(false).cachingEnabled(),
+        assertThat(optionsDefault.withCachingEnabled(false).cachingEnabled(),
                 equalTo(false));
-        assertThat(optionsDefault.setValueCacheOptions(testValueCacheOptions).getValueCacheOptions(),
+        assertThat(optionsDefault.withValueCacheOptions(testValueCacheOptions).getValueCacheOptions(),
                 equalTo(testValueCacheOptions));
-        assertThat(optionsDefault.setCacheKeyFunction(testCacheKey).cacheKeyFunction().get(),
+        assertThat(optionsDefault.withCacheKeyFunction(testCacheKey).cacheKeyFunction().get(),
                 equalTo(testCacheKey));
-        assertThat(optionsDefault.setValueCache(testValueCache).valueCache().get(),
+        assertThat(optionsDefault.withValueCache(testValueCache).valueCache().get(),
                 equalTo(testValueCache));
-        assertThat(optionsDefault.setMaxBatchSize(10).maxBatchSize(),
+        assertThat(optionsDefault.withMaxBatchSize(10).maxBatchSize(),
                 equalTo(10));
-        assertThat(optionsDefault.setStatisticsCollector(testStatisticsCollectorSupplier).getStatisticsCollector(),
+        assertThat(optionsDefault.withStatisticsCollector(testStatisticsCollectorSupplier).getStatisticsCollector(),
                 equalTo(testStatisticsCollectorSupplier.get()));
 
         DataLoaderOptions builtOptions = optionsDefault.transform(builder -> {
