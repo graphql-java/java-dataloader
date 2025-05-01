@@ -14,58 +14,54 @@ public class NoOpStatisticsCollector implements StatisticsCollector {
     private static final Statistics ZERO_STATS = new Statistics();
 
     @Override
-    public <K> long incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
-        return 0;
+    public <K> void incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
     }
 
     @Deprecated
     @Override
-    public long incrementLoadCount() {
-        return incrementLoadCount(null);
+    public void incrementLoadCount() {
+        incrementLoadCount(null);
     }
 
     @Override
-    public <K> long incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
-        return 0;
-    }
-
-    @Deprecated
-    @Override
-    public long incrementLoadErrorCount() {
-        return incrementLoadErrorCount(null);
-    }
-
-    @Override
-    public <K> long incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
-        return 0;
+    public <K> void incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
     }
 
     @Deprecated
     @Override
-    public long incrementBatchLoadCountBy(long delta) {
-        return incrementBatchLoadCountBy(delta, null);
+    public void incrementLoadErrorCount() {
+        incrementLoadErrorCount(null);
     }
 
     @Override
-    public <K> long incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
-        return 0;
-    }
-
-    @Deprecated
-    @Override
-    public long incrementBatchLoadExceptionCount() {
-        return incrementBatchLoadExceptionCount(null);
-    }
-
-    @Override
-    public <K> long incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
-        return 0;
+    public <K> void incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
     }
 
     @Deprecated
     @Override
-    public long incrementCacheHitCount() {
-        return incrementCacheHitCount(null);
+    public void incrementBatchLoadCountBy(long delta) {
+         incrementBatchLoadCountBy(delta, null);
+    }
+
+    @Override
+    public <K> void incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
+
+    }
+
+    @Deprecated
+    @Override
+    public void incrementBatchLoadExceptionCount() {
+        incrementBatchLoadExceptionCount(null);
+    }
+
+    @Override
+    public <K> void incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
+    }
+
+    @Deprecated
+    @Override
+    public void incrementCacheHitCount() {
+        incrementCacheHitCount(null);
     }
 
     @Override
