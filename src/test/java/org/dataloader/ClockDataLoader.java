@@ -9,7 +9,7 @@ public class ClockDataLoader<K, V> extends DataLoader<K, V> {
     }
 
     public ClockDataLoader(Object batchLoadFunction, DataLoaderOptions options, Clock clock) {
-        super(batchLoadFunction, options, clock);
+        super(null, batchLoadFunction, options, clock);
     }
 
 }

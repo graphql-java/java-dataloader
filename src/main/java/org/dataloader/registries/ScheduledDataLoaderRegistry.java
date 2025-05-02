@@ -3,7 +3,10 @@ package org.dataloader.registries;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderRegistry;
 import org.dataloader.annotations.ExperimentalApi;
+import org.dataloader.impl.Assertions;
 import org.dataloader.instrumentation.DataLoaderInstrumentation;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -54,6 +57,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  * This code is currently marked as {@link ExperimentalApi}
  */
 @ExperimentalApi
+@NullMarked
 public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements AutoCloseable {
 
     private final Map<DataLoader<?, ?>, DispatchPredicate> dataLoaderPredicates = new ConcurrentHashMap<>();
@@ -66,7 +70,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
 
     private ScheduledDataLoaderRegistry(Builder builder) {
         super(builder.dataLoaders, builder.instrumentation);
-        this.scheduledExecutorService = builder.scheduledExecutorService;
+        this.scheduledExecutorService = Assertions.nonNull(builder.scheduledExecutorService);
         this.defaultExecutorUsed = builder.defaultExecutorUsed;
         this.schedule = builder.schedule;
         this.tickerMode = builder.tickerMode;
@@ -112,7 +116,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
      * and return a new combined registry
      *
      * @param registry the registry to combine into this registry
-     *
      * @return a new combined registry
      */
     public ScheduledDataLoaderRegistry combine(DataLoaderRegistry registry) {
@@ -128,7 +131,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
      * This will unregister a new dataloader
      *
      * @param key the key of the data loader to unregister
-     *
      * @return this registry
      */
     public ScheduledDataLoaderRegistry unregister(String key) {
@@ -161,7 +163,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
      * @param key               the key to put the data loader under
      * @param dataLoader        the data loader to register
      * @param dispatchPredicate the dispatch predicate to associate with this data loader
-     *
      * @return this registry
      */
     public ScheduledDataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader, DispatchPredicate dispatchPredicate) {
@@ -222,7 +223,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
      *
      * @param dataLoaderKey the key in the dataloader map
      * @param dataLoader    the dataloader
-     *
      * @return true if it should dispatch
      */
     private boolean shouldDispatch(String dataLoaderKey, DataLoader<?, ?> dataLoader) {
@@ -267,11 +267,11 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         private final Map<String, DataLoader<?, ?>> dataLoaders = new LinkedHashMap<>();
         private final Map<DataLoader<?, ?>, DispatchPredicate> dataLoaderPredicates = new LinkedHashMap<>();
         private DispatchPredicate dispatchPredicate = DispatchPredicate.DISPATCH_ALWAYS;
-        private ScheduledExecutorService scheduledExecutorService;
+        private @Nullable ScheduledExecutorService scheduledExecutorService;
         private boolean defaultExecutorUsed = false;
         private Duration schedule = Duration.ofMillis(10);
         private boolean tickerMode = false;
-        private DataLoaderInstrumentation instrumentation;
+        private @Nullable DataLoaderInstrumentation instrumentation;
 
 
         /**
@@ -279,7 +279,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
          * {@link ScheduledDataLoaderRegistry#close()} is called.  This is left to the code that made this setup code
          *
          * @param executorService the executor service to run the ticker on
-         *
          * @return this builder for a fluent pattern
          */
         public Builder scheduledExecutorService(ScheduledExecutorService executorService) {
@@ -297,7 +296,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
          *
          * @param key        the key to put the data loader under
          * @param dataLoader the data loader to register
-         *
          * @return this builder for a fluent pattern
          */
         public Builder register(String key, DataLoader<?, ?> dataLoader) {
@@ -312,7 +310,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
          * @param key               the key to put the data loader under
          * @param dataLoader        the data loader to register
          * @param dispatchPredicate the dispatch predicate
-         *
          * @return this builder for a fluent pattern
          */
         public Builder register(String key, DataLoader<?, ?> dataLoader, DispatchPredicate dispatchPredicate) {
@@ -326,7 +323,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
          * from a previous {@link DataLoaderRegistry}
          *
          * @param otherRegistry the previous {@link DataLoaderRegistry}
-         *
          * @return this builder for a fluent pattern
          */
         public Builder registerAll(DataLoaderRegistry otherRegistry) {
@@ -343,7 +339,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
          * whether all {@link DataLoader}s in the {@link DataLoaderRegistry }should be dispatched.
          *
          * @param dispatchPredicate the predicate
-         *
          * @return this builder for a fluent pattern
          */
         public Builder dispatchPredicate(DispatchPredicate dispatchPredicate) {
@@ -357,7 +352,6 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
          * to dispatchAll.
          *
          * @param tickerMode true or false
-         *
          * @return this builder for a fluent pattern
          */
         public Builder tickerMode(boolean tickerMode) {

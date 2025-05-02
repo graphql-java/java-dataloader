@@ -11,8 +11,8 @@ import org.dataloader.MappedBatchLoaderWithContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -64,8 +64,16 @@ public class TestKit {
         return idLoader(null, new ArrayList<>());
     }
 
+    public static <K, V> DataLoader<K, V> idLoader(String name) {
+        return idLoader(name, null, new ArrayList<>());
+    }
+
     public static <K, V> DataLoader<K, V> idLoader(DataLoaderOptions options, List<List<K>> loadCalls) {
         return DataLoaderFactory.newDataLoader(keysAsValues(loadCalls), options);
+    }
+
+    public static <K, V> DataLoader<K, V> idLoader(String name, DataLoaderOptions options, List<List<K>> loadCalls) {
+        return DataLoaderFactory.newDataLoader(name, keysAsValues(loadCalls), options);
     }
 
     public static Collection<Integer> listFrom(int i, int max) {
@@ -104,7 +112,7 @@ public class TestKit {
 
     public static boolean areAllDone(CompletableFuture<?>... cfs) {
         for (CompletableFuture<?> cf : cfs) {
-            if (! cf.isDone()) {
+            if (!cf.isDone()) {
                 return false;
             }
         }
