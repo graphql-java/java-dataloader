@@ -58,7 +58,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  * <p>
  * A call to the batch loader might result in individual exception failures for item with the returned list.  if
  * you want to capture these specific item failures then use {@link org.dataloader.Try} as a return value and
- * create the data loader with {@link #newDataLoaderWithTry(BatchLoader)} form.  The Try values will be interpreted
+ * create the data loader with {@link DataLoaderFactory#newDataLoaderWithTry(BatchLoader)} form.  The Try values will be interpreted
  * as either success values or cause the {@link #load(Object)} promise to complete exceptionally.
  *
  * @param <K> type parameter indicating the type of the data load keys
@@ -70,6 +70,7 @@ import static org.dataloader.impl.Assertions.nonNull;
 @NullMarked
 public class DataLoader<K, V> {
 
+    private final @Nullable String name;
     private final DataLoaderHelper<K, V> helper;
     private final StatisticsCollector stats;
     private final CacheMap<Object, V> futureCache;
@@ -77,317 +78,13 @@ public class DataLoader<K, V> {
     private final DataLoaderOptions options;
     private final Object batchLoadFunction;
 
-    /**
-     * Creates new DataLoader with the specified batch loader function and default options
-     * (batching, caching and unlimited batch size).
-     *
-     * @param batchLoadFunction the batch load function to use
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newDataLoader(BatchLoader<K, V> batchLoadFunction) {
-        return newDataLoader(batchLoadFunction, null);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function with the provided options
-     *
-     * @param batchLoadFunction the batch load function to use
-     * @param options           the options to use
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newDataLoader(BatchLoader<K, V> batchLoadFunction, @Nullable DataLoaderOptions options) {
-        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function and default options
-     * (batching, caching and unlimited batch size) where the batch loader function returns a list of
-     * {@link org.dataloader.Try} objects.
-     * <p>
-     * If it's important you to know the exact status of each item in a batch call and whether it threw exceptions then
-     * you can use this form to create the data loader.
-     * <p>
-     * Using Try objects allows you to capture a value returned or an exception that might
-     * have occurred trying to get a value. .
-     *
-     * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoader<K, Try<V>> batchLoadFunction) {
-        return newDataLoaderWithTry(batchLoadFunction, null);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function and with the provided options
-     * where the batch loader function returns a list of
-     * {@link org.dataloader.Try} objects.
-     *
-     * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
-     * @param options           the options to use
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @see DataLoaderFactory#newDataLoaderWithTry(BatchLoader)
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoader<K, Try<V>> batchLoadFunction, @Nullable DataLoaderOptions options) {
-        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function and default options
-     * (batching, caching and unlimited batch size).
-     *
-     * @param batchLoadFunction the batch load function to use
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newDataLoader(BatchLoaderWithContext<K, V> batchLoadFunction) {
-        return newDataLoader(batchLoadFunction, null);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function with the provided options
-     *
-     * @param batchLoadFunction the batch load function to use
-     * @param options           the options to use
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newDataLoader(BatchLoaderWithContext<K, V> batchLoadFunction, @Nullable DataLoaderOptions options) {
-        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function and default options
-     * (batching, caching and unlimited batch size) where the batch loader function returns a list of
-     * {@link org.dataloader.Try} objects.
-     * <p>
-     * If it's important you to know the exact status of each item in a batch call and whether it threw exceptions then
-     * you can use this form to create the data loader.
-     * <p>
-     * Using Try objects allows you to capture a value returned or an exception that might
-     * have occurred trying to get a value. .
-     *
-     * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoaderWithContext<K, Try<V>> batchLoadFunction) {
-        return newDataLoaderWithTry(batchLoadFunction, null);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function and with the provided options
-     * where the batch loader function returns a list of
-     * {@link org.dataloader.Try} objects.
-     *
-     * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
-     * @param options           the options to use
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @see DataLoaderFactory#newDataLoaderWithTry(BatchLoader)
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newDataLoaderWithTry(BatchLoaderWithContext<K, Try<V>> batchLoadFunction, @Nullable DataLoaderOptions options) {
-        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function and default options
-     * (batching, caching and unlimited batch size).
-     *
-     * @param batchLoadFunction the batch load function to use
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoader<K, V> batchLoadFunction) {
-        return newMappedDataLoader(batchLoadFunction, null);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function with the provided options
-     *
-     * @param batchLoadFunction the batch load function to use
-     * @param options           the options to use
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoader<K, V> batchLoadFunction, @Nullable DataLoaderOptions options) {
-        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function and default options
-     * (batching, caching and unlimited batch size) where the batch loader function returns a list of
-     * {@link org.dataloader.Try} objects.
-     * <p>
-     * If it's important you to know the exact status of each item in a batch call and whether it threw exceptions then
-     * you can use this form to create the data loader.
-     * <p>
-     * Using Try objects allows you to capture a value returned or an exception that might
-     * have occurred trying to get a value. .
-     * <p>
-     *
-     * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoader<K, Try<V>> batchLoadFunction) {
-        return newMappedDataLoaderWithTry(batchLoadFunction, null);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function and with the provided options
-     * where the batch loader function returns a list of
-     * {@link org.dataloader.Try} objects.
-     *
-     * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
-     * @param options           the options to use
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @see DataLoaderFactory#newDataLoaderWithTry(BatchLoader)
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoader<K, Try<V>> batchLoadFunction, @Nullable DataLoaderOptions options) {
-        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
-    }
-
-    /**
-     * Creates new DataLoader with the specified mapped batch loader function and default options
-     * (batching, caching and unlimited batch size).
-     *
-     * @param batchLoadFunction the batch load function to use
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoaderWithContext<K, V> batchLoadFunction) {
-        return newMappedDataLoader(batchLoadFunction, null);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function with the provided options
-     *
-     * @param batchLoadFunction the batch load function to use
-     * @param options           the options to use
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newMappedDataLoader(MappedBatchLoaderWithContext<K, V> batchLoadFunction, @Nullable DataLoaderOptions options) {
-        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function and default options
-     * (batching, caching and unlimited batch size) where the batch loader function returns a list of
-     * {@link org.dataloader.Try} objects.
-     * <p>
-     * If it's important you to know the exact status of each item in a batch call and whether it threw exceptions then
-     * you can use this form to create the data loader.
-     * <p>
-     * Using Try objects allows you to capture a value returned or an exception that might
-     * have occurred trying to get a value. .
-     *
-     * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoaderWithContext<K, Try<V>> batchLoadFunction) {
-        return newMappedDataLoaderWithTry(batchLoadFunction, null);
-    }
-
-    /**
-     * Creates new DataLoader with the specified batch loader function and with the provided options
-     * where the batch loader function returns a list of
-     * {@link org.dataloader.Try} objects.
-     *
-     * @param batchLoadFunction the batch load function to use that uses {@link org.dataloader.Try} objects
-     * @param options           the options to use
-     * @param <K>               the key type
-     * @param <V>               the value type
-     * @return a new DataLoader
-     * @see DataLoaderFactory#newDataLoaderWithTry(BatchLoader)
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public static <K, V> DataLoader<K, V> newMappedDataLoaderWithTry(MappedBatchLoaderWithContext<K, Try<V>> batchLoadFunction, @Nullable DataLoaderOptions options) {
-        return DataLoaderFactory.mkDataLoader(batchLoadFunction, options);
-    }
-
-    /**
-     * Creates a new data loader with the provided batch load function, and default options.
-     *
-     * @param batchLoadFunction the batch load function to use
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public DataLoader(BatchLoader<K, V> batchLoadFunction) {
-        this((Object) batchLoadFunction, null);
-    }
-
-    /**
-     * Creates a new data loader with the provided batch load function and options.
-     *
-     * @param batchLoadFunction the batch load function to use
-     * @param options           the batch load options
-     * @deprecated use {@link DataLoaderFactory} instead
-     */
-    @Deprecated
-    public DataLoader(BatchLoader<K, V> batchLoadFunction, @Nullable DataLoaderOptions options) {
-        this((Object) batchLoadFunction, options);
+    @VisibleForTesting
+    DataLoader(@Nullable String name, Object batchLoadFunction, @Nullable DataLoaderOptions options) {
+        this(name, batchLoadFunction, options, Clock.systemUTC());
     }
 
     @VisibleForTesting
-    DataLoader(Object batchLoadFunction, @Nullable DataLoaderOptions options) {
-        this(batchLoadFunction, options, Clock.systemUTC());
-    }
-
-    @VisibleForTesting
-    DataLoader(Object batchLoadFunction, @Nullable DataLoaderOptions options, Clock clock) {
+    DataLoader(@Nullable String name, Object batchLoadFunction, @Nullable DataLoaderOptions options, Clock clock) {
         DataLoaderOptions loaderOptions = options == null ? new DataLoaderOptions() : options;
         this.futureCache = determineFutureCache(loaderOptions);
         this.valueCache = determineValueCache(loaderOptions);
@@ -395,6 +92,7 @@ public class DataLoader<K, V> {
         this.stats = nonNull(loaderOptions.getStatisticsCollector());
         this.batchLoadFunction = nonNull(batchLoadFunction);
         this.options = loaderOptions;
+        this.name = name;
 
         this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.valueCache, this.stats, clock);
     }
@@ -408,6 +106,13 @@ public class DataLoader<K, V> {
     @SuppressWarnings("unchecked")
     private ValueCache<K, V> determineValueCache(DataLoaderOptions loaderOptions) {
         return (ValueCache<K, V>) loaderOptions.valueCache().orElseGet(ValueCache::defaultValueCache);
+    }
+
+    /**
+     * @return the name of the DataLoader which can be null
+     */
+    public @Nullable String getName() {
+        return name;
     }
 
     /**
