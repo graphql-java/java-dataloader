@@ -18,9 +18,9 @@ public class DataLoaderRegistryTest {
 
     @Test
     public void registration_works() {
-        DataLoader<Object, Object> dlA = newDataLoader(identityBatchLoader);
-        DataLoader<Object, Object> dlB = newDataLoader(identityBatchLoader);
-        DataLoader<Object, Object> dlC = newDataLoader(identityBatchLoader);
+        DataLoader<Object, Object> dlA = newDataLoader("a", identityBatchLoader);
+        DataLoader<Object, Object> dlB = newDataLoader("b", identityBatchLoader);
+        DataLoader<Object, Object> dlC = newDataLoader("c", identityBatchLoader);
 
         DataLoaderRegistry registry = new DataLoaderRegistry();
 
@@ -54,10 +54,10 @@ public class DataLoaderRegistryTest {
     @Test
     public void registries_can_be_combined() {
 
-        DataLoader<Object, Object> dlA = newDataLoader(identityBatchLoader);
-        DataLoader<Object, Object> dlB = newDataLoader(identityBatchLoader);
-        DataLoader<Object, Object> dlC = newDataLoader(identityBatchLoader);
-        DataLoader<Object, Object> dlD = newDataLoader(identityBatchLoader);
+        DataLoader<Object, Object> dlA = newDataLoader("a",identityBatchLoader);
+        DataLoader<Object, Object> dlB = newDataLoader("b", identityBatchLoader);
+        DataLoader<Object, Object> dlC = newDataLoader("c", identityBatchLoader);
+        DataLoader<Object, Object> dlD = newDataLoader("d", identityBatchLoader);
 
         DataLoaderRegistry registry1 = new DataLoaderRegistry();
 
@@ -90,6 +90,10 @@ public class DataLoaderRegistryTest {
 
         registry.register("a", dlA).register("b", dlB).register("c", dlC);
 
+        dlA = registry.getDataLoader("a");
+        dlB = registry.getDataLoader("b");
+        dlC = registry.getDataLoader("b");
+
         dlA.load("X");
         dlB.load("Y");
         dlC.load("Z");
@@ -116,7 +120,7 @@ public class DataLoaderRegistryTest {
 
         DataLoaderRegistry registry = new DataLoaderRegistry();
 
-        DataLoader<Object, Object> dlA = newDataLoader(identityBatchLoader);
+        DataLoader<Object, Object> dlA = newDataLoader("a",identityBatchLoader);
         DataLoader<Object, Object> registered = registry.computeIfAbsent("a", (key) -> dlA);
 
         assertThat(registered, equalTo(dlA));
@@ -129,11 +133,11 @@ public class DataLoaderRegistryTest {
 
         DataLoaderRegistry registry = new DataLoaderRegistry();
 
-        DataLoader<Object, Object> dlA = newDataLoader(identityBatchLoader);
+        DataLoader<Object, Object> dlA = newDataLoader("a",identityBatchLoader);
         registry.computeIfAbsent("a", (key) -> dlA);
 
         // register again at same key
-        DataLoader<Object, Object> dlA2 = newDataLoader(identityBatchLoader);
+        DataLoader<Object, Object> dlA2 = newDataLoader("a", identityBatchLoader);
         DataLoader<Object, Object> registered = registry.computeIfAbsent("a", (key) -> dlA2);
 
         assertThat(registered, equalTo(dlA));
@@ -149,8 +153,8 @@ public class DataLoaderRegistryTest {
         DataLoader<Object, Object> dlA = newDataLoader(identityBatchLoader);
         DataLoader<Object, Object> dlB = newDataLoader(identityBatchLoader);
 
-        registry.register("a", dlA);
-        registry.register("b", dlB);
+        dlA = registry.registerAndGet("a", dlA);
+        dlB = registry.registerAndGet("b", dlB);
 
         dlA.load("av1");
         dlA.load("av2");

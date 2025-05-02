@@ -5,6 +5,8 @@ import org.dataloader.instrumentation.ChainedDataLoaderInstrumentation;
 import org.dataloader.instrumentation.DataLoaderInstrumentation;
 import org.dataloader.instrumentation.DataLoaderInstrumentationHelper;
 import org.dataloader.stats.Statistics;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,6 +17,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+
+import static org.dataloader.impl.Assertions.assertState;
 
 /**
  * This allows data loaders to be registered together into a single place, so
@@ -35,9 +39,10 @@ import java.util.function.Function;
  * are the same object, then nothing is changed, since the same instrumentation code is being run.
  */
 @PublicApi
+@NullMarked
 public class DataLoaderRegistry {
     protected final Map<String, DataLoader<?, ?>> dataLoaders;
-    protected final DataLoaderInstrumentation instrumentation;
+    protected final @Nullable DataLoaderInstrumentation instrumentation;
 
 
     public DataLoaderRegistry() {
@@ -48,15 +53,15 @@ public class DataLoaderRegistry {
         this(builder.dataLoaders, builder.instrumentation);
     }
 
-    protected DataLoaderRegistry(Map<String, DataLoader<?, ?>> dataLoaders, DataLoaderInstrumentation instrumentation) {
+    protected DataLoaderRegistry(Map<String, DataLoader<?, ?>> dataLoaders, @Nullable DataLoaderInstrumentation instrumentation) {
         this.dataLoaders = instrumentDLs(dataLoaders, instrumentation);
         this.instrumentation = instrumentation;
     }
 
-    private Map<String, DataLoader<?, ?>> instrumentDLs(Map<String, DataLoader<?, ?>> incomingDataLoaders, DataLoaderInstrumentation registryInstrumentation) {
+    private Map<String, DataLoader<?, ?>> instrumentDLs(Map<String, DataLoader<?, ?>> incomingDataLoaders, @Nullable DataLoaderInstrumentation registryInstrumentation) {
         Map<String, DataLoader<?, ?>> dataLoaders = new ConcurrentHashMap<>(incomingDataLoaders);
         if (registryInstrumentation != null) {
-            dataLoaders.replaceAll((k, existingDL) -> instrumentDL(registryInstrumentation, existingDL));
+            dataLoaders.replaceAll((k, existingDL) -> nameAndInstrumentDL(k, registryInstrumentation, existingDL));
         }
         return dataLoaders;
     }
@@ -64,11 +69,14 @@ public class DataLoaderRegistry {
     /**
      * Can be called to tweak a {@link DataLoader} so that it has the registry {@link DataLoaderInstrumentation} added as the first one.
      *
+     * @param key                     the key used to register the data loader
      * @param registryInstrumentation the common registry {@link DataLoaderInstrumentation}
      * @param existingDL              the existing data loader
      * @return a new {@link DataLoader} or the same one if there is nothing to change
      */
-    private static DataLoader<?, ?> instrumentDL(DataLoaderInstrumentation registryInstrumentation, DataLoader<?, ?> existingDL) {
+    private static DataLoader<?, ?> nameAndInstrumentDL(String key, @Nullable DataLoaderInstrumentation registryInstrumentation, DataLoader<?, ?> existingDL) {
+        existingDL = checkAndSetName(key, existingDL);
+
         if (registryInstrumentation == null) {
             return existingDL;
         }
@@ -97,6 +105,15 @@ public class DataLoaderRegistry {
         }
     }
 
+    private static DataLoader<?, ?> checkAndSetName(String key, DataLoader<?, ?> dataLoader) {
+        if (dataLoader.getName() == null) {
+            return dataLoader.transform(b -> b.name(key));
+        }
+        assertState(key.equals(dataLoader.getName()),
+                () -> String.format("Data loader name '%s' is not the same as registered key '%s'", dataLoader.getName(), key));
+        return dataLoader;
+    }
+
     private static DataLoader<?, ?> mkInstrumentedDataLoader(DataLoader<?, ?> existingDL, DataLoaderOptions options, DataLoaderInstrumentation newInstrumentation) {
         return existingDL.transform(builder -> builder.options(setInInstrumentation(options, newInstrumentation)));
     }
@@ -108,7 +125,7 @@ public class DataLoaderRegistry {
     /**
      * @return the {@link DataLoaderInstrumentation} associated with this registry which can be null
      */
-    public DataLoaderInstrumentation getInstrumentation() {
+    public @Nullable DataLoaderInstrumentation getInstrumentation() {
         return instrumentation;
     }
 
@@ -120,8 +137,21 @@ public class DataLoaderRegistry {
      * @return this registry
      */
     public DataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader) {
-        dataLoaders.put(key, instrumentDL(instrumentation, dataLoader));
+        dataLoaders.put(key, nameAndInstrumentDL(key, instrumentation, dataLoader));
         return this;
+    }
+
+    /**
+     * This will register a new dataloader and then return it.  It might have been wrapped into a new instance
+     * because of the registry instrumentation for example.
+     *
+     * @param key        the key to put the data loader under
+     * @param dataLoader the data loader to register
+     * @return the data loader instance that was registered
+     */
+    public <K, V> DataLoader<K, V> registerAndGet(String key, DataLoader<?, ?> dataLoader) {
+        dataLoaders.put(key, nameAndInstrumentDL(key, instrumentation, dataLoader));
+        return getDataLoader(key);
     }
 
     /**
@@ -142,7 +172,7 @@ public class DataLoaderRegistry {
                                                    final Function<String, DataLoader<?, ?>> mappingFunction) {
         return (DataLoader<K, V>) dataLoaders.computeIfAbsent(key, (k) -> {
             DataLoader<?, ?> dl = mappingFunction.apply(k);
-            return instrumentDL(instrumentation, dl);
+            return nameAndInstrumentDL(key, instrumentation, dl);
         });
     }
 
@@ -262,7 +292,7 @@ public class DataLoaderRegistry {
     public static class Builder {
 
         private final Map<String, DataLoader<?, ?>> dataLoaders = new HashMap<>();
-        private DataLoaderInstrumentation instrumentation;
+        private @Nullable DataLoaderInstrumentation instrumentation;
 
         /**
          * This will register a new dataloader

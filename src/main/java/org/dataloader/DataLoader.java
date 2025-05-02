@@ -492,4 +492,11 @@ public class DataLoader<K, V> {
         return valueCache;
     }
 
+    @Override
+    public String toString() {
+        return "DataLoader{" +
+                "name='" + name + '\'' +
+                ", stats=" + stats +
+                '}';
+    }
 }

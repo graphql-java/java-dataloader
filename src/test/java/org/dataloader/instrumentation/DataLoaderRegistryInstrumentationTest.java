@@ -32,9 +32,9 @@ public class DataLoaderRegistryInstrumentationTest {
 
     @BeforeEach
     void setUp() {
-        dlX = TestKit.idLoader();
-        dlY = TestKit.idLoader();
-        dlZ = TestKit.idLoader();
+        dlX = TestKit.idLoader("X");
+        dlY = TestKit.idLoader("Y");
+        dlZ = TestKit.idLoader("Z");
         instrA = new CapturingInstrumentation("A");
         instrB = new CapturingInstrumentation("B");
         chainedInstrA = new ChainedDataLoaderInstrumentation().add(instrA);
@@ -121,8 +121,8 @@ public class DataLoaderRegistryInstrumentationTest {
     @Test
     void wontDoAnyThingIfThereTheyAreTheSameInstrumentationAlready() {
         DataLoader<String, String> newX = dlX.transform(builder -> builder.options(dlX.getOptions().setInstrumentation(instrA)));
-        DataLoader<String, String> newY = dlX.transform(builder ->  builder.options(dlY.getOptions().setInstrumentation(instrA)));
-        DataLoader<String, String> newZ = dlX.transform(builder ->  builder.options(dlZ.getOptions().setInstrumentation(instrA)));
+        DataLoader<String, String> newY = dlY.transform(builder ->  builder.options(dlY.getOptions().setInstrumentation(instrA)));
+        DataLoader<String, String> newZ = dlZ.transform(builder ->  builder.options(dlZ.getOptions().setInstrumentation(instrA)));
         DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
                 .instrumentation(instrA)
                 .register("X", newX)
