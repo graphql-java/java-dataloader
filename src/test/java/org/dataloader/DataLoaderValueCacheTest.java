@@ -36,7 +36,7 @@ public class DataLoaderValueCacheTest {
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void test_by_default_we_have_no_value_caching(TestDataLoaderFactory factory) {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions();
+        DataLoaderOptions options = newOptions().build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
@@ -72,7 +72,7 @@ public class DataLoaderValueCacheTest {
     public void should_accept_a_remote_value_store_for_caching(TestDataLoaderFactory factory) {
         CustomValueCache customValueCache = new CustomValueCache();
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withValueCache(customValueCache);
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         // Fetches as expected
@@ -127,7 +127,7 @@ public class DataLoaderValueCacheTest {
         ValueCache<String, Object> caffeineValueCache = new CaffeineValueCache(caffeineCache);
 
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withValueCache(caffeineValueCache);
+        DataLoaderOptions options = newOptions().setValueCache(caffeineValueCache).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         // Fetches as expected
@@ -170,7 +170,7 @@ public class DataLoaderValueCacheTest {
         customValueCache.set("b", "From Cache");
 
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withValueCache(customValueCache);
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
@@ -198,7 +198,7 @@ public class DataLoaderValueCacheTest {
         };
 
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withValueCache(customValueCache);
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
@@ -237,7 +237,7 @@ public class DataLoaderValueCacheTest {
 
 
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withValueCache(customValueCache);
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
@@ -279,7 +279,7 @@ public class DataLoaderValueCacheTest {
 
 
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withValueCache(customValueCache);
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
@@ -323,7 +323,7 @@ public class DataLoaderValueCacheTest {
         };
 
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withValueCache(customValueCache);
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
@@ -359,7 +359,7 @@ public class DataLoaderValueCacheTest {
         };
 
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withValueCache(customValueCache).withCachingEnabled(false);
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache).setCachingEnabled(false).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
@@ -403,7 +403,7 @@ public class DataLoaderValueCacheTest {
         customValueCache.asMap().put("c", "cachedC");
 
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withValueCache(customValueCache).withCachingEnabled(true);
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache).setCachingEnabled(true).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");
@@ -444,7 +444,7 @@ public class DataLoaderValueCacheTest {
         customValueCache.asMap().put("a", "cachedA");
 
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withValueCache(customValueCache).withCachingEnabled(true).withBatchingEnabled(false);
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache).setCachingEnabled(true).setBatchingEnabled(false).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fA = identityLoader.load("a");

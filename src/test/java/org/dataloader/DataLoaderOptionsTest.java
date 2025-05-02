@@ -31,7 +31,7 @@ class DataLoaderOptionsTest {
         assertThat(optionsDefault.maxBatchSize(), equalTo(-1));
         assertThat(optionsDefault.getBatchLoaderScheduler(), equalTo(null));
 
-        DataLoaderOptions builtOptions = DataLoaderOptions.newOptionsBuilder().build();
+        DataLoaderOptions builtOptions = DataLoaderOptions.newDefaultOptions();
         assertThat(builtOptions, equalTo(optionsDefault));
         assertThat(builtOptions == optionsDefault, equalTo(false));
 
@@ -43,11 +43,7 @@ class DataLoaderOptionsTest {
 
     @Test
     void canCopyOk() {
-        DataLoaderOptions optionsNext = new DataLoaderOptions(optionsDefault);
-        assertThat(optionsNext, equalTo(optionsDefault));
-        assertThat(optionsNext == optionsDefault, equalTo(false));
-
-        optionsNext = DataLoaderOptions.newDataLoaderOptions(optionsDefault).build();
+        DataLoaderOptions optionsNext = DataLoaderOptions.newOptions(optionsDefault).build();
         assertThat(optionsNext, equalTo(optionsDefault));
         assertThat(optionsNext == optionsDefault, equalTo(false));
     }
@@ -89,25 +85,25 @@ class DataLoaderOptionsTest {
 
     @Test
     void canBuildOk() {
-        assertThat(optionsDefault.withBatchingEnabled(false).batchingEnabled(),
+        assertThat(optionsDefault.transform(b -> b.setBatchingEnabled(false)).batchingEnabled(),
                 equalTo(false));
-        assertThat(optionsDefault.withBatchLoaderScheduler(testBatchLoaderScheduler).getBatchLoaderScheduler(),
+        assertThat(optionsDefault.transform(b -> b.setBatchLoaderScheduler(testBatchLoaderScheduler)).getBatchLoaderScheduler(),
                 equalTo(testBatchLoaderScheduler));
-        assertThat(optionsDefault.withBatchLoaderContextProvider(testBatchLoaderContextProvider).getBatchLoaderContextProvider(),
+        assertThat(optionsDefault.transform(b -> b.setBatchLoaderContextProvider(testBatchLoaderContextProvider)).getBatchLoaderContextProvider(),
                 equalTo(testBatchLoaderContextProvider));
-        assertThat(optionsDefault.withCacheMap(testCacheMap).cacheMap().get(),
+        assertThat(optionsDefault.transform(b -> b.setCacheMap(testCacheMap)).cacheMap().get(),
                 equalTo(testCacheMap));
-        assertThat(optionsDefault.withCachingEnabled(false).cachingEnabled(),
+        assertThat(optionsDefault.transform(b -> b.setCachingEnabled(false)).cachingEnabled(),
                 equalTo(false));
-        assertThat(optionsDefault.withValueCacheOptions(testValueCacheOptions).getValueCacheOptions(),
+        assertThat(optionsDefault.transform(b -> b.setValueCacheOptions(testValueCacheOptions)).getValueCacheOptions(),
                 equalTo(testValueCacheOptions));
-        assertThat(optionsDefault.withCacheKeyFunction(testCacheKey).cacheKeyFunction().get(),
+        assertThat(optionsDefault.transform(b -> b.setCacheKeyFunction(testCacheKey)).cacheKeyFunction().get(),
                 equalTo(testCacheKey));
-        assertThat(optionsDefault.withValueCache(testValueCache).valueCache().get(),
+        assertThat(optionsDefault.transform(b -> b.setValueCache(testValueCache)).valueCache().get(),
                 equalTo(testValueCache));
-        assertThat(optionsDefault.withMaxBatchSize(10).maxBatchSize(),
+        assertThat(optionsDefault.transform(b -> b.setMaxBatchSize(10)).maxBatchSize(),
                 equalTo(10));
-        assertThat(optionsDefault.withStatisticsCollector(testStatisticsCollectorSupplier).getStatisticsCollector(),
+        assertThat(optionsDefault.transform(b -> b.setStatisticsCollector(testStatisticsCollectorSupplier)).getStatisticsCollector(),
                 equalTo(testStatisticsCollectorSupplier.get()));
 
         DataLoaderOptions builtOptions = optionsDefault.transform(builder -> {
@@ -150,7 +146,7 @@ class DataLoaderOptionsTest {
     @Test
     void canBuildViaBuilderOk() {
 
-        DataLoaderOptions.Builder builder = DataLoaderOptions.newOptionsBuilder();
+        DataLoaderOptions.Builder builder = DataLoaderOptions.newOptions();
         builder.setBatchingEnabled(false);
         builder.setCachingExceptionsEnabled(false);
         builder.setCachingEnabled(false);
@@ -196,7 +192,7 @@ class DataLoaderOptionsTest {
         };
         BatchLoaderContextProvider contextProvider1 = () -> null;
 
-        DataLoaderOptions startingOptions = DataLoaderOptions.newOptionsBuilder().setBatchingEnabled(false)
+        DataLoaderOptions startingOptions = DataLoaderOptions.newOptions().setBatchingEnabled(false)
                 .setCachingEnabled(false)
                 .setInstrumentation(instrumentation1)
                 .setBatchLoaderContextProvider(contextProvider1)

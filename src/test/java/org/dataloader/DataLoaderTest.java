@@ -47,6 +47,7 @@ import static java.util.Collections.*;
 import static java.util.concurrent.CompletableFuture.*;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
+import static org.dataloader.DataLoaderOptions.newDefaultOptions;
 import static org.dataloader.DataLoaderOptions.newOptions;
 import static org.dataloader.fixtures.TestKit.areAllDone;
 import static org.dataloader.fixtures.TestKit.listFrom;
@@ -588,7 +589,7 @@ public class DataLoaderTest {
     @ParameterizedTest
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_NOT_Cache_failed_fetches_if_told_not_too(TestDataLoaderFactory factory) {
-        DataLoaderOptions options = DataLoaderOptions.newOptions().withCachingExceptionsEnabled(false);
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setCachingExceptionsEnabled(false).build();
         List<Collection<Integer>> loadCalls = new ArrayList<>();
         DataLoader<Integer, Object> errorLoader = factory.idLoaderAllExceptions(options, loadCalls);
 
@@ -736,7 +737,7 @@ public class DataLoaderTest {
     public void should_Disable_caching(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader =
-                factory.idLoader(newOptions().withCachingEnabled(false), loadCalls);
+                factory.idLoader(newOptions().setCachingEnabled(false).build(), loadCalls);
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
@@ -774,7 +775,7 @@ public class DataLoaderTest {
     public void should_work_with_duplicate_keys_when_caching_disabled(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader =
-                factory.idLoader(newOptions().withCachingEnabled(false), loadCalls);
+                factory.idLoader(newOptions().setCachingEnabled(false).build(), loadCalls);
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
@@ -797,7 +798,7 @@ public class DataLoaderTest {
     public void should_work_with_duplicate_keys_when_caching_enabled(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader =
-                factory.idLoader(newOptions().withCachingEnabled(true), loadCalls);
+                factory.idLoader(newOptions().setCachingEnabled(true).build(), loadCalls);
 
         CompletableFuture<String> future1 = identityLoader.load("A");
         CompletableFuture<String> future2 = identityLoader.load("B");
@@ -817,7 +818,7 @@ public class DataLoaderTest {
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Accept_objects_with_a_complex_key(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withCacheKeyFunction(getJsonObjectCacheMapFn());
+        DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn()).build();
         DataLoader<JsonObject, JsonObject> identityLoader = factory.idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("id", 123);
@@ -839,7 +840,7 @@ public class DataLoaderTest {
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Clear_objects_with_complex_key(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withCacheKeyFunction(getJsonObjectCacheMapFn());
+        DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn()).build();
         DataLoader<JsonObject, JsonObject> identityLoader = factory.idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("id", 123);
@@ -864,7 +865,7 @@ public class DataLoaderTest {
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Accept_objects_with_different_order_of_keys(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withCacheKeyFunction(getJsonObjectCacheMapFn());
+        DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn()).build();
         DataLoader<JsonObject, JsonObject> identityLoader = factory.idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("a", 123).put("b", 321);
@@ -887,7 +888,7 @@ public class DataLoaderTest {
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Allow_priming_the_cache_with_an_object_key(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         List<Collection<JsonObject>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withCacheKeyFunction(getJsonObjectCacheMapFn());
+        DataLoaderOptions options = newOptions().setCacheKeyFunction(getJsonObjectCacheMapFn()).build();
         DataLoader<JsonObject, JsonObject> identityLoader = factory.idLoader(options, loadCalls);
 
         JsonObject key1 = new JsonObject().put("id", 123);
@@ -910,7 +911,7 @@ public class DataLoaderTest {
     public void should_Accept_a_custom_cache_map_implementation(TestDataLoaderFactory factory) throws ExecutionException, InterruptedException {
         CustomCacheMap customMap = new CustomCacheMap();
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withCacheMap(customMap);
+        DataLoaderOptions options = newOptions().setCacheMap(customMap).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         // Fetches as expected
@@ -961,7 +962,7 @@ public class DataLoaderTest {
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_degrade_gracefully_if_cache_get_throws(TestDataLoaderFactory factory) {
         CacheMap<String, Object> cache = new ThrowingCacheMap();
-        DataLoaderOptions options = newOptions().withCachingEnabled(true).withCacheMap(cache);
+        DataLoaderOptions options = newOptions().setCachingEnabled(true).setCacheMap(cache).build();
         List<Collection<String>> loadCalls = new ArrayList<>();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
@@ -976,7 +977,7 @@ public class DataLoaderTest {
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void batching_disabled_should_dispatch_immediately(TestDataLoaderFactory factory) {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withBatchingEnabled(false);
+        DataLoaderOptions options = newOptions().setBatchingEnabled(false).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fa = identityLoader.load("A");
@@ -1005,7 +1006,7 @@ public class DataLoaderTest {
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void batching_disabled_and_caching_disabled_should_dispatch_immediately_and_forget(TestDataLoaderFactory factory) {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().withBatchingEnabled(false).withCachingEnabled(false);
+        DataLoaderOptions options = newOptions().setBatchingEnabled(false).setCachingEnabled(false).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fa = identityLoader.load("A");
@@ -1037,7 +1038,7 @@ public class DataLoaderTest {
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void batches_multiple_requests_with_max_batch_size(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> identityLoader = factory.idLoader(newOptions().withMaxBatchSize(2), loadCalls);
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(newOptions().setMaxBatchSize(2).build(), loadCalls);
 
         CompletableFuture<Integer> f1 = identityLoader.load(1);
         CompletableFuture<Integer> f2 = identityLoader.load(2);
@@ -1059,7 +1060,7 @@ public class DataLoaderTest {
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void can_split_max_batch_sizes_correctly(TestDataLoaderFactory factory) {
         List<Collection<Integer>> loadCalls = new ArrayList<>();
-        DataLoader<Integer, Integer> identityLoader = factory.idLoader(newOptions().withMaxBatchSize(5), loadCalls);
+        DataLoader<Integer, Integer> identityLoader = factory.idLoader(newOptions().setMaxBatchSize(5).build(), loadCalls);
 
         for (int i = 0; i < 21; i++) {
             identityLoader.load(i);
@@ -1082,7 +1083,7 @@ public class DataLoaderTest {
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void should_Batch_loads_occurring_within_futures(TestDataLoaderFactory factory) {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoader<String, String> identityLoader = factory.idLoader(newOptions(), loadCalls);
+        DataLoader<String, String> identityLoader = factory.idLoader(newDefaultOptions(), loadCalls);
 
         Supplier<Object> nullValue = () -> null;
 

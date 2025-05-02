@@ -205,7 +205,7 @@ for the context object.
 
 ```java
         DataLoaderOptions options = DataLoaderOptions.newOptions()
-                .withBatchLoaderContextProvider(() -> SecurityCtx.getCallingUserCtx());
+            .setBatchLoaderContextProvider(() -> SecurityCtx.getCallingUserCtx()).build();
 
         BatchLoaderWithContext<String, String> batchLoader = new BatchLoaderWithContext<String, String>() {
             @Override
@@ -227,7 +227,7 @@ You can gain access to them as a map by key or as the original list of context o
 
 ```java
         DataLoaderOptions options = DataLoaderOptions.newOptions()
-                .withBatchLoaderContextProvider(() -> SecurityCtx.getCallingUserCtx());
+           .setBatchLoaderContextProvider(() -> SecurityCtx.getCallingUserCtx()).build();
 
         BatchLoaderWithContext<String, String> batchLoader = new BatchLoaderWithContext<String, String>() {
             @Override
@@ -433,7 +433,7 @@ However, you can create your own custom future cache and supply it to the data l
 
 ```java
         MyCustomCache customCache = new MyCustomCache();
-        DataLoaderOptions options = DataLoaderOptions.newOptions().withsetCacheMap(customCache);
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setCacheMap(customCache).build();
         DataLoaderFactory.newDataLoader(userBatchLoader, options);
 ```
 
@@ -467,7 +467,7 @@ The tests have an example based on [Caffeine](https://github.com/ben-manes/caffe
 In certain uncommon cases, a DataLoader which does not cache may be desirable. 
 
 ```java
-    DataLoaderFactory.newDataLoader(userBatchLoader, DataLoaderOptions.newOptions().withCachingEnabled(false));
+    DataLoaderFactory.newDataLoader(userBatchLoader, DataLoaderOptions.newOptions().setCachingEnabled(false).build());
 ``` 
 
 Calling the above will ensure that every call to `.load()` will produce a new promise, and requested keys will not be saved in memory.
@@ -533,7 +533,7 @@ Knowing what the behaviour of your data is important for you to understand how e
 You can configure the statistics collector used when you build the data loader
 
 ```java
-        DataLoaderOptions options = DataLoaderOptions.newOptions().withStatisticsCollector(() -> new ThreadLocalStatisticsCollector());
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setStatisticsCollector(() -> new ThreadLocalStatisticsCollector()).build();
         DataLoader<String,User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader,options);
 
 ```
@@ -780,7 +780,7 @@ You set the `DataLoaderInstrumentation` into the `DataLoaderOptions` at build ti
                 });
             }
         };
-        DataLoaderOptions options = DataLoaderOptions.newOptions().withInstrumentation(timingInstrumentation);
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setInstrumentation(timingInstrumentation).build();
         DataLoader<String, User> userDataLoader = DataLoaderFactory.newDataLoader(userBatchLoader, options);
         
 ```

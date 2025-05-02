@@ -33,7 +33,7 @@ public class DataLoaderStatsTest {
     public void stats_are_collected_by_default() {
         BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
         DataLoader<String, String> loader = newDataLoader(batchLoader,
-                DataLoaderOptions.newOptions().withStatisticsCollector(SimpleStatisticsCollector::new)
+                DataLoaderOptions.newOptions().setStatisticsCollector(SimpleStatisticsCollector::new).build()
         );
 
         loader.load("A");
@@ -75,7 +75,7 @@ public class DataLoaderStatsTest {
         collector.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(1, null));
 
         BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
-        DataLoaderOptions loaderOptions = DataLoaderOptions.newOptions().withStatisticsCollector(() -> collector);
+        DataLoaderOptions loaderOptions = DataLoaderOptions.newOptions().setStatisticsCollector(() -> collector).build();
         DataLoader<String, String> loader = newDataLoader(batchLoader, loaderOptions);
 
         loader.load("A");
@@ -113,7 +113,7 @@ public class DataLoaderStatsTest {
         StatisticsCollector collector = new SimpleStatisticsCollector();
 
         BatchLoader<String, String> batchLoader = CompletableFuture::completedFuture;
-        DataLoaderOptions loaderOptions = DataLoaderOptions.newOptions().withStatisticsCollector(() -> collector).withCachingEnabled(false);
+        DataLoaderOptions loaderOptions = DataLoaderOptions.newOptions().setStatisticsCollector(() -> collector).setCachingEnabled(false).build();
         DataLoader<String, String> loader = newDataLoader(batchLoader, loaderOptions);
 
         loader.load("A");
@@ -166,7 +166,7 @@ public class DataLoaderStatsTest {
     @Test
     public void stats_are_collected_on_exceptions() {
         DataLoader<String, String> loader = DataLoaderFactory.newDataLoaderWithTry(batchLoaderThatBlows,
-                DataLoaderOptions.newOptions().withStatisticsCollector(SimpleStatisticsCollector::new)
+                DataLoaderOptions.newOptions().setStatisticsCollector(SimpleStatisticsCollector::new).build()
         );
 
         loader.load("A");
@@ -290,7 +290,7 @@ public class DataLoaderStatsTest {
     public void context_is_passed_through_to_collector() {
         ContextPassingStatisticsCollector statisticsCollector = new ContextPassingStatisticsCollector();
         DataLoader<String, Try<String>> loader = newDataLoader(batchLoaderThatBlows,
-                DataLoaderOptions.newOptions().withStatisticsCollector(() -> statisticsCollector)
+                DataLoaderOptions.newOptions().setStatisticsCollector(() -> statisticsCollector).build()
         );
 
         loader.load("key", "keyContext");
