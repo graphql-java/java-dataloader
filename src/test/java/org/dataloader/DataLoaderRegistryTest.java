@@ -1,9 +1,12 @@
 package org.dataloader;
 
+import org.dataloader.impl.DataLoaderAssertionException;
 import org.dataloader.stats.SimpleStatisticsCollector;
 import org.dataloader.stats.Statistics;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static java.util.Arrays.asList;
@@ -21,6 +24,7 @@ public class DataLoaderRegistryTest {
         DataLoader<Object, Object> dlA = newDataLoader("a", identityBatchLoader);
         DataLoader<Object, Object> dlB = newDataLoader("b", identityBatchLoader);
         DataLoader<Object, Object> dlC = newDataLoader("c", identityBatchLoader);
+        DataLoader<Object, Object> dlUnnamed = newDataLoader(identityBatchLoader);
 
         DataLoaderRegistry registry = new DataLoaderRegistry();
 
@@ -40,7 +44,7 @@ public class DataLoaderRegistryTest {
 
         // and unregister (fluently)
         DataLoaderRegistry dlR = registry.unregister("c");
-        assertThat(dlR,equalTo(registry));
+        assertThat(dlR, equalTo(registry));
 
         assertThat(registry.getDataLoaders(), equalTo(asList(dlA, dlB)));
 
@@ -49,12 +53,24 @@ public class DataLoaderRegistryTest {
         assertThat(readDL, sameInstance(dlA));
 
         assertThat(registry.getKeys(), hasItems("a", "b"));
+
+
+        // named registry
+        registry = new DataLoaderRegistry();
+        registry.register(dlA);
+        assertThat(registry.getDataLoaders(), equalTo(List.of(dlA)));
+
+        try {
+            registry.register(dlUnnamed);
+            Assertions.fail("Should have thrown an exception");
+        } catch (DataLoaderAssertionException ignored) {
+        }
     }
 
     @Test
     public void registries_can_be_combined() {
 
-        DataLoader<Object, Object> dlA = newDataLoader("a",identityBatchLoader);
+        DataLoader<Object, Object> dlA = newDataLoader("a", identityBatchLoader);
         DataLoader<Object, Object> dlB = newDataLoader("b", identityBatchLoader);
         DataLoader<Object, Object> dlC = newDataLoader("c", identityBatchLoader);
         DataLoader<Object, Object> dlD = newDataLoader("d", identityBatchLoader);
@@ -120,7 +136,7 @@ public class DataLoaderRegistryTest {
 
         DataLoaderRegistry registry = new DataLoaderRegistry();
 
-        DataLoader<Object, Object> dlA = newDataLoader("a",identityBatchLoader);
+        DataLoader<Object, Object> dlA = newDataLoader("a", identityBatchLoader);
         DataLoader<Object, Object> registered = registry.computeIfAbsent("a", (key) -> dlA);
 
         assertThat(registered, equalTo(dlA));
@@ -133,7 +149,7 @@ public class DataLoaderRegistryTest {
 
         DataLoaderRegistry registry = new DataLoaderRegistry();
 
-        DataLoader<Object, Object> dlA = newDataLoader("a",identityBatchLoader);
+        DataLoader<Object, Object> dlA = newDataLoader("a", identityBatchLoader);
         registry.computeIfAbsent("a", (key) -> dlA);
 
         // register again at same key

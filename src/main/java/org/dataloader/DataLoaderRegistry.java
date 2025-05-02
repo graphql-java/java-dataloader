@@ -130,7 +130,29 @@ public class DataLoaderRegistry {
     }
 
     /**
-     * This will register a new dataloader
+     * This will register a new named dataloader.  The {@link DataLoader} must be named something and
+     * cannot have a null name.
+     * <p>
+     * Note: Registration can change the data loader instance since it might get an {@link DataLoaderInstrumentation} applied to
+     * it.  So the {@link DataLoader} instance your read via {@link DataLoaderRegistry#getDataLoader(String)} might not be the same
+     * object that was registered.
+     *
+     * @param dataLoader the named data loader to register
+     * @return this registry
+     */
+    public DataLoaderRegistry register(DataLoader<?, ?> dataLoader) {
+        String name = dataLoader.getName();
+        assertState(name != null, () -> "The DataLoader must have a non null name");
+        dataLoaders.put(name, nameAndInstrumentDL(name, instrumentation, dataLoader));
+        return this;
+    }
+
+    /**
+     * This will register a new {@link DataLoader}
+     * <p>
+     * Note: Registration can change the data loader instance since it might get an {@link DataLoaderInstrumentation} applied to
+     * it.  So the {@link DataLoader} instance your read via {@link DataLoaderRegistry#getDataLoader(String)} might not be the same
+     * object that was registered.
      *
      * @param key        the key to put the data loader under
      * @param dataLoader the data loader to register
@@ -142,8 +164,11 @@ public class DataLoaderRegistry {
     }
 
     /**
-     * This will register a new dataloader and then return it.  It might have been wrapped into a new instance
-     * because of the registry instrumentation for example.
+     * This will register a new {@link DataLoader} and then return it.
+     * <p>
+     * Note: Registration can change the data loader instance since it might get an {@link DataLoaderInstrumentation} applied to
+     * it.  So the {@link DataLoader} instance your read via {@link DataLoaderRegistry#getDataLoader(String)} might not be the same
+     * object that was registered.
      *
      * @param key        the key to put the data loader under
      * @param dataLoader the data loader to register
@@ -160,6 +185,10 @@ public class DataLoaderRegistry {
      * <p>
      * Note: The entire method invocation is performed atomically,
      * so the function is applied at most once per key.
+     * <p>
+     * Note: Registration can change the data loader instance since it might get an {@link DataLoaderInstrumentation} applied to
+     * it.  So the {@link DataLoader} instance your read via {@link DataLoaderRegistry#getDataLoader(String)} might not be the same
+     * object that was registered.
      *
      * @param key             the key of the data loader
      * @param mappingFunction the function to compute a data loader
