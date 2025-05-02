@@ -542,7 +542,7 @@ public class DataLoaderFactory {
      */
     public static class Builder<K, V> {
         Object batchLoadFunction;
-        DataLoaderOptions options = DataLoaderOptions.newOptions();
+        DataLoaderOptions options = DataLoaderOptions.newDefaultOptions();
 
         Builder() {
         }

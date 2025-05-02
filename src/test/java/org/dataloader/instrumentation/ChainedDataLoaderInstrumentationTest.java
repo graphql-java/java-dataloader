@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static org.awaitility.Awaitility.await;
-import static org.dataloader.DataLoaderOptions.newOptionsBuilder;
+import static org.dataloader.DataLoaderOptions.newOptions;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -37,7 +37,7 @@ public class ChainedDataLoaderInstrumentationTest {
         // just to prove its useless but harmless
         ChainedDataLoaderInstrumentation chainedItn = new ChainedDataLoaderInstrumentation();
 
-        DataLoaderOptions options = newOptionsBuilder().setInstrumentation(chainedItn).build();
+        DataLoaderOptions options = newOptions().setInstrumentation(chainedItn).build();
 
         DataLoader<String, String> dl = DataLoaderFactory.newDataLoader(TestKit.keysAsValues(), options);
 
@@ -57,7 +57,7 @@ public class ChainedDataLoaderInstrumentationTest {
         ChainedDataLoaderInstrumentation chainedItn = new ChainedDataLoaderInstrumentation()
                 .add(capturingA);
 
-        DataLoaderOptions options = newOptionsBuilder().setInstrumentation(chainedItn).build();
+        DataLoaderOptions options = newOptions().setInstrumentation(chainedItn).build();
 
         DataLoader<String, String> dl = DataLoaderFactory.newDataLoader(TestKit.keysAsValues(), options);
 
@@ -88,7 +88,7 @@ public class ChainedDataLoaderInstrumentationTest {
                 .add(capturingB)
                 .add(capturingButReturnsNull);
 
-        DataLoaderOptions options = newOptionsBuilder().setInstrumentation(chainedItn).build();
+        DataLoaderOptions options = newOptions().setInstrumentation(chainedItn).build();
 
         DataLoader<String, String> dl = factory.idLoader(options);
 

@@ -12,8 +12,8 @@ public class DataLoaderBuilderTest {
 
     BatchLoader<String, Object> batchLoader2 = keys -> null;
 
-    DataLoaderOptions defaultOptions = DataLoaderOptions.newOptions();
-    DataLoaderOptions differentOptions = DataLoaderOptions.newOptions().setCachingEnabled(false);
+    DataLoaderOptions defaultOptions = DataLoaderOptions.newOptions().build();
+    DataLoaderOptions differentOptions = DataLoaderOptions.newOptions().setCachingEnabled(false).build();
 
     @Test
     void canBuildNewDataLoaders() {
