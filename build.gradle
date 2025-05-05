@@ -63,6 +63,9 @@ jar {
                 '-exportcontents': 'org.dataloader.*',
                 '-removeheaders': 'Private-Package')
     }
+    bnd('''
+Import-Package: org.jspecify.annotations;resolution:=optional,*
+''')
 }
 
 dependencies {
