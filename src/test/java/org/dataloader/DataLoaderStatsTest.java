@@ -221,63 +221,55 @@ public class DataLoaderStatsTest {
         public List<IncrementCacheHitCountStatisticsContext<?>> incrementCacheHitCountStatisticsContexts = new ArrayList<>();
 
         @Override
-        public <K> long incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
+        public <K> void incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
             incrementLoadCountStatisticsContexts.add(context);
-            return 0;
         }
 
         @Deprecated
         @Override
-        public long incrementLoadCount() {
-            return 0;
+        public void incrementLoadCount() {
+
         }
 
         @Override
-        public <K> long incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
+        public <K> void incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
             incrementLoadErrorCountStatisticsContexts.add(context);
-            return 0;
         }
 
         @Deprecated
         @Override
-        public long incrementLoadErrorCount() {
-            return 0;
+        public void incrementLoadErrorCount() {
+
         }
 
         @Override
-        public <K> long incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
+        public <K> void incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
             incrementBatchLoadCountByStatisticsContexts.add(context);
-            return 0;
         }
 
         @Deprecated
         @Override
-        public long incrementBatchLoadCountBy(long delta) {
-            return 0;
+        public void incrementBatchLoadCountBy(long delta) {
         }
 
         @Override
-        public <K> long incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
+        public <K> void incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
             incrementBatchLoadExceptionCountStatisticsContexts.add(context);
-            return 0;
         }
 
         @Deprecated
         @Override
-        public long incrementBatchLoadExceptionCount() {
-            return 0;
+        public void incrementBatchLoadExceptionCount() {
         }
 
         @Override
-        public <K> long incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
+        public <K> void incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
             incrementCacheHitCountStatisticsContexts.add(context);
-            return 0;
         }
 
         @Deprecated
         @Override
-        public long incrementCacheHitCount() {
-            return 0;
+        public void incrementCacheHitCount() {
         }
 
         @Override
