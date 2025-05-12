@@ -14,7 +14,7 @@ class DataLoaderFactoryTest {
     @Test
     void can_create_via_builder() {
         BatchLoaderWithContext<String, String> loader = (keys, environment) -> CompletableFuture.completedFuture(keys);
-        DataLoaderOptions options = DataLoaderOptions.newOptionsBuilder().setBatchingEnabled(true).build();
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setBatchingEnabled(true).build();
 
         DataLoader<String, String> dl = DataLoaderFactory.<String, String>builder()
                 .name("x").batchLoader(loader).options(options).build();

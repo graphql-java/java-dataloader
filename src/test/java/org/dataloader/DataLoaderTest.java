@@ -101,7 +101,7 @@ public class DataLoaderTest {
     @Test
     public void should_Build_a_named_data_loader() {
         BatchLoader<Integer, Integer> loadFunction = CompletableFuture::completedFuture;
-        DataLoader<Integer, Integer> dl = newDataLoader("name", loadFunction, DataLoaderOptions.newOptions());
+        DataLoader<Integer, Integer> dl = newDataLoader("name", loadFunction, DataLoaderOptions.newDefaultOptions());
 
         assertNotNull(dl.getName());
         assertThat(dl.getName(), equalTo("name"));
