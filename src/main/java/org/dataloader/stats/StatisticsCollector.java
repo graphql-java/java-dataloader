@@ -18,21 +18,18 @@ public interface StatisticsCollector {
      *
      * @param <K> the class of the key in the data loader
      * @param context the context containing metadata of the data loader invocation
-     *
-     * @return the current value after increment
      */
-    default <K> long incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
-        return incrementLoadCount();
+    default <K> void incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
+        incrementLoadCount();
     }
 
     /**
      * Called to increment the number of loads
      *
      * @deprecated use {@link #incrementLoadCount(IncrementLoadCountStatisticsContext)}
-     * @return the current value after increment
      */
     @Deprecated
-    long incrementLoadCount();
+    void incrementLoadCount();
 
     /**
      * Called to increment the number of loads that resulted in an object deemed in error
@@ -40,20 +37,18 @@ public interface StatisticsCollector {
      * @param <K> the class of the key in the data loader
      * @param context the context containing metadata of the data loader invocation
      *
-     * @return the current value after increment
      */
-    default <K> long incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
-        return incrementLoadErrorCount();
+    default <K> void incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
+        incrementLoadErrorCount();
     }
 
     /**
      * Called to increment the number of loads that resulted in an object deemed in error
      *
      * @deprecated use {@link #incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext)}
-     * @return the current value after increment
      */
     @Deprecated
-    long incrementLoadErrorCount();
+    void incrementLoadErrorCount();
 
     /**
      * Called to increment the number of batch loads
@@ -61,11 +56,9 @@ public interface StatisticsCollector {
      * @param <K> the class of the key in the data loader
      * @param delta how much to add to the count
      * @param context the context containing metadata of the data loader invocation
-     *
-     * @return the current value after increment
      */
-    default <K> long incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
-        return incrementBatchLoadCountBy(delta);
+    default <K> void  incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
+        incrementBatchLoadCountBy(delta);
     }
 
     /**
@@ -74,52 +67,45 @@ public interface StatisticsCollector {
      * @param delta how much to add to the count
      *
      * @deprecated use {@link #incrementBatchLoadCountBy(long, IncrementBatchLoadCountByStatisticsContext)}
-     * @return the current value after increment
      */
     @Deprecated
-    long incrementBatchLoadCountBy(long delta);
+    void incrementBatchLoadCountBy(long delta);
 
     /**
      * Called to increment the number of batch loads exceptions
      *
      * @param <K> the class of the key in the data loader
      * @param context the context containing metadata of the data loader invocation
-     *
-     * @return the current value after increment
      */
-    default <K> long incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
-        return incrementBatchLoadExceptionCount();
+    default <K> void incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
+        incrementBatchLoadExceptionCount();
     }
 
     /**
      * Called to increment the number of batch loads exceptions
      *
      * @deprecated use {@link #incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext)}
-     * @return the current value after increment
      */
     @Deprecated
-    long incrementBatchLoadExceptionCount();
+    void incrementBatchLoadExceptionCount();
 
     /**
      * Called to increment the number of cache hits
      *
      * @param <K> the class of the key in the data loader
      * @param context the context containing metadata of the data loader invocation
-     *
-     * @return the current value after increment
      */
-    default <K> long incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
-        return incrementCacheHitCount();
+    default <K> void incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
+        incrementCacheHitCount();
     }
 
     /**
      * Called to increment the number of cache hits
      *
      * @deprecated use {@link #incrementCacheHitCount(IncrementCacheHitCountStatisticsContext)}
-     * @return the current value after increment
      */
     @Deprecated
-    long incrementCacheHitCount();
+    void incrementCacheHitCount();
 
     /**
      * @return the statistics that have been gathered to this point in time

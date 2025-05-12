@@ -35,63 +35,63 @@ public class ThreadLocalStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> long incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
+    public <K> void incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
         overallCollector.incrementLoadCount(context);
-        return collector.get().incrementLoadCount(context);
+        collector.get().incrementLoadCount(context);
     }
 
     @Deprecated
     @Override
-    public long incrementLoadCount() {
-        return incrementLoadCount(null);
+    public void incrementLoadCount() {
+        incrementLoadCount(null);
     }
 
     @Override
-    public <K> long incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
+    public <K> void incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
         overallCollector.incrementLoadErrorCount(context);
-        return collector.get().incrementLoadErrorCount(context);
+        collector.get().incrementLoadErrorCount(context);
     }
 
     @Deprecated
     @Override
-    public long incrementLoadErrorCount() {
-        return incrementLoadErrorCount(null);
+    public void incrementLoadErrorCount() {
+        incrementLoadErrorCount(null);
     }
 
     @Override
-    public <K> long incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
+    public <K> void incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
         overallCollector.incrementBatchLoadCountBy(delta, context);
-        return collector.get().incrementBatchLoadCountBy(delta, context);
+        collector.get().incrementBatchLoadCountBy(delta, context);
     }
 
     @Deprecated
     @Override
-    public long incrementBatchLoadCountBy(long delta) {
-        return incrementBatchLoadCountBy(delta, null);
+    public void incrementBatchLoadCountBy(long delta) {
+        incrementBatchLoadCountBy(delta, null);
     }
 
     @Override
-    public <K> long incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
+    public <K> void incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
         overallCollector.incrementBatchLoadExceptionCount(context);
-        return collector.get().incrementBatchLoadExceptionCount(context);
+        collector.get().incrementBatchLoadExceptionCount(context);
     }
 
     @Deprecated
     @Override
-    public long incrementBatchLoadExceptionCount() {
-        return incrementBatchLoadExceptionCount(null);
+    public void incrementBatchLoadExceptionCount() {
+        incrementBatchLoadExceptionCount(null);
     }
 
     @Override
-    public <K> long incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
+    public <K> void incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
         overallCollector.incrementCacheHitCount(context);
-        return collector.get().incrementCacheHitCount(context);
+        collector.get().incrementCacheHitCount(context);
     }
 
     @Deprecated
     @Override
-    public long incrementCacheHitCount() {
-        return incrementCacheHitCount(null);
+    public void incrementCacheHitCount() {
+        incrementCacheHitCount(null);
     }
 
     /**

@@ -6,7 +6,7 @@ import org.dataloader.stats.context.IncrementCacheHitCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * This simple collector uses {@link java.util.concurrent.atomic.AtomicLong}s to collect
@@ -15,72 +15,73 @@ import java.util.concurrent.atomic.AtomicLong;
  * @see org.dataloader.stats.StatisticsCollector
  */
 public class SimpleStatisticsCollector implements StatisticsCollector {
-    private final AtomicLong loadCount = new AtomicLong();
-    private final AtomicLong batchInvokeCount = new AtomicLong();
-    private final AtomicLong batchLoadCount = new AtomicLong();
-    private final AtomicLong cacheHitCount = new AtomicLong();
-    private final AtomicLong batchLoadExceptionCount = new AtomicLong();
-    private final AtomicLong loadErrorCount = new AtomicLong();
+
+    private final LongAdder loadCount = new LongAdder();
+    private final LongAdder batchInvokeCount = new LongAdder();
+    private final LongAdder batchLoadCount = new LongAdder();
+    private final LongAdder cacheHitCount = new LongAdder();
+    private final LongAdder batchLoadExceptionCount = new LongAdder();
+    private final LongAdder loadErrorCount = new LongAdder();
 
     @Override
-    public <K> long incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
-        return loadCount.incrementAndGet();
+    public <K> void incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
+        loadCount.increment();
     }
 
     @Deprecated
     @Override
-    public long incrementLoadCount() {
-        return incrementLoadCount(null);
+    public void incrementLoadCount() {
+        incrementLoadCount(null);
     }
 
     @Override
-    public <K> long incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
-        return loadErrorCount.incrementAndGet();
-    }
-
-    @Deprecated
-    @Override
-    public long incrementLoadErrorCount() {
-        return incrementLoadErrorCount(null);
-    }
-
-    @Override
-    public <K> long incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
-        batchInvokeCount.incrementAndGet();
-        return batchLoadCount.addAndGet(delta);
+    public <K> void incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
+        loadErrorCount.increment();
     }
 
     @Deprecated
     @Override
-    public long incrementBatchLoadCountBy(long delta) {
-        return incrementBatchLoadCountBy(delta, null);
+    public void incrementLoadErrorCount() {
+        incrementLoadErrorCount(null);
     }
 
     @Override
-    public <K> long incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
-        return batchLoadExceptionCount.incrementAndGet();
-    }
-
-    @Deprecated
-    @Override
-    public long incrementBatchLoadExceptionCount() {
-        return incrementBatchLoadExceptionCount(null);
-    }
-
-    @Override
-    public <K> long incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
-        return cacheHitCount.incrementAndGet();
+    public <K> void incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
+        batchInvokeCount.increment();
+        batchLoadCount.add(delta);
     }
 
     @Deprecated
     @Override
-    public long incrementCacheHitCount() {
-        return incrementCacheHitCount(null);
+    public void incrementBatchLoadCountBy(long delta) {
+        incrementBatchLoadCountBy(delta, null);
+    }
+
+    @Override
+    public <K> void incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
+        batchLoadExceptionCount.increment();
+    }
+
+    @Deprecated
+    @Override
+    public void incrementBatchLoadExceptionCount() {
+         incrementBatchLoadExceptionCount(null);
+    }
+
+    @Override
+    public <K> void incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
+        cacheHitCount.increment();
+    }
+
+    @Deprecated
+    @Override
+    public void incrementCacheHitCount() {
+        incrementCacheHitCount(null);
     }
 
     @Override
     public Statistics getStatistics() {
-        return new Statistics(loadCount.get(), loadErrorCount.get(), batchInvokeCount.get(), batchLoadCount.get(), batchLoadExceptionCount.get(), cacheHitCount.get());
+        return new Statistics(loadCount.sum(), loadErrorCount.sum(), batchInvokeCount.sum(), batchLoadCount.sum(), batchLoadExceptionCount.sum(), cacheHitCount.sum());
     }
 
     @Override
