@@ -29,8 +29,8 @@ import java.util.function.Consumer;
  *       CompletableFuture<String> cf = super.load(key, keyContext);
  *       return cf.thenApply(v -> "|" + v + "|");
  *    }
- *};
- *}</pre>
+ * };
+ * }</pre>
  *
  * @param <K> type parameter indicating the type of the data load keys
  * @param <V> type parameter indicating the type of the data that is returned
@@ -58,7 +58,7 @@ public class DelegatingDataLoader<K, V> extends DataLoader<K, V> {
     }
 
     public DelegatingDataLoader(DataLoader<K, V> delegate) {
-        super(delegate.getBatchLoadFunction(), delegate.getOptions());
+        super(delegate.getName(), delegate.getBatchLoadFunction(), delegate.getOptions());
         this.delegate = delegate;
     }
 

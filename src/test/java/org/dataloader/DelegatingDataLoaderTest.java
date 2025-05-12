@@ -4,6 +4,7 @@ import org.dataloader.fixtures.TestKit;
 import org.dataloader.fixtures.parameterized.DelegatingDataLoaderFactory;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -13,6 +14,7 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * There are WAY more tests via the {@link DelegatingDataLoaderFactory}
@@ -60,5 +62,19 @@ public class DelegatingDataLoaderTest {
 
         assertThat(delegatingDataLoader.getIfCompleted("A").isEmpty(), equalTo(false));
         assertThat(delegatingDataLoader.getIfCompleted("X").isEmpty(), equalTo(true));
+    }
+
+    @Test
+    void can_delegate_simple_properties() {
+        DataLoaderOptions options = DataLoaderOptions.newOptions();
+        BatchLoader<String, String> loadFunction = CompletableFuture::completedFuture;
+
+        DataLoader<String, String> rawLoader = DataLoaderFactory.newDataLoader("name", loadFunction, options);
+        DelegatingDataLoader<String, String> delegate = new DelegatingDataLoader<>(rawLoader);
+
+        assertNotNull(delegate.getName());
+        assertThat(delegate.getName(),equalTo("name"));
+        assertThat(delegate.getOptions(),equalTo(options));
+        assertThat(delegate.getBatchLoadFunction(),equalTo(loadFunction));
     }
 }

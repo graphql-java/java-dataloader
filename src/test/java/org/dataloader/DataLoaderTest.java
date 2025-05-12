@@ -33,7 +33,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
@@ -43,8 +49,12 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
-import static java.util.Collections.*;
-import static java.util.concurrent.CompletableFuture.*;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonList;
+import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.dataloader.DataLoaderOptions.newDefaultOptions;
@@ -53,8 +63,13 @@ import static org.dataloader.fixtures.TestKit.areAllDone;
 import static org.dataloader.fixtures.TestKit.listFrom;
 import static org.dataloader.impl.CompletableFutureKit.cause;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.anEmptyMap;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Tests for {@link DataLoader}.
@@ -81,6 +96,20 @@ public class DataLoaderTest {
         });
         identityLoader.dispatch();
         await().untilAtomic(success, is(true));
+    }
+
+    @Test
+    public void should_Build_a_named_data_loader() {
+        BatchLoader<Integer, Integer> loadFunction = CompletableFuture::completedFuture;
+        DataLoader<Integer, Integer> dl = newDataLoader("name", loadFunction, DataLoaderOptions.newOptions());
+
+        assertNotNull(dl.getName());
+        assertThat(dl.getName(), equalTo("name"));
+
+        DataLoader<Integer, Integer> dl2 = DataLoaderFactory.<Integer, Integer>builder().name("name2").batchLoader(loadFunction).build();
+
+        assertNotNull(dl2.getName());
+        assertThat(dl2.getName(), equalTo("name2"));
     }
 
     @Test
