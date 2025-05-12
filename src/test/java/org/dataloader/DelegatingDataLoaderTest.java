@@ -66,7 +66,7 @@ public class DelegatingDataLoaderTest {
 
     @Test
     void can_delegate_simple_properties() {
-        DataLoaderOptions options = DataLoaderOptions.newOptions();
+        DataLoaderOptions options = DataLoaderOptions.newOptions().build();
         BatchLoader<String, String> loadFunction = CompletableFuture::completedFuture;
 
         DataLoader<String, String> rawLoader = DataLoaderFactory.newDataLoader("name", loadFunction, options);

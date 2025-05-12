@@ -806,7 +806,7 @@ public class DataLoaderFactory {
     public static class Builder<K, V> {
         String name;
         Object batchLoadFunction;
-        DataLoaderOptions options = DataLoaderOptions.newOptions();
+        DataLoaderOptions options = DataLoaderOptions.newDefaultOptions();
 
         Builder() {
         }

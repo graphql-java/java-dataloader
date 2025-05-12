@@ -120,9 +120,9 @@ public class DataLoaderRegistryInstrumentationTest {
 
     @Test
     void wontDoAnyThingIfThereTheyAreTheSameInstrumentationAlready() {
-        DataLoader<String, String> newX = dlX.transform(builder -> builder.options(dlX.getOptions().setInstrumentation(instrA)));
-        DataLoader<String, String> newY = dlY.transform(builder ->  builder.options(dlY.getOptions().setInstrumentation(instrA)));
-        DataLoader<String, String> newZ = dlZ.transform(builder ->  builder.options(dlZ.getOptions().setInstrumentation(instrA)));
+        DataLoader<String, String> newX = dlX.transform(builder -> builder.options(dlX.getOptions().transform(b-> b.setInstrumentation(instrA))));
+        DataLoader<String, String> newY = dlY.transform(builder ->  builder.options(dlY.getOptions().transform(b-> b.setInstrumentation(instrA))));
+        DataLoader<String, String> newZ = dlZ.transform(builder ->  builder.options(dlZ.getOptions().transform(b-> b.setInstrumentation(instrA))));
         DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
                 .instrumentation(instrA)
                 .register("X", newX)
@@ -145,7 +145,7 @@ public class DataLoaderRegistryInstrumentationTest {
 
     @Test
     void ifTheDLHasAInstrumentationThenItsTurnedIntoAChainedOne() {
-        DataLoaderOptions options = dlX.getOptions().setInstrumentation(instrA);
+        DataLoaderOptions options = dlX.getOptions().transform(b -> b.setInstrumentation(instrA));
         DataLoader<String, String> newX = dlX.transform(builder -> builder.options(options));
 
         DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
@@ -164,7 +164,7 @@ public class DataLoaderRegistryInstrumentationTest {
 
     @Test
     void chainedInstrumentationsWillBeCombined() {
-        DataLoaderOptions options = dlX.getOptions().setInstrumentation(chainedInstrB);
+        DataLoaderOptions options = dlX.getOptions().transform(b -> b.setInstrumentation(chainedInstrB));
         DataLoader<String, String> newX = dlX.transform(builder -> builder.options(options));
 
         DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
