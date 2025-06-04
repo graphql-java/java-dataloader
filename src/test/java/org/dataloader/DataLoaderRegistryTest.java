@@ -1,6 +1,5 @@
 package org.dataloader;
 
-import org.dataloader.impl.DataLoaderAssertionException;
 import org.dataloader.stats.SimpleStatisticsCollector;
 import org.dataloader.stats.Statistics;
 import org.junit.jupiter.api.Assertions;

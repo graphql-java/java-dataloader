@@ -143,8 +143,7 @@ public class DataLoaderRegistry {
      * @return this registry
      */
     public DataLoaderRegistry register(DataLoader<?, ?> dataLoader) {
-        String name = dataLoader.getName();
-        Objects.requireNonNull(name, "The DataLoader must have a non null name");
+        String name = Assertions.nonNull(dataLoader.getName(), () -> "The DataLoader must have a non null name");
         dataLoaders.put(name, nameAndInstrumentDL(name, instrumentation, dataLoader));
         return this;
     }
