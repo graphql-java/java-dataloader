@@ -1,3 +1,6 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
+import net.ltgt.gradle.errorprone.CheckSeverity
 import java.text.SimpleDateFormat
 
 plugins {
@@ -12,11 +15,27 @@ plugins {
     id 'com.github.ben-manes.versions' version '0.51.0'
     id "me.champeau.jmh" version "0.7.3"
     id "net.ltgt.errorprone" version '4.2.0'
+
+    // Kotlin just for tests - not
+    id 'org.jetbrains.kotlin.jvm' version '2.1.21'
 }
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+kotlin {
+    compilerOptions {
+        apiVersion = KotlinVersion.KOTLIN_2_0
+        languageVersion = KotlinVersion.KOTLIN_2_0
+        jvmTarget = JvmTarget.JVM_11
+        javaParameters = true
+        freeCompilerArgs = [
+                '-Xemit-jvm-type-annotations',
+                '-Xjspecify-annotations=strict',
+        ]
     }
 }
 
@@ -79,9 +98,10 @@ dependencies {
 
     errorprone 'com.uber.nullaway:nullaway:0.12.6'
     errorprone 'com.google.errorprone:error_prone_core:2.37.0'
-}
 
-import net.ltgt.gradle.errorprone.CheckSeverity
+    // just tests
+    testCompileOnly 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+}
 
 tasks.withType(JavaCompile) {
     options.release = 11
