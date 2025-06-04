@@ -1,6 +1,7 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
+import org.dataloader.impl.Assertions;
 import org.dataloader.instrumentation.ChainedDataLoaderInstrumentation;
 import org.dataloader.instrumentation.DataLoaderInstrumentation;
 import org.dataloader.instrumentation.DataLoaderInstrumentationHelper;
@@ -14,6 +15,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -142,7 +144,7 @@ public class DataLoaderRegistry {
      */
     public DataLoaderRegistry register(DataLoader<?, ?> dataLoader) {
         String name = dataLoader.getName();
-        assertState(name != null, () -> "The DataLoader must have a non null name");
+        Objects.requireNonNull(name, "The DataLoader must have a non null name");
         dataLoaders.put(name, nameAndInstrumentDL(name, instrumentation, dataLoader));
         return this;
     }
@@ -176,7 +178,7 @@ public class DataLoaderRegistry {
      */
     public <K, V> DataLoader<K, V> registerAndGet(String key, DataLoader<?, ?> dataLoader) {
         dataLoaders.put(key, nameAndInstrumentDL(key, instrumentation, dataLoader));
-        return getDataLoader(key);
+        return Objects.requireNonNull(getDataLoader(key));
     }
 
     /**
@@ -251,10 +253,10 @@ public class DataLoaderRegistry {
      * @param key the key of the data loader
      * @param <K> the type of keys
      * @param <V> the type of values
-     * @return a data loader or null if its not present
+     * @return a data loader or null if it's not present
      */
     @SuppressWarnings("unchecked")
-    public <K, V> DataLoader<K, V> getDataLoader(String key) {
+    public <K, V> @Nullable DataLoader<K, V> getDataLoader(String key) {
         return (DataLoader<K, V>) dataLoaders.get(key);
     }
 

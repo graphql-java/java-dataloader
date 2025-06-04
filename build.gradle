@@ -11,11 +11,12 @@ plugins {
     id 'io.github.gradle-nexus.publish-plugin' version '1.0.0'
     id 'com.github.ben-manes.versions' version '0.51.0'
     id "me.champeau.jmh" version "0.7.3"
+    id "net.ltgt.errorprone" version '4.2.0'
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(11)
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }
 
@@ -75,7 +76,33 @@ dependencies {
     // this is needed for the idea jmh plugin to work correctly
     jmh 'org.openjdk.jmh:jmh-core:1.37'
     jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
+
+    errorprone 'com.uber.nullaway:nullaway:0.12.6'
+    errorprone 'com.google.errorprone:error_prone_core:2.37.0'
 }
+
+import net.ltgt.gradle.errorprone.CheckSeverity
+
+tasks.withType(JavaCompile) {
+    options.release = 11
+    options.errorprone {
+        disableAllChecks = true
+        check("NullAway", CheckSeverity.ERROR)
+        //
+        // end state has us with this config turned on - eg all classes
+        //
+        //option("NullAway:AnnotatedPackages", "org.dataloader")
+        option("NullAway:OnlyNullMarked", "true")
+        option("NullAway:JSpecifyMode", "true")
+    }
+    // Include to disable NullAway on test code
+    if (name.toLowerCase().contains("test")) {
+        options.errorprone {
+            disable("NullAway")
+        }
+    }
+}
+
 
 task sourcesJar(type: Jar) {
     dependsOn classes

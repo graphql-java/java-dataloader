@@ -63,7 +63,7 @@ public class DataLoaderRegistryTest {
         try {
             registry.register(dlUnnamed);
             Assertions.fail("Should have thrown an exception");
-        } catch (DataLoaderAssertionException ignored) {
+        } catch (NullPointerException ignored) {
         }
     }
 
