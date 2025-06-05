@@ -19,11 +19,11 @@ import java.util.Map;
 @NullMarked
 public class BatchLoaderEnvironment {
 
-    private final Object context;
+    private final @Nullable Object context;
     private final Map<Object, Object> keyContexts;
     private final List<Object> keyContextsList;
 
-    private BatchLoaderEnvironment(Object context, List<Object> keyContextsList, Map<Object, Object> keyContexts) {
+    private BatchLoaderEnvironment(@Nullable Object context, List<Object> keyContextsList, Map<Object, Object> keyContexts) {
         this.context = context;
         this.keyContexts = keyContexts;
         this.keyContextsList = keyContextsList;
@@ -33,7 +33,6 @@ public class BatchLoaderEnvironment {
      * Returns the overall context object provided by {@link org.dataloader.BatchLoaderContextProvider}
      *
      * @param <T> the type you would like the object to be
-     *
      * @return a context object or null if there isn't one
      */
     @SuppressWarnings("unchecked")
@@ -68,7 +67,7 @@ public class BatchLoaderEnvironment {
     }
 
     public static class Builder {
-        private Object context;
+        private @Nullable Object context;
         private Map<Object, Object> keyContexts = Collections.emptyMap();
         private List<Object> keyContextsList = Collections.emptyList();
 

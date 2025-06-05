@@ -68,7 +68,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  */
 @PublicApi
 @NullMarked
-public class DataLoader<K, V> {
+public class DataLoader<K, V extends @Nullable Object> {
 
     private final @Nullable String name;
     private final DataLoaderHelper<K, V> helper;

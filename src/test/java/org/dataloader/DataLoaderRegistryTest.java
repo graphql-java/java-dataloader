@@ -1,6 +1,5 @@
 package org.dataloader;
 
-import org.dataloader.impl.DataLoaderAssertionException;
 import org.dataloader.stats.SimpleStatisticsCollector;
 import org.dataloader.stats.Statistics;
 import org.junit.jupiter.api.Assertions;
@@ -63,7 +62,7 @@ public class DataLoaderRegistryTest {
         try {
             registry.register(dlUnnamed);
             Assertions.fail("Should have thrown an exception");
-        } catch (DataLoaderAssertionException ignored) {
+        } catch (NullPointerException ignored) {
         }
     }
 
