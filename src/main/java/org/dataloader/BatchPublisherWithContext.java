@@ -2,6 +2,7 @@ package org.dataloader;
 
 import org.dataloader.annotations.PublicSpi;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 
 import java.util.List;
@@ -16,7 +17,7 @@ import java.util.List;
  */
 @NullMarked
 @PublicSpi
-public interface BatchPublisherWithContext<K, V> {
+public interface BatchPublisherWithContext<K, V extends @Nullable Object> {
     /**
      * Called to batch the provided keys into a stream of values.  You <b>must</b> provide
      * the same number of values as there as keys, and they <b>must</b> be in the order of the keys.

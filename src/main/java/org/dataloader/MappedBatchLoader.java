@@ -18,6 +18,7 @@ package org.dataloader;
 
 import org.dataloader.annotations.PublicSpi;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Set;
@@ -59,7 +60,7 @@ import java.util.concurrent.CompletionStage;
  */
 @PublicSpi
 @NullMarked
-public interface MappedBatchLoader<K, V> {
+public interface MappedBatchLoader<K, V extends @Nullable Object> {
 
     /**
      * Called to batch load the provided keys and return a promise to a map of values.

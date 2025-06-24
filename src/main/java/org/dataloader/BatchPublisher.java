@@ -23,7 +23,7 @@ import java.util.List;
  */
 @NullMarked
 @PublicSpi
-public interface BatchPublisher<K, V> {
+public interface BatchPublisher<K, V extends @Nullable Object> {
     /**
      * Called to batch the provided keys into a stream of values.  You <b>must</b> provide
      * the same number of values as there as keys, and they <b>must</b> be in the order of the keys.

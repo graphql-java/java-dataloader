@@ -2,6 +2,7 @@ package org.dataloader;
 
 import org.dataloader.annotations.PublicSpi;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.concurrent.CompletionStage;
@@ -16,7 +17,7 @@ import java.util.concurrent.CompletionStage;
  */
 @PublicSpi
 @NullMarked
-public interface BatchLoaderWithContext<K, V> {
+public interface BatchLoaderWithContext<K, V extends @Nullable Object> {
     /**
      * Called to batch load the provided keys and return a promise to a list of values.  This default
      * version can be given an environment object to that maybe be useful during the call.  A typical use case
