@@ -2,6 +2,7 @@ package org.dataloader;
 
 import org.dataloader.annotations.PublicSpi;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 
 import java.util.List;
@@ -17,7 +18,7 @@ import java.util.Map;
  */
 @PublicSpi
 @NullMarked
-public interface MappedBatchPublisherWithContext<K, V> {
+public interface MappedBatchPublisherWithContext<K, V extends @Nullable Object> {
 
     /**
      * Called to batch the provided keys into a stream of map entries of keys and values.
