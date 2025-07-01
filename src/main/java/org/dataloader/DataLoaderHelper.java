@@ -594,11 +594,11 @@ class DataLoaderHelper<K, V> {
     }
 
     private boolean isPublisher() {
-        return batchLoadFunction instanceof BatchPublisher;
+        return batchLoadFunction instanceof BatchPublisher || batchLoadFunction instanceof BatchPublisherWithContext;
     }
 
     private boolean isMappedPublisher() {
-        return batchLoadFunction instanceof MappedBatchPublisher;
+        return batchLoadFunction instanceof MappedBatchPublisher || batchLoadFunction instanceof MappedBatchPublisherWithContext;
     }
 
     private DataLoaderInstrumentation instrumentation() {
