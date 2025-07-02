@@ -1,5 +1,6 @@
 package org.dataloader.fixtures.parameterized;
 
+import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
 
@@ -7,6 +8,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 public interface TestDataLoaderFactory {
     <K> DataLoader<K, K> idLoader(DataLoaderOptions options, List<Collection<K>> loadCalls);
@@ -22,6 +24,11 @@ public interface TestDataLoaderFactory {
     DataLoader<String, String> onlyReturnsNValues(int N, DataLoaderOptions options, ArrayList<Object> loadCalls);
 
     DataLoader<String, String> idLoaderReturnsTooMany(int howManyMore, DataLoaderOptions options, ArrayList<Object> loadCalls);
+
+    // similar to above but batch loaders with context
+
+    <K> DataLoader<K, K> idLoaderWithContext(DataLoaderOptions options, List<Collection<K>> loadCalls, AtomicReference<BatchLoaderEnvironment> environmentREF);
+
 
     // Convenience methods
 

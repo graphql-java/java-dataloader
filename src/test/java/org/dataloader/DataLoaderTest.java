@@ -45,6 +45,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -1229,6 +1230,31 @@ public class DataLoaderTest {
             assertThat(cf4.join(), equalTo("D"));
         }
     }
+
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
+    public void should_Support_loading_values_with_context(TestDataLoaderFactory factory) {
+        AtomicReference<BatchLoaderEnvironment> environmentREF = new AtomicReference<>();
+        DataLoader<Integer, Integer> identityLoader = factory.idLoaderWithContext(new DataLoaderOptions(), new ArrayList<>(), environmentREF);
+
+        identityLoader.load(1, "ctx1");
+        identityLoader.load(2, "ctx2");
+        identityLoader.loadMany(List.of(3, 4), List.of("ctx3", "ctx4"));
+
+        CompletableFuture<List<Integer>> cf = identityLoader.dispatch();
+        await().atMost(Duration.FIVE_SECONDS).until(cf::isDone);
+
+        assertThat(cf.toCompletableFuture().join(), equalTo(asList(1, 2, 3, 4)));
+
+        Map<Object, Object> keyContexts = environmentREF.get().getKeyContexts();
+        assertThat(keyContexts, equalTo(Map.of(
+                1, "ctx1",
+                2, "ctx2",
+                3, "ctx3",
+                4, "ctx4"
+        )));
+    }
+
 
     @Test
     public void can_call_a_loader_from_a_loader() throws Exception {

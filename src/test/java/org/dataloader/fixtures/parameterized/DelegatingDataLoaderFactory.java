@@ -1,5 +1,6 @@
 package org.dataloader.fixtures.parameterized;
 
+import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.DelegatingDataLoader;
@@ -8,6 +9,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class DelegatingDataLoaderFactory implements TestDataLoaderFactory {
     // its delegates all the way down to the turtles
@@ -36,6 +38,11 @@ public class DelegatingDataLoaderFactory implements TestDataLoaderFactory {
     @Override
     public <K> DataLoader<K, K> idLoader(DataLoaderOptions options, List<Collection<K>> loadCalls) {
         return mkDelegateDataLoader(delegateFactory.idLoader(options, loadCalls));
+    }
+
+    @Override
+    public <K> DataLoader<K, K> idLoaderWithContext(DataLoaderOptions options, List<Collection<K>> loadCalls, AtomicReference<BatchLoaderEnvironment> environmentREF) {
+        return mkDelegateDataLoader(delegateFactory.idLoaderWithContext(options, loadCalls, environmentREF));
     }
 
     @Override

@@ -1,5 +1,6 @@
 package org.dataloader.fixtures.parameterized;
 
+import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.Try;
@@ -11,9 +12,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.dataloader.DataLoaderFactory.newPublisherDataLoader;
 import static org.dataloader.DataLoaderFactory.newPublisherDataLoaderWithTry;
 
@@ -23,6 +24,15 @@ public class PublisherDataLoaderFactory implements TestDataLoaderFactory, TestRe
     public <K> DataLoader<K, K> idLoader(
             DataLoaderOptions options, List<Collection<K>> loadCalls) {
         return newPublisherDataLoader((keys, subscriber) -> {
+            loadCalls.add(new ArrayList<>(keys));
+            Flux.fromIterable(keys).subscribe(subscriber);
+        }, options);
+    }
+
+    @Override
+    public <K> DataLoader<K, K> idLoaderWithContext(DataLoaderOptions options, List<Collection<K>> loadCalls, AtomicReference<BatchLoaderEnvironment> environmentREF) {
+        return newPublisherDataLoader((keys, subscriber, environment) -> {
+            environmentREF.set(environment);
             loadCalls.add(new ArrayList<>(keys));
             Flux.fromIterable(keys).subscribe(subscriber);
         }, options);
