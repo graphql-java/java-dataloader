@@ -1,5 +1,6 @@
 package org.dataloader.fixtures.parameterized;
 
+import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.fixtures.TestKit;
@@ -11,10 +12,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.dataloader.DataLoaderFactory.newMappedDataLoader;
 import static org.dataloader.fixtures.TestKit.futureError;
 
@@ -24,6 +25,17 @@ public class MappedDataLoaderFactory implements TestDataLoaderFactory {
     public <K> DataLoader<K, K> idLoader(
             DataLoaderOptions options, List<Collection<K>> loadCalls) {
         return newMappedDataLoader((keys) -> {
+            loadCalls.add(new ArrayList<>(keys));
+            Map<K, K> map = new HashMap<>();
+            keys.forEach(k -> map.put(k, k));
+            return completedFuture(map);
+        }, options);
+    }
+
+    @Override
+    public <K> DataLoader<K, K> idLoaderWithContext(DataLoaderOptions options, List<Collection<K>> loadCalls, AtomicReference<BatchLoaderEnvironment> environmentREF) {
+        return newMappedDataLoader((keys, environment) -> {
+            environmentREF.set(environment);
             loadCalls.add(new ArrayList<>(keys));
             Map<K, K> map = new HashMap<>();
             keys.forEach(k -> map.put(k, k));
