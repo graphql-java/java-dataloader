@@ -1,8 +1,10 @@
 package org.dataloader
 
+import java.util.concurrent.CompletableFuture
 import org.junit.jupiter.api.Test
 import reactor.core.publisher.Flux
 import java.util.concurrent.CompletableFuture.completedFuture
+import org.dataloader.impl.NoOpValueCache
 
 /**
  * Some Kotlin code to prove that are JSpecify annotations work here
@@ -79,6 +81,19 @@ class KotlinExamples {
         val dataLoader: DataLoader<String, String?> = DataLoaderFactory.newMappedPublisherDataLoader(batchLoadFunction)
 
         standardNullableAsserts(dataLoader)
+    }
+
+    @Test
+    fun `basic kotlin test of nullable value types in value cache`() {
+        val valueCache = object : ValueCache<String, String?> by NoOpValueCache() {
+            override fun get(key: String): CompletableFuture<String?> = if (key == "null")
+                completedFuture(null)
+            else
+                completedFuture(key)
+        }
+
+        assert(valueCache["key"].get() == "key")
+        assert(valueCache["null"].get() == null)
     }
 
     private fun standardNullableAsserts(dataLoader: DataLoader<String, String?>) {
