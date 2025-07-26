@@ -3,6 +3,7 @@ package org.dataloader;
 import org.dataloader.annotations.PublicSpi;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.impl.NoOpValueCache;
+import org.jspecify.annotations.Nullable;
 import org.jspecify.annotations.NullMarked;
 
 import java.util.ArrayList;
@@ -40,7 +41,7 @@ import java.util.concurrent.CompletableFuture;
  */
 @PublicSpi
 @NullMarked
-public interface ValueCache<K, V> {
+public interface ValueCache<K, V extends @Nullable Object> {
 
     /**
      * Creates a new value cache, using the default no-op implementation.
