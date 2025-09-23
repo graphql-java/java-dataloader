@@ -17,7 +17,7 @@ plugins {
     id "net.ltgt.errorprone" version '4.3.0'
 
     // Kotlin just for tests - not production code
-    id 'org.jetbrains.kotlin.jvm' version '2.2.10'
+    id 'org.jetbrains.kotlin.jvm' version '2.2.20'
 }
 
 java {
@@ -97,7 +97,7 @@ dependencies {
     jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
 
     errorprone 'com.uber.nullaway:nullaway:0.12.10'
-    errorprone 'com.google.errorprone:error_prone_core:2.41.0'
+    errorprone 'com.google.errorprone:error_prone_core:2.42.0'
 
     // just tests
     testImplementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
