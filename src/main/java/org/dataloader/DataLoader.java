@@ -63,6 +63,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  *
  * @param <K> type parameter indicating the type of the data load keys
  * @param <V> type parameter indicating the type of the data that is returned
+ *
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
@@ -133,6 +134,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      * This allows you to change the current {@link DataLoader} and turn it into a new one
      *
      * @param builderConsumer the {@link DataLoaderFactory.Builder} consumer for changing the {@link DataLoader}
+     *
      * @return a newly built {@link DataLoader} instance
      */
     public DataLoader<K, V> transform(Consumer<DataLoaderFactory.Builder<K, V>> builderConsumer) {
@@ -167,6 +169,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      * and returned from cache).
      *
      * @param key the key to load
+     *
      * @return the future of the value
      */
     public CompletableFuture<V> load(K key) {
@@ -184,6 +187,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      * NOTE : This will NOT cause a data load to happen. You must call {@link #load(Object)} for that to happen.
      *
      * @param key the key to check
+     *
      * @return an Optional to the future of the value
      */
     public Optional<CompletableFuture<V>> getIfPresent(K key) {
@@ -202,6 +206,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      * NOTE : This will NOT cause a data load to happen.  You must call {@link #load(Object)} for that to happen.
      *
      * @param key the key to check
+     *
      * @return an Optional to the future of the value
      */
     public Optional<CompletableFuture<V>> getIfCompleted(K key) {
@@ -221,6 +226,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      *
      * @param key        the key to load
      * @param keyContext a context object that is specific to this key
+     *
      * @return the future of the value
      */
     public CompletableFuture<V> load(@NonNull K key, @Nullable Object keyContext) {
@@ -236,6 +242,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      * and returned from cache).
      *
      * @param keys the list of keys to load
+     *
      * @return the composite future of the list of values
      */
     public CompletableFuture<List<V>> loadMany(List<K> keys) {
@@ -255,24 +262,23 @@ public class DataLoader<K, V extends @Nullable Object> {
      *
      * @param keys        the list of keys to load
      * @param keyContexts the list of key calling context objects
+     *
      * @return the composite future of the list of values
      */
     public CompletableFuture<List<V>> loadMany(List<K> keys, List<Object> keyContexts) {
         nonNull(keys);
         nonNull(keyContexts);
 
-        synchronized (this) {
-            List<CompletableFuture<V>> collect = new ArrayList<>(keys.size());
-            for (int i = 0; i < keys.size(); i++) {
-                K key = keys.get(i);
-                Object keyContext = null;
-                if (i < keyContexts.size()) {
-                    keyContext = keyContexts.get(i);
-                }
-                collect.add(load(key, keyContext));
+        List<CompletableFuture<V>> collect = new ArrayList<>(keys.size());
+        for (int i = 0; i < keys.size(); i++) {
+            K key = keys.get(i);
+            Object keyContext = null;
+            if (i < keyContexts.size()) {
+                keyContext = keyContexts.get(i);
             }
-            return CompletableFutureKit.allOf(collect);
+            collect.add(load(key, keyContext));
         }
+        return CompletableFutureKit.allOf(collect);
     }
 
     /**
@@ -287,20 +293,19 @@ public class DataLoader<K, V extends @Nullable Object> {
      * {@link org.dataloader.MappedBatchLoaderWithContext} to help retrieve data.
      *
      * @param keysAndContexts the map of keys to their respective contexts
+     *
      * @return the composite future of the map of keys and values
      */
     public CompletableFuture<Map<K, V>> loadMany(Map<K, ?> keysAndContexts) {
         nonNull(keysAndContexts);
 
-        synchronized (this) {
-            Map<K, CompletableFuture<V>> collect = new HashMap<>(keysAndContexts.size());
-            for (Map.Entry<K, ?> entry : keysAndContexts.entrySet()) {
-                K key = entry.getKey();
-                Object keyContext = entry.getValue();
-                collect.put(key, load(key, keyContext));
-            }
-            return CompletableFutureKit.allOf(collect);
+        Map<K, CompletableFuture<V>> collect = new HashMap<>(keysAndContexts.size());
+        for (Map.Entry<K, ?> entry : keysAndContexts.entrySet()) {
+            K key = entry.getKey();
+            Object keyContext = entry.getValue();
+            collect.put(key, load(key, keyContext));
         }
+        return CompletableFutureKit.allOf(collect);
     }
 
     /**
@@ -359,6 +364,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      * on the next load request.
      *
      * @param key the key to remove
+     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clear(K key) {
@@ -372,6 +378,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      *
      * @param key     the key to remove
      * @param handler a handler that will be called after the async remote clear completes
+     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clear(K key, BiConsumer<Void, Throwable> handler) {
@@ -397,6 +404,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      * Clears the entire cache map of the loader, and of the cached value store.
      *
      * @param handler a handler that will be called after the async remote clear all completes
+     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clearAll(BiConsumer<Void, Throwable> handler) {
@@ -414,6 +422,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      *
      * @param key   the key
      * @param value the value
+     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, V value) {
@@ -425,6 +434,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      *
      * @param key   the key
      * @param error the exception to prime instead of a value
+     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, Exception error) {
@@ -438,6 +448,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      *
      * @param key   the key
      * @param value the value
+     *
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> prime(K key, CompletableFuture<V> value) {
@@ -457,6 +468,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      * If no cache key function is present in {@link DataLoaderOptions}, then the returned value equals the input key.
      *
      * @param key the input key
+     *
      * @return the cache key after the input is transformed with the cache key function
      */
     public Object getCacheKey(K key) {
@@ -495,8 +507,8 @@ public class DataLoader<K, V extends @Nullable Object> {
     @Override
     public String toString() {
         return "DataLoader{" +
-                "name='" + name + '\'' +
-                ", stats=" + stats +
-                '}';
+               "name='" + name + '\'' +
+               ", stats=" + stats +
+               '}';
     }
 }
