@@ -160,20 +160,6 @@ public class DataLoader<K, V extends @Nullable Object> {
     }
 
     /**
-     * Requests to load the data with the specified key asynchronously, and returns a future of the resulting value.
-     * <p>
-     * If batching is enabled (the default), you'll have to call {@link DataLoader#dispatch()} at a later stage to
-     * start batch execution. If you forget this call the future will never be completed (unless already completed,
-     * and returned from cache).
-     *
-     * @param key the key to load
-     * @return the future of the value
-     */
-    public CompletableFuture<V> load(K key) {
-        return load(key, null);
-    }
-
-    /**
      * This will return an optional promise to a value previously loaded via a {@link #load(Object)} call or empty if not call has been made for that key.
      * <p>
      * If you do get a present CompletableFuture it does not mean it has been dispatched and completed yet.  It just means
@@ -209,6 +195,24 @@ public class DataLoader<K, V extends @Nullable Object> {
     }
 
 
+    private CompletableFuture<V> loadImpl(@NonNull K key, @Nullable Object keyContext) {
+        return helper.load(nonNull(key), keyContext);
+    }
+
+    /**
+     * Requests to load the data with the specified key asynchronously, and returns a future of the resulting value.
+     * <p>
+     * If batching is enabled (the default), you'll have to call {@link DataLoader#dispatch()} at a later stage to
+     * start batch execution. If you forget this call the future will never be completed (unless already completed,
+     * and returned from cache).
+     *
+     * @param key the key to load
+     * @return the future of the value
+     */
+    public CompletableFuture<V> load(K key) {
+        return loadImpl(key, null);
+    }
+
     /**
      * Requests to load the data with the specified key asynchronously, and returns a future of the resulting value.
      * <p>
@@ -224,7 +228,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      * @return the future of the value
      */
     public CompletableFuture<V> load(@NonNull K key, @Nullable Object keyContext) {
-        return helper.load(nonNull(key), keyContext);
+        return loadImpl(key, keyContext);
     }
 
     /**
@@ -269,7 +273,7 @@ public class DataLoader<K, V extends @Nullable Object> {
                 if (i < keyContexts.size()) {
                     keyContext = keyContexts.get(i);
                 }
-                collect.add(load(key, keyContext));
+                collect.add(loadImpl(key, keyContext));
             }
             return CompletableFutureKit.allOf(collect);
         }
@@ -297,7 +301,7 @@ public class DataLoader<K, V extends @Nullable Object> {
             for (Map.Entry<K, ?> entry : keysAndContexts.entrySet()) {
                 K key = entry.getKey();
                 Object keyContext = entry.getValue();
-                collect.put(key, load(key, keyContext));
+                collect.put(key, loadImpl(key, keyContext));
             }
             return CompletableFutureKit.allOf(collect);
         }

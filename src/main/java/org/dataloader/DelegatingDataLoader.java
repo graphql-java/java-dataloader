@@ -9,6 +9,7 @@ import org.jspecify.annotations.Nullable;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
@@ -66,17 +67,29 @@ public class DelegatingDataLoader<K, V> extends DataLoader<K, V> {
         return delegate;
     }
 
-    /**
-     * The {@link DataLoader#load(Object)} and {@link DataLoader#loadMany(List)} type methods all call back
-     * to the {@link DataLoader#load(Object, Object)} and hence we don't override them.
-     *
-     * @param key        the key to load
-     * @param keyContext a context object that is specific to this key
-     * @return the future of the value
-     */
+    @Override
+    public CompletableFuture<V> load(K key) {
+        return delegate.load(key);
+    }
+
     @Override
     public CompletableFuture<V> load(@NonNull K key, @Nullable Object keyContext) {
         return delegate.load(key, keyContext);
+    }
+
+    @Override
+    public CompletableFuture<List<V>> loadMany(List<K> keys) {
+        return delegate.loadMany(keys);
+    }
+
+    @Override
+    public CompletableFuture<List<V>> loadMany(List<K> keys, List<Object> keyContexts) {
+        return delegate.loadMany(keys, keyContexts);
+    }
+
+    @Override
+    public CompletableFuture<Map<K, V>> loadMany(Map<K, ?> keysAndContexts) {
+        return delegate.loadMany(keysAndContexts);
     }
 
     @Override
