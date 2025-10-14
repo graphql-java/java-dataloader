@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -77,6 +79,7 @@ public class DataLoader<K, V extends @Nullable Object> {
     private final ValueCache<K, V> valueCache;
     private final DataLoaderOptions options;
     private final Object batchLoadFunction;
+    final Lock lock;
 
     @VisibleForTesting
     DataLoader(@Nullable String name, Object batchLoadFunction, @Nullable DataLoaderOptions options) {
@@ -93,7 +96,7 @@ public class DataLoader<K, V extends @Nullable Object> {
         this.batchLoadFunction = nonNull(batchLoadFunction);
         this.options = loaderOptions;
         this.name = name;
-
+        this.lock = new ReentrantLock();
         this.helper = new DataLoaderHelper<>(this, batchLoadFunction, loaderOptions, this.futureCache, this.valueCache, this.stats, clock);
     }
 
@@ -265,18 +268,16 @@ public class DataLoader<K, V extends @Nullable Object> {
         nonNull(keys);
         nonNull(keyContexts);
 
-        synchronized (this) {
-            List<CompletableFuture<V>> collect = new ArrayList<>(keys.size());
-            for (int i = 0; i < keys.size(); i++) {
-                K key = keys.get(i);
-                Object keyContext = null;
-                if (i < keyContexts.size()) {
-                    keyContext = keyContexts.get(i);
-                }
-                collect.add(loadImpl(key, keyContext));
+        List<CompletableFuture<V>> collect = new ArrayList<>(keys.size());
+        for (int i = 0; i < keys.size(); i++) {
+            K key = keys.get(i);
+            Object keyContext = null;
+            if (i < keyContexts.size()) {
+                keyContext = keyContexts.get(i);
             }
-            return CompletableFutureKit.allOf(collect);
+            collect.add(loadImpl(key, keyContext));
         }
+        return CompletableFutureKit.allOf(collect);
     }
 
     /**
@@ -296,15 +297,13 @@ public class DataLoader<K, V extends @Nullable Object> {
     public CompletableFuture<Map<K, V>> loadMany(Map<K, ?> keysAndContexts) {
         nonNull(keysAndContexts);
 
-        synchronized (this) {
-            Map<K, CompletableFuture<V>> collect = new HashMap<>(keysAndContexts.size());
-            for (Map.Entry<K, ?> entry : keysAndContexts.entrySet()) {
-                K key = entry.getKey();
-                Object keyContext = entry.getValue();
-                collect.put(key, loadImpl(key, keyContext));
-            }
-            return CompletableFutureKit.allOf(collect);
+        Map<K, CompletableFuture<V>> collect = new HashMap<>(keysAndContexts.size());
+        for (Map.Entry<K, ?> entry : keysAndContexts.entrySet()) {
+            K key = entry.getKey();
+            Object keyContext = entry.getValue();
+            collect.put(key, loadImpl(key, keyContext));
         }
+        return CompletableFutureKit.allOf(collect);
     }
 
     /**
@@ -380,9 +379,12 @@ public class DataLoader<K, V extends @Nullable Object> {
      */
     public DataLoader<K, V> clear(K key, BiConsumer<Void, Throwable> handler) {
         Object cacheKey = getCacheKey(key);
-        synchronized (this) {
+        try {
+            lock.lock();
             futureCache.delete(cacheKey);
             valueCache.delete(key).whenComplete(handler);
+        } finally {
+            lock.unlock();
         }
         return this;
     }
@@ -404,9 +406,12 @@ public class DataLoader<K, V extends @Nullable Object> {
      * @return the data loader for fluent coding
      */
     public DataLoader<K, V> clearAll(BiConsumer<Void, Throwable> handler) {
-        synchronized (this) {
+        try {
+            lock.lock();
             futureCache.clear();
             valueCache.clear().whenComplete(handler);
+        } finally {
+            lock.unlock();
         }
         return this;
     }
@@ -446,10 +451,13 @@ public class DataLoader<K, V extends @Nullable Object> {
      */
     public DataLoader<K, V> prime(K key, CompletableFuture<V> value) {
         Object cacheKey = getCacheKey(key);
-        synchronized (this) {
+        try {
+            lock.lock();
             if (!futureCache.containsKey(cacheKey)) {
                 futureCache.set(cacheKey, value);
             }
+        } finally {
+            lock.unlock();
         }
         return this;
     }
