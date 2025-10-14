@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.dataloader.impl.Assertions.assertState;
 
@@ -25,6 +27,7 @@ abstract class AbstractBatchSubscriber<K, V, T> implements Subscriber<T> {
     final List<Object> callContexts;
     final List<CompletableFuture<V>> queuedFutures;
     final ReactiveSupport.HelperIntegration<K> helperIntegration;
+    final Lock lock = new ReentrantLock();
 
     List<K> clearCacheKeys = new ArrayList<>();
     List<V> completedValues = new ArrayList<>();

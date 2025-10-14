@@ -28,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -82,6 +83,7 @@ class DataLoaderHelper<K, V> {
     private final StatisticsCollector stats;
     private final Clock clock;
     private final AtomicReference<Instant> lastDispatchTime;
+    private final Lock lock;
 
     DataLoaderHelper(DataLoader<K, V> dataLoader,
                      Object batchLoadFunction,
@@ -95,6 +97,7 @@ class DataLoaderHelper<K, V> {
         this.loaderOptions = loaderOptions;
         this.futureCache = futureCache;
         this.valueCache = valueCache;
+        this.lock = dataLoader.lock;
         this.loaderQueue = new ArrayList<>();
         this.stats = stats;
         this.clock = clock;
@@ -111,7 +114,8 @@ class DataLoaderHelper<K, V> {
     }
 
     Optional<CompletableFuture<V>> getIfPresent(K key) {
-        synchronized (dataLoader) {
+        try {
+            lock.lock();
             boolean cachingEnabled = loaderOptions.cachingEnabled();
             if (cachingEnabled) {
                 Object cacheKey = getCacheKey(nonNull(key));
@@ -124,12 +128,16 @@ class DataLoaderHelper<K, V> {
                 } catch (Exception ignored) {
                 }
             }
+        } finally {
+            lock.unlock();
         }
         return Optional.empty();
     }
 
     Optional<CompletableFuture<V>> getIfCompleted(K key) {
-        synchronized (dataLoader) {
+        try {
+            lock.lock();
+
             Optional<CompletableFuture<V>> cachedPromise = getIfPresent(key);
             if (cachedPromise.isPresent()) {
                 CompletableFuture<V> promise = cachedPromise.get();
@@ -137,13 +145,18 @@ class DataLoaderHelper<K, V> {
                     return cachedPromise;
                 }
             }
+        } finally {
+            lock.unlock();
         }
         return Optional.empty();
     }
 
 
+    @GuardedBy("lock")
     CompletableFuture<V> load(K key, Object loadContext) {
-        synchronized (dataLoader) {
+        try {
+            lock.lock();
+
             boolean batchingEnabled = loaderOptions.batchingEnabled();
             boolean cachingEnabled = loaderOptions.cachingEnabled();
 
@@ -158,6 +171,8 @@ class DataLoaderHelper<K, V> {
             ctx.onDispatched();
             cf.whenComplete(ctx::onCompleted);
             return cf;
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -173,6 +188,7 @@ class DataLoaderHelper<K, V> {
                 loaderOptions.cacheKeyFunction().get().getKeyWithContext(key, context) : key;
     }
 
+    @GuardedBy("lock")
     DispatchResult<V> dispatch() {
         DataLoaderInstrumentationContext<DispatchResult<?>> instrCtx = ctxOrNoopCtx(instrumentation().beginDispatch(dataLoader));
 
@@ -180,7 +196,9 @@ class DataLoaderHelper<K, V> {
         final List<K> keys;
         final List<Object> callContexts;
         final List<CompletableFuture<V>> queuedFutures;
-        synchronized (dataLoader) {
+        try {
+            lock.lock();
+
             int queueSize = loaderQueue.size();
             if (queueSize == 0) {
                 lastDispatchTime.set(now());
@@ -200,6 +218,8 @@ class DataLoaderHelper<K, V> {
             });
             loaderQueue.clear();
             lastDispatchTime.set(now());
+        } finally {
+            lock.unlock();
         }
         if (!batchingEnabled) {
             instrCtx.onDispatched();
@@ -334,7 +354,7 @@ class DataLoaderHelper<K, V> {
         }
     }
 
-    @GuardedBy("dataLoader")
+    @GuardedBy("lock")
     private CompletableFuture<V> loadFromCache(K key, Object loadContext, boolean batchingEnabled) {
         final Object cacheKey = loadContext == null ? getCacheKey(key) : getCacheKeyWithContext(key, loadContext);
 
@@ -353,7 +373,7 @@ class DataLoaderHelper<K, V> {
         return loadCallFuture;
     }
 
-    @GuardedBy("dataLoader")
+    @GuardedBy("lock")
     private CompletableFuture<V> queueOrInvokeLoader(K key, Object loadContext, boolean batchingEnabled, boolean cachingEnabled) {
         if (batchingEnabled) {
             CompletableFuture<V> loadCallFuture = new CompletableFuture<>();
@@ -606,8 +626,11 @@ class DataLoaderHelper<K, V> {
     }
 
     int dispatchDepth() {
-        synchronized (dataLoader) {
+        try {
+            lock.lock();
             return loaderQueue.size();
+        } finally {
+            lock.unlock();
         }
     }
 
