@@ -43,61 +43,77 @@ class MappedBatchSubscriberImpl<K, V> extends AbstractBatchSubscriber<K, V, Map.
 
 
     @Override
-    public synchronized void onNext(Map.Entry<K, V> entry) {
-        super.onNext(entry);
-        K key = entry.getKey();
-        V value = entry.getValue();
+    public void onNext(Map.Entry<K, V> entry) {
+        try {
+            lock.lock();
+            super.onNext(entry);
+            K key = entry.getKey();
+            V value = entry.getValue();
 
-        Object callContext = callContextByKey.get(key);
-        List<CompletableFuture<V>> futures = queuedFuturesByKey.getOrDefault(key, List.of());
-
-        onNextValue(key, value, callContext, futures);
-
-        // did we have an actual key for this value - ignore it if they send us one outside the key set
-        if (!futures.isEmpty()) {
-            completedValuesByKey.put(key, value);
-        }
-    }
-
-    @Override
-    public synchronized void onComplete() {
-        super.onComplete();
-
-        possiblyClearCacheEntriesOnExceptions();
-        List<V> values = new ArrayList<>(keys.size());
-        for (K key : keys) {
-            V value = completedValuesByKey.get(key);
-            values.add(value);
-
+            Object callContext = callContextByKey.get(key);
             List<CompletableFuture<V>> futures = queuedFuturesByKey.getOrDefault(key, List.of());
-            for (CompletableFuture<V> future : futures) {
-                if (!future.isDone()) {
-                    // we have a future that never came back for that key
-                    // but the publisher is done sending in data - it must be null
-                    // e.g. for key X when found no value
-                    future.complete(null);
-                }
+
+            onNextValue(key, value, callContext, futures);
+
+            // did we have an actual key for this value - ignore it if they send us one outside the key set
+            if (!futures.isEmpty()) {
+                completedValuesByKey.put(key, value);
             }
+        } finally {
+            lock.unlock();
         }
-        valuesFuture.complete(values);
+
     }
 
     @Override
-    public synchronized void onError(Throwable ex) {
-        super.onError(ex);
-        ex = unwrapThrowable(ex);
-        // Complete the futures for the remaining keys with the exception.
-        for (int idx = 0; idx < queuedFutures.size(); idx++) {
-            K key = keys.get(idx);
-            List<CompletableFuture<V>> futures = queuedFuturesByKey.get(key);
-            if (!completedValuesByKey.containsKey(key)) {
+    public void onComplete() {
+        try {
+            lock.lock();
+            super.onComplete();
+
+            possiblyClearCacheEntriesOnExceptions();
+            List<V> values = new ArrayList<>(keys.size());
+            for (K key : keys) {
+                V value = completedValuesByKey.get(key);
+                values.add(value);
+
+                List<CompletableFuture<V>> futures = queuedFuturesByKey.getOrDefault(key, List.of());
                 for (CompletableFuture<V> future : futures) {
-                    future.completeExceptionally(ex);
+                    if (!future.isDone()) {
+                        // we have a future that never came back for that key
+                        // but the publisher is done sending in data - it must be null
+                        // e.g. for key X when found no value
+                        future.complete(null);
+                    }
                 }
-                // clear any cached view of this key because they all failed
-                helperIntegration.clearCacheView(key);
             }
+            valuesFuture.complete(values);
+        } finally {
+            lock.unlock();
         }
-        valuesFuture.completeExceptionally(ex);
+    }
+
+    @Override
+    public void onError(Throwable ex) {
+        try {
+            lock.lock();
+            super.onError(ex);
+            ex = unwrapThrowable(ex);
+            // Complete the futures for the remaining keys with the exception.
+            for (int idx = 0; idx < queuedFutures.size(); idx++) {
+                K key = keys.get(idx);
+                List<CompletableFuture<V>> futures = queuedFuturesByKey.get(key);
+                if (!completedValuesByKey.containsKey(key)) {
+                    for (CompletableFuture<V> future : futures) {
+                        future.completeExceptionally(ex);
+                    }
+                    // clear any cached view of this key because they all failed
+                    helperIntegration.clearCacheView(key);
+                }
+            }
+            valuesFuture.completeExceptionally(ex);
+        } finally {
+            lock.unlock();
+        }
     }
 }
