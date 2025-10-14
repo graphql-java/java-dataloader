@@ -2,7 +2,6 @@ package org.dataloader;
 
 import org.dataloader.fixtures.TestKit;
 import org.dataloader.fixtures.parameterized.DelegatingDataLoaderFactory;
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -11,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -34,13 +34,36 @@ public class DelegatingDataLoaderTest {
     }
 
     @Test
+    @NullMarked
     void canCreateAClassOk() {
         DataLoader<String, String> rawLoader = TestKit.idLoader();
         DelegatingDataLoader<String, String> delegatingDataLoader = new DelegatingDataLoader<>(rawLoader) {
-            @Override
-            public CompletableFuture<String> load(@NonNull String key, @Nullable Object keyContext) {
-                CompletableFuture<String> cf = super.load(key, keyContext);
+            private CompletableFuture<String> enhance(CompletableFuture<String> cf) {
                 return cf.thenApply(v -> "|" + v + "|");
+            }
+
+            private CompletableFuture<List<String>> enhanceList(CompletableFuture<List<String>> cf) {
+                return cf.thenApply(v -> v.stream().map(s -> "|" + s + "|").collect(Collectors.toList()));
+            }
+
+            @Override
+            public CompletableFuture<String> load(String key, @Nullable Object keyContext) {
+                return enhance(super.load(key, keyContext));
+            }
+
+            @Override
+            public CompletableFuture<String> load(String key) {
+                return enhance(super.load(key));
+            }
+
+            @Override
+            public CompletableFuture<List<String>> loadMany(List<String> keys) {
+                return enhanceList(super.loadMany(keys));
+            }
+
+            @Override
+            public CompletableFuture<List<String>> loadMany(List<String> keys, List<Object> keyContexts) {
+                return enhanceList(super.loadMany(keys, keyContexts));
             }
         };
 
