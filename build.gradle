@@ -261,3 +261,7 @@ tasks.named("dependencyUpdates").configure {
         isNonStable(it.candidate.version)
     }
 }
+
+jcstress {
+    verbose = true
+}

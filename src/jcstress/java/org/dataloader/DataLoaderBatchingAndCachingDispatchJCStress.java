@@ -16,7 +16,7 @@ import static org.openjdk.jcstress.annotations.Expect.ACCEPTABLE;
 @JCStressTest
 @State
 @Outcome(id = "2000, 2000", expect = ACCEPTABLE, desc = "accepted")
-public class DataLoaderDispatchJCStress {
+public class DataLoaderBatchingAndCachingDispatchJCStress {
 
 
     AtomicInteger counter = new AtomicInteger();
@@ -33,12 +33,16 @@ public class DataLoaderDispatchJCStress {
     };
     DataLoader<String, String> dataLoader = DataLoaderFactory.newDataLoader(batchLoader);
 
-    public DataLoaderDispatchJCStress() {
+    public DataLoaderBatchingAndCachingDispatchJCStress() {
 
     }
 
     @Actor
     public void load1() {
+        for (int i = 0; i < 1000; i++) {
+            dataLoader.load("load-1-" + i);
+        }
+        // we load the same keys again
         for (int i = 0; i < 1000; i++) {
             dataLoader.load("load-1-" + i);
         }
@@ -49,6 +53,10 @@ public class DataLoaderDispatchJCStress {
     public void load2() {
         for (int i = 0; i < 1000; i++) {
             dataLoader.load("load-2-" + i);
+        }
+        // we load the same keys again
+        for (int i = 0; i < 1000; i++) {
+            dataLoader.load("load-1-" + i);
         }
         finished2 = true;
     }
