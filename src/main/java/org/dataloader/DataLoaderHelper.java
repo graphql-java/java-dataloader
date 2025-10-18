@@ -13,12 +13,14 @@ import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsCo
 import org.dataloader.stats.context.IncrementCacheHitCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +30,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -52,20 +53,22 @@ class DataLoaderHelper<K, V> {
     static class LoaderQueueEntry<K, V> {
 
         final K key;
-        final V value;
+        final CompletableFuture<V> value;
         final Object callContext;
+        final LoaderQueueEntry<K, V> prev;
 
-        public LoaderQueueEntry(K key, V value, Object callContext) {
+        public LoaderQueueEntry(K key, CompletableFuture<V> value, Object callContext, LoaderQueueEntry<K, V> prev) {
             this.key = key;
             this.value = value;
             this.callContext = callContext;
+            this.prev = prev;
         }
 
         K getKey() {
             return key;
         }
 
-        V getValue() {
+        CompletableFuture<V> getValue() {
             return value;
         }
 
@@ -79,11 +82,11 @@ class DataLoaderHelper<K, V> {
     private final DataLoaderOptions loaderOptions;
     private final CacheMap<Object, V> futureCache;
     private final ValueCache<K, V> valueCache;
-    private final List<LoaderQueueEntry<K, CompletableFuture<V>>> loaderQueue;
+    //    private final List<LoaderQueueEntry<K, CompletableFuture<V>>> loaderQueue;
+    private final AtomicReference<@Nullable LoaderQueueEntry<K, V>> loaderQueue = new AtomicReference<>();
     private final StatisticsCollector stats;
     private final Clock clock;
     private final AtomicReference<Instant> lastDispatchTime;
-    private final Lock lock;
 
     DataLoaderHelper(DataLoader<K, V> dataLoader,
                      Object batchLoadFunction,
@@ -97,8 +100,6 @@ class DataLoaderHelper<K, V> {
         this.loaderOptions = loaderOptions;
         this.futureCache = futureCache;
         this.valueCache = valueCache;
-        this.lock = dataLoader.lock;
-        this.loaderQueue = new ArrayList<>();
         this.stats = stats;
         this.clock = clock;
         this.lastDispatchTime = new AtomicReference<>();
@@ -114,39 +115,28 @@ class DataLoaderHelper<K, V> {
     }
 
     Optional<CompletableFuture<V>> getIfPresent(K key) {
-        try {
-            lock.lock();
-            boolean cachingEnabled = loaderOptions.cachingEnabled();
-            if (cachingEnabled) {
-                Object cacheKey = getCacheKey(nonNull(key));
-                try {
-                    CompletableFuture<V> cacheValue = futureCache.get(cacheKey);
-                    if (cacheValue != null) {
-                        stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key));
-                        return Optional.of(cacheValue);
-                    }
-                } catch (Exception ignored) {
+        boolean cachingEnabled = loaderOptions.cachingEnabled();
+        if (cachingEnabled) {
+            Object cacheKey = getCacheKey(nonNull(key));
+            try {
+                CompletableFuture<V> cacheValue = futureCache.get(cacheKey);
+                if (cacheValue != null) {
+                    stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key));
+                    return Optional.of(cacheValue);
                 }
+            } catch (Exception ignored) {
             }
-        } finally {
-            lock.unlock();
         }
         return Optional.empty();
     }
 
     Optional<CompletableFuture<V>> getIfCompleted(K key) {
-        try {
-            lock.lock();
-
-            Optional<CompletableFuture<V>> cachedPromise = getIfPresent(key);
-            if (cachedPromise.isPresent()) {
-                CompletableFuture<V> promise = cachedPromise.get();
-                if (promise.isDone()) {
-                    return cachedPromise;
-                }
+        Optional<CompletableFuture<V>> cachedPromise = getIfPresent(key);
+        if (cachedPromise.isPresent()) {
+            CompletableFuture<V> promise = cachedPromise.get();
+            if (promise.isDone()) {
+                return cachedPromise;
             }
-        } finally {
-            lock.unlock();
         }
         return Optional.empty();
     }
@@ -154,25 +144,70 @@ class DataLoaderHelper<K, V> {
 
     @GuardedBy("lock")
     CompletableFuture<V> load(K key, Object loadContext) {
-        try {
-            lock.lock();
+        boolean batchingEnabled = loaderOptions.batchingEnabled();
+        boolean futureCachingEnabled = loaderOptions.cachingEnabled();
 
-            boolean batchingEnabled = loaderOptions.batchingEnabled();
-            boolean cachingEnabled = loaderOptions.cachingEnabled();
-
-            stats.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(key, loadContext));
-            DataLoaderInstrumentationContext<Object> ctx = ctxOrNoopCtx(instrumentation().beginLoad(dataLoader, key,loadContext));
-            CompletableFuture<V> cf;
-            if (cachingEnabled) {
-                cf = loadFromCache(key, loadContext, batchingEnabled);
-            } else {
-                cf = queueOrInvokeLoader(key, loadContext, batchingEnabled, false);
+        stats.incrementLoadCount(new IncrementLoadCountStatisticsContext<>(key, loadContext));
+        DataLoaderInstrumentationContext<Object> ctx = ctxOrNoopCtx(instrumentation().beginLoad(dataLoader, key, loadContext));
+        Object cacheKey = null;
+        if (futureCachingEnabled) {
+            cacheKey = loadContext == null ? getCacheKey(key) : getCacheKeyWithContext(key, loadContext);
+            try {
+                CompletableFuture<V> cachedFuture = futureCache.get(cacheKey);
+                if (cachedFuture != null) {
+                    // We already have a promise for this key, no need to check value cache or queue up load
+                    stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key, loadContext));
+                    ctx.onDispatched();
+                    cachedFuture.whenComplete(ctx::onCompleted);
+                    return cachedFuture;
+                }
+            } catch (Exception ignored) {
             }
-            ctx.onDispatched();
-            cf.whenComplete(ctx::onCompleted);
-            return cf;
-        } finally {
-            lock.unlock();
+        }
+        CompletableFuture<V> loadCallFuture;
+        if (batchingEnabled) {
+            loadCallFuture = new CompletableFuture<>();
+            if (futureCachingEnabled) {
+                CompletableFuture<V> cachedFuture = futureCache.setIfAbsent(cacheKey, loadCallFuture);
+                if (cachedFuture != null) {
+                    // another thread was faster and created a matching CF ... hence this is really a cachehit and we are done
+                    stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key, loadContext));
+                    ctx.onDispatched();
+                    cachedFuture.whenComplete(ctx::onCompleted);
+                    return cachedFuture;
+                }
+            }
+            addEntryToLoaderQueue(key, loadCallFuture, loadContext);
+        } else {
+            stats.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(key, loadContext));
+            // immediate execution of batch function
+            loadCallFuture = invokeLoaderImmediately(key, loadContext, true);
+            if (futureCachingEnabled) {
+                CompletableFuture<V> cachedFuture = futureCache.setIfAbsent(cacheKey, loadCallFuture);
+                if (cachedFuture != null) {
+                    // another thread was faster and the loader was invoked twice with the same key
+                    // we are disregarding the resul of our dispatch call and use the already cached value
+                    // meaning this is a cache hit and we are done
+                    stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key, loadContext));
+                    ctx.onDispatched();
+                    cachedFuture.whenComplete(ctx::onCompleted);
+                    return cachedFuture;
+                }
+            }
+        }
+
+        ctx.onDispatched();
+        loadCallFuture.whenComplete(ctx::onCompleted);
+        return loadCallFuture;
+    }
+
+    private void addEntryToLoaderQueue(K key, CompletableFuture<V> future, Object loadContext) {
+        while (true) {
+            LoaderQueueEntry<K, V> prev = loaderQueue.get();
+            LoaderQueueEntry<K, V> curr = new LoaderQueueEntry<>(key, future, loadContext, prev);
+            if (loaderQueue.compareAndSet(prev, curr)) {
+                return;
+            }
         }
     }
 
@@ -196,35 +231,42 @@ class DataLoaderHelper<K, V> {
         final List<K> keys;
         final List<Object> callContexts;
         final List<CompletableFuture<V>> queuedFutures;
-        try {
-            lock.lock();
 
-            int queueSize = loaderQueue.size();
-            if (queueSize == 0) {
-                lastDispatchTime.set(now());
-                instrCtx.onDispatched();
-                return endDispatchCtx(instrCtx, emptyDispatchResult());
+        LoaderQueueEntry<K, V> loaderQueueEntryHead;
+        while (true) {
+            loaderQueueEntryHead = loaderQueue.get();
+            if (loaderQueue.compareAndSet(loaderQueueEntryHead, null)) {
+                break;
             }
-
-            // we copy the pre-loaded set of futures ready for dispatch
-            keys = new ArrayList<>(queueSize);
-            callContexts = new ArrayList<>(queueSize);
-            queuedFutures = new ArrayList<>(queueSize);
-
-            loaderQueue.forEach(entry -> {
-                keys.add(entry.getKey());
-                queuedFutures.add(entry.getValue());
-                callContexts.add(entry.getCallContext());
-            });
-            loaderQueue.clear();
-            lastDispatchTime.set(now());
-        } finally {
-            lock.unlock();
         }
+        if (loaderQueueEntryHead == null) {
+            lastDispatchTime.set(now());
+            instrCtx.onDispatched();
+            return endDispatchCtx(instrCtx, emptyDispatchResult());
+        }
+        int queueSize = calcQueueDepth(loaderQueueEntryHead);
+        // we copy the pre-loaded set of futures ready for dispatch
+        keys = new ArrayList<>(queueSize);
+        callContexts = new ArrayList<>(queueSize);
+        queuedFutures = new ArrayList<>(queueSize);
+
+        while (loaderQueueEntryHead != null) {
+            keys.add(loaderQueueEntryHead.getKey());
+            queuedFutures.add(loaderQueueEntryHead.getValue());
+            callContexts.add(loaderQueueEntryHead.getCallContext());
+            loaderQueueEntryHead = loaderQueueEntryHead.prev;
+        }
+        //TODO: to many test depend on the previous order, therefore we reverse the lists here
+        // but this should not matter and we should change the tests
+        Collections.reverse(keys);
+        Collections.reverse(callContexts);
+        Collections.reverse(queuedFutures);
+        lastDispatchTime.set(now());
         if (!batchingEnabled) {
             instrCtx.onDispatched();
             return endDispatchCtx(instrCtx, emptyDispatchResult());
         }
+
         final int totalEntriesHandled = keys.size();
         //
         // order of keys -> values matter in data loader hence the use of linked hash map
@@ -351,38 +393,6 @@ class DataLoaderHelper<K, V> {
         // it to be cleared
         if (!loaderOptions.cachingExceptionsEnabled()) {
             keys.forEach(dataLoader::clear);
-        }
-    }
-
-    @GuardedBy("lock")
-    private CompletableFuture<V> loadFromCache(K key, Object loadContext, boolean batchingEnabled) {
-        final Object cacheKey = loadContext == null ? getCacheKey(key) : getCacheKeyWithContext(key, loadContext);
-
-        try {
-            CompletableFuture<V> cacheValue = futureCache.get(cacheKey);
-            if (cacheValue != null) {
-                // We already have a promise for this key, no need to check value cache or queue up load
-                stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key, loadContext));
-                return cacheValue;
-            }
-        } catch (Exception ignored) {
-        }
-
-        CompletableFuture<V> loadCallFuture = queueOrInvokeLoader(key, loadContext, batchingEnabled, true);
-        futureCache.set(cacheKey, loadCallFuture);
-        return loadCallFuture;
-    }
-
-    @GuardedBy("lock")
-    private CompletableFuture<V> queueOrInvokeLoader(K key, Object loadContext, boolean batchingEnabled, boolean cachingEnabled) {
-        if (batchingEnabled) {
-            CompletableFuture<V> loadCallFuture = new CompletableFuture<>();
-            loaderQueue.add(new LoaderQueueEntry<>(key, loadCallFuture, loadContext));
-            return loadCallFuture;
-        } else {
-            stats.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(key, loadContext));
-            // immediate execution of batch function
-            return invokeLoaderImmediately(key, loadContext, cachingEnabled);
         }
     }
 
@@ -626,13 +636,18 @@ class DataLoaderHelper<K, V> {
     }
 
     int dispatchDepth() {
-        try {
-            lock.lock();
-            return loaderQueue.size();
-        } finally {
-            lock.unlock();
-        }
+        return calcQueueDepth(loaderQueue.get());
     }
+
+    private int calcQueueDepth(LoaderQueueEntry<K, V> head) {
+        int count = 0;
+        while (head != null) {
+            count++;
+            head = head.prev;
+        }
+        return count;
+    }
+
 
     private final List<Try<V>> NOT_SUPPORTED_LIST = emptyList();
     private final CompletableFuture<List<Try<V>>> NOT_SUPPORTED = CompletableFuture.completedFuture(NOT_SUPPORTED_LIST);
