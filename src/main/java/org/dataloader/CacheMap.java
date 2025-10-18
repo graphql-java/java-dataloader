@@ -90,7 +90,7 @@ public interface CacheMap<K, V> {
      *
      * @return the cache map for fluent coding
      */
-    CacheMap<K, V> set(K key, CompletableFuture<V> value);
+    CompletableFuture<V> setIfAbsent(K key, CompletableFuture<V> value);
 
     /**
      * Deletes the entry with the specified key from the cache map, if it exists.

@@ -3,16 +3,15 @@ package org.dataloader.fixtures;
 import org.dataloader.CacheMap;
 
 import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CustomCacheMap implements CacheMap<String, Object> {
 
-    public Map<String, CompletableFuture<Object>> stash;
+    public ConcurrentHashMap<String, CompletableFuture<Object>> stash;
 
     public CustomCacheMap() {
-        stash = new LinkedHashMap<>();
+        stash = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -31,9 +30,8 @@ public class CustomCacheMap implements CacheMap<String, Object> {
     }
 
     @Override
-    public CacheMap<String, Object> set(String key, CompletableFuture<Object> value) {
-        stash.put(key, value);
-        return this;
+    public CompletableFuture<Object> setIfAbsent(String key, CompletableFuture<Object> value) {
+        return stash.putIfAbsent(key, value);
     }
 
     @Override
