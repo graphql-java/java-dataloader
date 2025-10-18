@@ -15,45 +15,33 @@ import static org.openjdk.jcstress.annotations.Expect.ACCEPTABLE_INTERESTING;
 
 @JCStressTest
 @State
-@Outcome(id = "2000, 2000", expect = ACCEPTABLE, desc = "No keys loaded twice")
-@Outcome(id = "2.*, 2000", expect = ACCEPTABLE_INTERESTING, desc = "Some keys loaded twice")
+@Outcome(id = "1000, 1000", expect = ACCEPTABLE, desc = "No keys loaded twice")
+@Outcome(id = "1.*, 1000", expect = ACCEPTABLE_INTERESTING, desc = "Some keys loaded twice")
 public class DataLoader_NoBatching_Caching_JCStress {
 
 
     AtomicInteger batchLoaderCount = new AtomicInteger();
-    volatile boolean finished1;
-    volatile boolean finished2;
-
 
     BatchLoader<String, String> batchLoader = keys -> {
         batchLoaderCount.getAndAdd(keys.size());
         return CompletableFuture.completedFuture(keys);
     };
-    DataLoader<String, String> dataLoader = DataLoaderFactory.newDataLoader(batchLoader, DataLoaderOptions.newOptions().setBatchingEnabled(false).build());
 
+
+    DataLoader<String, String> dataLoader = DataLoaderFactory.newDataLoader(batchLoader, DataLoaderOptions.newOptions().setBatchingEnabled(false).build());
 
     @Actor
     public void load1() {
         for (int i = 0; i < 1000; i++) {
             dataLoader.load("load-1-" + i);
         }
-        // we load the same keys again
-        for (int i = 0; i < 1000; i++) {
-            dataLoader.load("load-1-" + i);
-        }
-        finished1 = true;
     }
 
     @Actor
     public void load2() {
         for (int i = 0; i < 1000; i++) {
-            dataLoader.load("load-2-" + i);
-        }
-        // we load the same keys again
-        for (int i = 0; i < 1000; i++) {
             dataLoader.load("load-1-" + i);
         }
-        finished2 = true;
     }
 
 

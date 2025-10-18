@@ -56,7 +56,7 @@ public class DataLoader_Batching_Caching_JCStress {
         }
         // we load the same keys again
         for (int i = 0; i < 1000; i++) {
-            dataLoader.load("load-1-" + i);
+            dataLoader.load("load-2-" + i);
         }
         finished2 = true;
     }
