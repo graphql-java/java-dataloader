@@ -16,7 +16,7 @@ import static org.openjdk.jcstress.annotations.Expect.ACCEPTABLE;
 @JCStressTest
 @State
 @Outcome(id = "2000, 2000", expect = ACCEPTABLE, desc = "accepted")
-public class DataLoaderBatchingAndCachingDispatchJCStress {
+public class DataLoader_Batching_Caching_JCStress {
 
 
     AtomicInteger counter = new AtomicInteger();
@@ -33,7 +33,7 @@ public class DataLoaderBatchingAndCachingDispatchJCStress {
     };
     DataLoader<String, String> dataLoader = DataLoaderFactory.newDataLoader(batchLoader);
 
-    public DataLoaderBatchingAndCachingDispatchJCStress() {
+    public DataLoader_Batching_Caching_JCStress() {
 
     }
 

@@ -263,5 +263,5 @@ tasks.named("dependencyUpdates").configure {
 }
 
 jcstress {
-    verbose = true
+//    verbose = true
 }

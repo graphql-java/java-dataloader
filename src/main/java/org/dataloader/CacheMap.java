@@ -74,10 +74,11 @@ public interface CacheMap<K, V> {
      *
      * @return the cached value, or {@code null} if not found (depends on cache implementation)
      */
-    @Nullable  CompletableFuture<V> get(K key);
+    @Nullable CompletableFuture<V> get(K key);
 
     /**
      * Gets a collection of CompletableFutures from the cache map.
+     *
      * @return the collection of cached values
      */
     Collection<CompletableFuture<V>> getAll();
@@ -107,4 +108,13 @@ public interface CacheMap<K, V> {
      * @return the cache map for fluent coding
      */
     CacheMap<K, V> clear();
+
+    /**
+     * Returns the current size of the cache. This is not used by DataLoader directly
+     * and intended for testing and debugging.
+     * If a cache doesn't support it, it can throw an Exception.
+     *
+     * @return
+     */
+    int size();
 }

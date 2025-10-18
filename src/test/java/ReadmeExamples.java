@@ -278,6 +278,11 @@ public class ReadmeExamples {
         public CacheMap clear() {
             return null;
         }
+
+        @Override
+        public int size() {
+            return 0;
+        }
     }
 
     private void customCache() {

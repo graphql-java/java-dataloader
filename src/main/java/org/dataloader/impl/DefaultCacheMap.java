@@ -93,4 +93,9 @@ public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
         cache.clear();
         return this;
     }
+
+    @Override
+    public int size() {
+        return cache.size();
+    }
 }

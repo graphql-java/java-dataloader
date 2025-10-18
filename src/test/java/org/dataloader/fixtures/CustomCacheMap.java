@@ -45,4 +45,9 @@ public class CustomCacheMap implements CacheMap<String, Object> {
         stash.clear();
         return this;
     }
+
+    @Override
+    public int size() {
+        return stash.size();
+    }
 }
