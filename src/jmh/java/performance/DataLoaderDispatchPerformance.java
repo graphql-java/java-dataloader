@@ -12,6 +12,7 @@ import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -280,15 +281,20 @@ public class DataLoaderDispatchPerformance {
 
         }
 
+        DataLoader ownerDL = DataLoaderFactory.newDataLoader(ownerBatchLoader);
+        DataLoader petDL = DataLoaderFactory.newDataLoader(petBatchLoader);
+
+
     }
 
 
     @Benchmark
     @BenchmarkMode(Mode.AverageTime)
     @OutputTimeUnit(TimeUnit.NANOSECONDS)
+    @Threads(Threads.MAX)
     public void loadAndDispatch(MyState myState, Blackhole blackhole) {
-        DataLoader ownerDL = DataLoaderFactory.newDataLoader(ownerBatchLoader);
-        DataLoader petDL = DataLoaderFactory.newDataLoader(petBatchLoader);
+        DataLoader ownerDL = myState.ownerDL;
+        DataLoader petDL = myState.petDL;
 
         for (Owner owner : owners.values()) {
             ownerDL.load(owner.id);
