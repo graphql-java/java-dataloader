@@ -19,8 +19,8 @@ import org.reactivestreams.Subscriber;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -228,9 +228,6 @@ class DataLoaderHelper<K, V> {
         DataLoaderInstrumentationContext<DispatchResult<?>> instrCtx = ctxOrNoopCtx(instrumentation().beginDispatch(dataLoader));
 
         boolean batchingEnabled = loaderOptions.batchingEnabled();
-        final List<K> keys;
-        final List<Object> callContexts;
-        final List<CompletableFuture<V>> queuedFutures;
 
         LoaderQueueEntry<K, V> loaderQueueEntryHead;
         while (true) {
@@ -246,21 +243,21 @@ class DataLoaderHelper<K, V> {
         }
         int queueSize = calcQueueDepth(loaderQueueEntryHead);
         // we copy the pre-loaded set of futures ready for dispatch
-        keys = new ArrayList<>(queueSize);
-        callContexts = new ArrayList<>(queueSize);
-        queuedFutures = new ArrayList<>(queueSize);
-
+        Object[] keysArray = new Object[queueSize];
+        CompletableFuture[] queuedFuturesArray = new CompletableFuture[queueSize];
+        Object[] callContextsArray = new Object[queueSize];
+        int index = queueSize - 1;
         while (loaderQueueEntryHead != null) {
-            keys.add(loaderQueueEntryHead.getKey());
-            queuedFutures.add(loaderQueueEntryHead.getValue());
-            callContexts.add(loaderQueueEntryHead.getCallContext());
+            keysArray[index] = loaderQueueEntryHead.getKey();
+            queuedFuturesArray[index] = loaderQueueEntryHead.getValue();
+            callContextsArray[index] = loaderQueueEntryHead.getCallContext();
             loaderQueueEntryHead = loaderQueueEntryHead.prev;
+            index--;
         }
-        //TODO: to many test depend on the previous order, therefore we reverse the lists here
-        // but this should not matter and we should change the tests
-        Collections.reverse(keys);
-        Collections.reverse(callContexts);
-        Collections.reverse(queuedFutures);
+        final List<K> keys = (List<K>) Arrays.asList(keysArray);
+        final List<CompletableFuture<V>> queuedFutures = Arrays.asList(queuedFuturesArray);
+        final List<Object> callContexts = Arrays.asList(callContextsArray);
+
         lastDispatchTime.set(now());
         if (!batchingEnabled) {
             instrCtx.onDispatched();
