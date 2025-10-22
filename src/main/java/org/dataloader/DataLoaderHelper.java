@@ -56,12 +56,14 @@ class DataLoaderHelper<K, V> {
         final CompletableFuture<V> value;
         final Object callContext;
         final LoaderQueueEntry<K, V> prev;
+        final int queueSize;
 
-        public LoaderQueueEntry(K key, CompletableFuture<V> value, Object callContext, LoaderQueueEntry<K, V> prev) {
+        public LoaderQueueEntry(K key, CompletableFuture<V> value, Object callContext, LoaderQueueEntry<K, V> prev, int queueSize) {
             this.key = key;
             this.value = value;
             this.callContext = callContext;
             this.prev = prev;
+            this.queueSize = queueSize;
         }
 
         K getKey() {
@@ -204,7 +206,7 @@ class DataLoaderHelper<K, V> {
     private void addEntryToLoaderQueue(K key, CompletableFuture<V> future, Object loadContext) {
         while (true) {
             LoaderQueueEntry<K, V> prev = loaderQueue.get();
-            LoaderQueueEntry<K, V> curr = new LoaderQueueEntry<>(key, future, loadContext, prev);
+            LoaderQueueEntry<K, V> curr = new LoaderQueueEntry<>(key, future, loadContext, prev, prev != null ? prev.queueSize + 1 : 1);
             if (loaderQueue.compareAndSet(prev, curr)) {
                 return;
             }
@@ -241,7 +243,7 @@ class DataLoaderHelper<K, V> {
             instrCtx.onDispatched();
             return endDispatchCtx(instrCtx, emptyDispatchResult());
         }
-        int queueSize = calcQueueDepth(loaderQueueEntryHead);
+        int queueSize = loaderQueueEntryHead.queueSize;
         // we copy the pre-loaded set of futures ready for dispatch
         Object[] keysArray = new Object[queueSize];
         CompletableFuture[] queuedFuturesArray = new CompletableFuture[queueSize];
@@ -633,16 +635,12 @@ class DataLoaderHelper<K, V> {
     }
 
     int dispatchDepth() {
-        return calcQueueDepth(loaderQueue.get());
-    }
-
-    private int calcQueueDepth(LoaderQueueEntry<K, V> head) {
-        int count = 0;
-        while (head != null) {
-            count++;
-            head = head.prev;
+        LoaderQueueEntry<K, V> loaderQueueEntry = loaderQueue.get();
+        if (loaderQueueEntry != null) {
+            return loaderQueueEntry.queueSize;
+        } else {
+            return 0;
         }
-        return count;
     }
 
 
