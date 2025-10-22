@@ -1,6 +1,5 @@
 package org.dataloader;
 
-import org.dataloader.annotations.GuardedBy;
 import org.dataloader.annotations.Internal;
 import org.dataloader.impl.CompletableFutureKit;
 import org.dataloader.instrumentation.DataLoaderInstrumentation;
@@ -144,7 +143,6 @@ class DataLoaderHelper<K, V> {
     }
 
 
-    @GuardedBy("lock")
     CompletableFuture<V> load(K key, Object loadContext) {
         boolean batchingEnabled = loaderOptions.batchingEnabled();
         boolean futureCachingEnabled = loaderOptions.cachingEnabled();
@@ -225,7 +223,6 @@ class DataLoaderHelper<K, V> {
                 loaderOptions.cacheKeyFunction().get().getKeyWithContext(key, context) : key;
     }
 
-    @GuardedBy("lock")
     DispatchResult<V> dispatch() {
         DataLoaderInstrumentationContext<DispatchResult<?>> instrCtx = ctxOrNoopCtx(instrumentation().beginDispatch(dataLoader));
 
