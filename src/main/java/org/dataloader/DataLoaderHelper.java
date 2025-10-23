@@ -168,7 +168,7 @@ class DataLoaderHelper<K, V> {
         if (batchingEnabled) {
             loadCallFuture = new CompletableFuture<>();
             if (futureCachingEnabled) {
-                CompletableFuture<V> cachedFuture = futureCache.setIfAbsent(cacheKey, loadCallFuture);
+                CompletableFuture<V> cachedFuture = futureCache.putIfAbsentAtomically(cacheKey, loadCallFuture);
                 if (cachedFuture != null) {
                     // another thread was faster and created a matching CF ... hence this is really a cachehit and we are done
                     stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key, loadContext));
@@ -183,7 +183,7 @@ class DataLoaderHelper<K, V> {
             // immediate execution of batch function
             loadCallFuture = invokeLoaderImmediately(key, loadContext, true);
             if (futureCachingEnabled) {
-                CompletableFuture<V> cachedFuture = futureCache.setIfAbsent(cacheKey, loadCallFuture);
+                CompletableFuture<V> cachedFuture = futureCache.putIfAbsentAtomically(cacheKey, loadCallFuture);
                 if (cachedFuture != null) {
                     // another thread was faster and the loader was invoked twice with the same key
                     // we are disregarding the resul of our dispatch call and use the already cached value

@@ -72,7 +72,7 @@ public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
      * {@inheritDoc}
      */
     @Override
-    public CompletableFuture<V> setIfAbsent(K key, CompletableFuture<V> value) {
+    public CompletableFuture<V> putIfAbsentAtomically(K key, CompletableFuture<V> value) {
         return cache.putIfAbsent(key, value);
     }
 

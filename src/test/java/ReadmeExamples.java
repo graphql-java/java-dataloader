@@ -265,7 +265,7 @@ public class ReadmeExamples {
         }
 
         @Override
-        public CompletableFuture<Object> setIfAbsent(Object key, CompletableFuture value) {
+        public CompletableFuture<Object> putIfAbsentAtomically(Object key, CompletableFuture value) {
             return null;
         }
 

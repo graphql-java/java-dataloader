@@ -448,7 +448,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      */
     public DataLoader<K, V> prime(K key, CompletableFuture<V> value) {
         Object cacheKey = getCacheKey(key);
-        futureCache.setIfAbsent(cacheKey, value);
+        futureCache.putIfAbsentAtomically(cacheKey, value);
         return this;
     }
 

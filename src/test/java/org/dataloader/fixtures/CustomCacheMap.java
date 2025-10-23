@@ -30,7 +30,7 @@ public class CustomCacheMap implements CacheMap<String, Object> {
     }
 
     @Override
-    public CompletableFuture<Object> setIfAbsent(String key, CompletableFuture<Object> value) {
+    public CompletableFuture<Object> putIfAbsentAtomically(String key, CompletableFuture<Object> value) {
         return stash.putIfAbsent(key, value);
     }
 
