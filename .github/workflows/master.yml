@@ -28,6 +28,6 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
       - name: build test and publish
-        run: ./gradlew assemble && ./gradlew check --info && && ./gradlew jcstress && ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository -x check --info --stacktrace
+        run: ./gradlew assemble && ./gradlew check --info && ./gradlew jcstress && ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository -x check --info --stacktrace
         env:
           CI: true
