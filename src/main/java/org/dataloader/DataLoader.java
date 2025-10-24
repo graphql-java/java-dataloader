@@ -229,6 +229,12 @@ public class DataLoader<K, V extends @Nullable Object> {
      * @return the future of the value
      */
     public CompletableFuture<V> load(@NonNull K key, @Nullable Object keyContext) {
+        CompletableFuture<V> result = loadImpl(key, keyContext);
+        options.getDispatchStrategy().loadCalled(this);
+        return result;
+    }
+
+    private CompletableFuture<V> loadImpl(@NonNull K key, @Nullable Object keyContext) {
         return helper.load(nonNull(key), keyContext);
     }
 
@@ -275,8 +281,9 @@ public class DataLoader<K, V extends @Nullable Object> {
             if (i < keyContexts.size()) {
                 keyContext = keyContexts.get(i);
             }
-            collect.add(load(key, keyContext));
+            collect.add(loadImpl(key, keyContext));
         }
+        options.getDispatchStrategy().loadCalled(this);
         return CompletableFutureKit.allOf(collect);
     }
 
@@ -302,8 +309,9 @@ public class DataLoader<K, V extends @Nullable Object> {
         for (Map.Entry<K, ?> entry : keysAndContexts.entrySet()) {
             K key = entry.getKey();
             Object keyContext = entry.getValue();
-            collect.put(key, load(key, keyContext));
+            collect.put(key, loadImpl(key, keyContext));
         }
+        options.getDispatchStrategy().loadCalled(this);
         return CompletableFutureKit.allOf(collect);
     }
 
