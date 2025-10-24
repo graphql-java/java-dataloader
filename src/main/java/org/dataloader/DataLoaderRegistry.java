@@ -46,24 +46,27 @@ public class DataLoaderRegistry {
     protected final Map<String, DataLoader<?, ?>> dataLoaders;
     protected final @Nullable DataLoaderInstrumentation instrumentation;
 
+    private final DispatchStrategy dispatchStrategy;
+
 
     public DataLoaderRegistry() {
-        this(new ConcurrentHashMap<>(), null);
+        this(new ConcurrentHashMap<>(), null, DispatchStrategy.NO_OP);
     }
 
     private DataLoaderRegistry(Builder builder) {
-        this(builder.dataLoaders, builder.instrumentation);
+        this(builder.dataLoaders, builder.instrumentation, builder.dispatchStrategy);
     }
 
-    protected DataLoaderRegistry(Map<String, DataLoader<?, ?>> dataLoaders, @Nullable DataLoaderInstrumentation instrumentation) {
+    protected DataLoaderRegistry(Map<String, DataLoader<?, ?>> dataLoaders, @Nullable DataLoaderInstrumentation instrumentation, DispatchStrategy dispatchStrategy) {
         this.dataLoaders = instrumentDLs(dataLoaders, instrumentation);
         this.instrumentation = instrumentation;
+        this.dispatchStrategy = dispatchStrategy;
     }
 
     private Map<String, DataLoader<?, ?>> instrumentDLs(Map<String, DataLoader<?, ?>> incomingDataLoaders, @Nullable DataLoaderInstrumentation registryInstrumentation) {
         Map<String, DataLoader<?, ?>> dataLoaders = new ConcurrentHashMap<>(incomingDataLoaders);
         if (registryInstrumentation != null) {
-            dataLoaders.replaceAll((k, existingDL) -> nameAndInstrumentDL(k, registryInstrumentation, existingDL));
+            dataLoaders.replaceAll((k, existingDL) -> nameAndInstrumentDL(k, registryInstrumentation, existingDL, dispatchStrategy));
         }
         return dataLoaders;
     }
@@ -74,9 +77,10 @@ public class DataLoaderRegistry {
      * @param key                     the key used to register the data loader
      * @param registryInstrumentation the common registry {@link DataLoaderInstrumentation}
      * @param existingDL              the existing data loader
+     *
      * @return a new {@link DataLoader} or the same one if there is nothing to change
      */
-    private static DataLoader<?, ?> nameAndInstrumentDL(String key, @Nullable DataLoaderInstrumentation registryInstrumentation, DataLoader<?, ?> existingDL) {
+    private static DataLoader<?, ?> nameAndInstrumentDL(String key, @Nullable DataLoaderInstrumentation registryInstrumentation, DataLoader<?, ?> existingDL, DispatchStrategy dispatchStrategy) {
         existingDL = checkAndSetName(key, existingDL);
 
         if (registryInstrumentation == null) {
@@ -92,18 +96,18 @@ public class DataLoaderRegistry {
             }
             if (existingInstrumentation == DataLoaderInstrumentationHelper.NOOP_INSTRUMENTATION) {
                 // replace it with the registry one
-                return mkInstrumentedDataLoader(existingDL, options, registryInstrumentation);
+                return mkInstrumentedDataLoader(existingDL, options, registryInstrumentation, dispatchStrategy);
             }
             if (existingInstrumentation instanceof ChainedDataLoaderInstrumentation) {
                 // avoids calling a chained inside a chained
                 DataLoaderInstrumentation newInstrumentation = ((ChainedDataLoaderInstrumentation) existingInstrumentation).prepend(registryInstrumentation);
-                return mkInstrumentedDataLoader(existingDL, options, newInstrumentation);
+                return mkInstrumentedDataLoader(existingDL, options, newInstrumentation, dispatchStrategy);
             } else {
                 DataLoaderInstrumentation newInstrumentation = new ChainedDataLoaderInstrumentation().add(registryInstrumentation).add(existingInstrumentation);
-                return mkInstrumentedDataLoader(existingDL, options, newInstrumentation);
+                return mkInstrumentedDataLoader(existingDL, options, newInstrumentation, dispatchStrategy);
             }
         } else {
-            return mkInstrumentedDataLoader(existingDL, options, registryInstrumentation);
+            return mkInstrumentedDataLoader(existingDL, options, registryInstrumentation, dispatchStrategy);
         }
     }
 
@@ -116,12 +120,12 @@ public class DataLoaderRegistry {
         return dataLoader;
     }
 
-    private static DataLoader<?, ?> mkInstrumentedDataLoader(DataLoader<?, ?> existingDL, DataLoaderOptions options, DataLoaderInstrumentation newInstrumentation) {
-        return existingDL.transform(builder -> builder.options(setInInstrumentation(options, newInstrumentation)));
+    private static DataLoader<?, ?> mkInstrumentedDataLoader(DataLoader<?, ?> existingDL, DataLoaderOptions options, DataLoaderInstrumentation newInstrumentation, DispatchStrategy dispatchStrategy) {
+        return existingDL.transform(builder -> builder.options(setInInstrumentation(options, newInstrumentation, dispatchStrategy)));
     }
 
-    private static DataLoaderOptions setInInstrumentation(DataLoaderOptions options, DataLoaderInstrumentation newInstrumentation) {
-        return options.transform(optionsBuilder -> optionsBuilder.setInstrumentation(newInstrumentation));
+    private static DataLoaderOptions setInInstrumentation(DataLoaderOptions options, DataLoaderInstrumentation newInstrumentation, DispatchStrategy dispatchStrategy) {
+        return options.transform(optionsBuilder -> optionsBuilder.setInstrumentation(newInstrumentation).setDispatchStrategy(dispatchStrategy));
     }
 
     /**
@@ -140,11 +144,12 @@ public class DataLoaderRegistry {
      * object that was registered.
      *
      * @param dataLoader the named data loader to register
+     *
      * @return this registry
      */
     public DataLoaderRegistry register(DataLoader<?, ?> dataLoader) {
         String name = Assertions.nonNull(dataLoader.getName(), () -> "The DataLoader must have a non null name");
-        dataLoaders.put(name, nameAndInstrumentDL(name, instrumentation, dataLoader));
+        dataLoaders.put(name, nameAndInstrumentDL(name, instrumentation, dataLoader, dispatchStrategy));
         return this;
     }
 
@@ -157,10 +162,11 @@ public class DataLoaderRegistry {
      *
      * @param key        the key to put the data loader under
      * @param dataLoader the data loader to register
+     *
      * @return this registry
      */
     public DataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader) {
-        dataLoaders.put(key, nameAndInstrumentDL(key, instrumentation, dataLoader));
+        dataLoaders.put(key, nameAndInstrumentDL(key, instrumentation, dataLoader, dispatchStrategy));
         return this;
     }
 
@@ -173,10 +179,11 @@ public class DataLoaderRegistry {
      *
      * @param key        the key to put the data loader under
      * @param dataLoader the data loader to register
+     *
      * @return the data loader instance that was registered
      */
     public <K, V> DataLoader<K, V> registerAndGet(String key, DataLoader<?, ?> dataLoader) {
-        dataLoaders.put(key, nameAndInstrumentDL(key, instrumentation, dataLoader));
+        dataLoaders.put(key, nameAndInstrumentDL(key, instrumentation, dataLoader, dispatchStrategy));
         return Objects.requireNonNull(getDataLoader(key));
     }
 
@@ -195,6 +202,7 @@ public class DataLoaderRegistry {
      * @param mappingFunction the function to compute a data loader
      * @param <K>             the type of keys
      * @param <V>             the type of values
+     *
      * @return a data loader
      */
     @SuppressWarnings("unchecked")
@@ -202,7 +210,7 @@ public class DataLoaderRegistry {
                                                    final Function<String, DataLoader<?, ?>> mappingFunction) {
         return (DataLoader<K, V>) dataLoaders.computeIfAbsent(key, (k) -> {
             DataLoader<?, ?> dl = mappingFunction.apply(k);
-            return nameAndInstrumentDL(key, instrumentation, dl);
+            return nameAndInstrumentDL(key, instrumentation, dl, dispatchStrategy);
         });
     }
 
@@ -211,6 +219,7 @@ public class DataLoaderRegistry {
      * and return a new combined registry
      *
      * @param registry the registry to combine into this registry
+     *
      * @return a new combined registry
      */
     public DataLoaderRegistry combine(DataLoaderRegistry registry) {
@@ -239,6 +248,7 @@ public class DataLoaderRegistry {
      * This will unregister a new dataloader
      *
      * @param key the key of the data loader to unregister
+     *
      * @return this registry
      */
     public DataLoaderRegistry unregister(String key) {
@@ -252,6 +262,7 @@ public class DataLoaderRegistry {
      * @param key the key of the data loader
      * @param <K> the type of keys
      * @param <V> the type of values
+     *
      * @return a data loader or null if it's not present
      */
     @SuppressWarnings("unchecked")
@@ -322,6 +333,7 @@ public class DataLoaderRegistry {
     public static class Builder {
 
         private final Map<String, DataLoader<?, ?>> dataLoaders = new HashMap<>();
+        public DispatchStrategy dispatchStrategy = DispatchStrategy.NO_OP;
         private @Nullable DataLoaderInstrumentation instrumentation;
 
         /**
@@ -329,6 +341,7 @@ public class DataLoaderRegistry {
          *
          * @param key        the key to put the data loader under
          * @param dataLoader the data loader to register
+         *
          * @return this builder for a fluent pattern
          */
         public Builder register(String key, DataLoader<?, ?> dataLoader) {
@@ -341,6 +354,7 @@ public class DataLoaderRegistry {
          * from a previous {@link DataLoaderRegistry}
          *
          * @param otherRegistry the previous {@link DataLoaderRegistry}
+         *
          * @return this builder for a fluent pattern
          */
         public Builder registerAll(DataLoaderRegistry otherRegistry) {
@@ -350,6 +364,11 @@ public class DataLoaderRegistry {
 
         public Builder instrumentation(DataLoaderInstrumentation instrumentation) {
             this.instrumentation = instrumentation;
+            return this;
+        }
+
+        public Builder dispatchStrategy(DispatchStrategy dispatchStrategy) {
+            this.dispatchStrategy = dispatchStrategy;
             return this;
         }
 

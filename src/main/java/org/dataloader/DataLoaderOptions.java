@@ -55,6 +55,7 @@ public class DataLoaderOptions {
     private final ValueCacheOptions valueCacheOptions;
     private final BatchLoaderScheduler batchLoaderScheduler;
     private final DataLoaderInstrumentation instrumentation;
+    private final DispatchStrategy dispatchStrategy;
 
     /**
      * Creates a new data loader options with default settings.
@@ -72,6 +73,7 @@ public class DataLoaderOptions {
         valueCacheOptions = DEFAULT_VALUE_CACHE_OPTIONS;
         batchLoaderScheduler = null;
         instrumentation = DataLoaderInstrumentationHelper.NOOP_INSTRUMENTATION;
+        dispatchStrategy = DispatchStrategy.NO_OP;
     }
 
     private DataLoaderOptions(Builder builder) {
@@ -87,6 +89,7 @@ public class DataLoaderOptions {
         this.valueCacheOptions = builder.valueCacheOptions;
         this.batchLoaderScheduler = builder.batchLoaderScheduler;
         this.instrumentation = builder.instrumentation;
+        this.dispatchStrategy = builder.dispatchStrategy;
     }
 
     /**
@@ -116,6 +119,7 @@ public class DataLoaderOptions {
      * Will transform the current options in to a builder ands allow you to build a new set of options
      *
      * @param builderConsumer the consumer of a builder that has this objects starting values
+     *
      * @return a new {@link DataLoaderOptions} object
      */
     public DataLoaderOptions transform(Consumer<Builder> builderConsumer) {
@@ -126,19 +130,21 @@ public class DataLoaderOptions {
 
     @Override
     public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         DataLoaderOptions that = (DataLoaderOptions) o;
         return batchingEnabled == that.batchingEnabled
-                && cachingEnabled == that.cachingEnabled
-                && cachingExceptionsEnabled == that.cachingExceptionsEnabled
-                && maxBatchSize == that.maxBatchSize
-                && Objects.equals(cacheKeyFunction, that.cacheKeyFunction) &&
-                Objects.equals(cacheMap, that.cacheMap) &&
-                Objects.equals(valueCache, that.valueCache) &&
-                Objects.equals(statisticsCollector, that.statisticsCollector) &&
-                Objects.equals(environmentProvider, that.environmentProvider) &&
-                Objects.equals(valueCacheOptions, that.valueCacheOptions) &&
-                Objects.equals(batchLoaderScheduler, that.batchLoaderScheduler);
+               && cachingEnabled == that.cachingEnabled
+               && cachingExceptionsEnabled == that.cachingExceptionsEnabled
+               && maxBatchSize == that.maxBatchSize
+               && Objects.equals(cacheKeyFunction, that.cacheKeyFunction) &&
+               Objects.equals(cacheMap, that.cacheMap) &&
+               Objects.equals(valueCache, that.valueCache) &&
+               Objects.equals(statisticsCollector, that.statisticsCollector) &&
+               Objects.equals(environmentProvider, that.environmentProvider) &&
+               Objects.equals(valueCacheOptions, that.valueCacheOptions) &&
+               Objects.equals(batchLoaderScheduler, that.batchLoaderScheduler);
     }
 
 
@@ -254,7 +260,12 @@ public class DataLoaderOptions {
         return instrumentation;
     }
 
+    public DispatchStrategy getDispatchStrategy() {
+        return dispatchStrategy;
+    }
+
     public static class Builder {
+        private DispatchStrategy dispatchStrategy = DispatchStrategy.NO_OP;
         private boolean batchingEnabled;
         private boolean cachingEnabled;
         private boolean cachingExceptionsEnabled;
@@ -285,12 +296,14 @@ public class DataLoaderOptions {
             this.valueCacheOptions = other.valueCacheOptions;
             this.batchLoaderScheduler = other.batchLoaderScheduler;
             this.instrumentation = other.instrumentation;
+            this.dispatchStrategy = other.dispatchStrategy;
         }
 
         /**
          * Sets the option that determines whether batch loading is enabled.
          *
          * @param batchingEnabled {@code true} to enable batch loading, {@code false} otherwise
+         *
          * @return this builder for fluent coding
          */
         public Builder setBatchingEnabled(boolean batchingEnabled) {
@@ -302,6 +315,7 @@ public class DataLoaderOptions {
          * Sets the option that determines whether caching is enabled.
          *
          * @param cachingEnabled {@code true} to enable caching, {@code false} otherwise
+         *
          * @return this builder for fluent coding
          */
         public Builder setCachingEnabled(boolean cachingEnabled) {
@@ -313,6 +327,7 @@ public class DataLoaderOptions {
          * Sets the option that determines whether exceptional values are cache enabled.
          *
          * @param cachingExceptionsEnabled {@code true} to enable caching exceptional values, {@code false} otherwise
+         *
          * @return this builder for fluent coding
          */
         public Builder setCachingExceptionsEnabled(boolean cachingExceptionsEnabled) {
@@ -324,6 +339,7 @@ public class DataLoaderOptions {
          * Sets the function to use for creating the cache key, if caching is enabled.
          *
          * @param cacheKeyFunction the cache key function to use
+         *
          * @return this builder for fluent coding
          */
         public Builder setCacheKeyFunction(CacheKey<?> cacheKeyFunction) {
@@ -335,6 +351,7 @@ public class DataLoaderOptions {
          * Sets the cache map implementation to use for caching, if caching is enabled.
          *
          * @param cacheMap the cache map instance
+         *
          * @return this builder for fluent coding
          */
         public Builder setCacheMap(CacheMap<?, ?> cacheMap) {
@@ -346,6 +363,7 @@ public class DataLoaderOptions {
          * Sets the value cache implementation to use for caching values, if caching is enabled.
          *
          * @param valueCache the value cache instance
+         *
          * @return this builder for fluent coding
          */
         public Builder setValueCache(ValueCache<?, ?> valueCache) {
@@ -358,6 +376,7 @@ public class DataLoaderOptions {
          * before they are split into multiple class
          *
          * @param maxBatchSize the maximum batch size
+         *
          * @return this builder for fluent coding
          */
         public Builder setMaxBatchSize(int maxBatchSize) {
@@ -371,6 +390,7 @@ public class DataLoaderOptions {
          * a common value
          *
          * @param statisticsCollector the statistics collector to use
+         *
          * @return this builder for fluent coding
          */
         public Builder setStatisticsCollector(Supplier<StatisticsCollector> statisticsCollector) {
@@ -382,6 +402,7 @@ public class DataLoaderOptions {
          * Sets the batch loader environment provider that will be used to give context to batch load functions
          *
          * @param environmentProvider the batch loader context provider
+         *
          * @return this builder for fluent coding
          */
         public Builder setBatchLoaderContextProvider(BatchLoaderContextProvider environmentProvider) {
@@ -393,6 +414,7 @@ public class DataLoaderOptions {
          * Sets the {@link ValueCacheOptions} that control how the {@link ValueCache} will be used
          *
          * @param valueCacheOptions the value cache options
+         *
          * @return this builder for fluent coding
          */
         public Builder setValueCacheOptions(ValueCacheOptions valueCacheOptions) {
@@ -405,6 +427,7 @@ public class DataLoaderOptions {
          * to some future time.
          *
          * @param batchLoaderScheduler the scheduler
+         *
          * @return this builder for fluent coding
          */
         public Builder setBatchLoaderScheduler(BatchLoaderScheduler batchLoaderScheduler) {
@@ -416,10 +439,16 @@ public class DataLoaderOptions {
          * Sets in a new {@link DataLoaderInstrumentation}
          *
          * @param instrumentation the new {@link DataLoaderInstrumentation}
+         *
          * @return this builder for fluent coding
          */
         public Builder setInstrumentation(DataLoaderInstrumentation instrumentation) {
             this.instrumentation = nonNull(instrumentation);
+            return this;
+        }
+
+        public Builder setDispatchStrategy(DispatchStrategy dispatchStrategy) {
+            this.dispatchStrategy = dispatchStrategy;
             return this;
         }
 
