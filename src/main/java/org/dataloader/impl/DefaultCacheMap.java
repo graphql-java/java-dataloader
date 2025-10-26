@@ -18,6 +18,8 @@ package org.dataloader.impl;
 
 import org.dataloader.CacheMap;
 import org.dataloader.annotations.Internal;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
@@ -32,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  */
 @Internal
+@NullMarked
 public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
 
     private final ConcurrentHashMap<K, CompletableFuture<V>> cache;
@@ -56,7 +59,7 @@ public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
      * {@inheritDoc}
      */
     @Override
-    public CompletableFuture<V> get(K key) {
+    public @Nullable CompletableFuture<V> get(K key) {
         return cache.get(key);
     }
 
@@ -72,7 +75,7 @@ public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
      * {@inheritDoc}
      */
     @Override
-    public CompletableFuture<V> putIfAbsentAtomically(K key, CompletableFuture<V> value) {
+    public @Nullable CompletableFuture<V> putIfAbsentAtomically(K key, CompletableFuture<V> value) {
         return cache.putIfAbsent(key, value);
     }
 
