@@ -28,7 +28,13 @@ import java.util.concurrent.CompletableFuture;
  * CacheMap is used by data loaders that use caching promises to values aka {@link CompletableFuture}&lt;V&gt;.  A better name for this
  * class might have been FutureCache but that is history now.
  * <p>
- * The default implementation used by the data loader is based on a {@link java.util.LinkedHashMap}.
+ * The default implementation used by the data loader is based on a {@link java.util.concurrent.ConcurrentHashMap} because
+ * the data loader code requires the cache to prove atomic writes especially the {@link #putIfAbsentAtomically(Object, CompletableFuture)}
+ * method.
+ * <p>
+ * The data loader code using a Compare and Swap (CAS) algorithm to decide if a cache entry is present or not.  If you write your
+ * own {@link CacheMap} implementation then you MUST provide atomic writes in this method to ensure that the same promise for a key is
+ * returned always.
  * <p>
  * This is really a cache of completed {@link CompletableFuture}&lt;V&gt; values in memory.  It is used, when caching is enabled, to
  * give back the same future to any code that may call it.  If you need a cache of the underlying values that is possible external to the JVM
@@ -42,7 +48,7 @@ import java.util.concurrent.CompletableFuture;
  */
 @PublicSpi
 @NullMarked
-public interface CacheMap<K, V> {
+public interface CacheMap<K,V> {
 
     /**
      * Creates a new cache map, using the default implementation that is based on a {@link java.util.LinkedHashMap}.
@@ -84,14 +90,21 @@ public interface CacheMap<K, V> {
     Collection<CompletableFuture<V>> getAll();
 
     /**
-     * Creates a new cache map entry with the specified key and value, or updates the value if the key already exists.
+     * Atomically creates a new cache map entry with the specified key and value, or updates the value if the key already exists.
+     * <p>
+     * The data loader code using a Compare and Swap (CAS) algorithm to decide if a cache entry is present or not.  If you write your
+     * own {@link CacheMap} implementation then you MUST provide atomic writes in this method to ensure that the same promise for a key is
+     * returned always.
+     * <p>
+     * The default implementation of this method uses {@link java.util.concurrent.ConcurrentHashMap} has its implementation so these CAS
+     * writes work as expected.
      *
      * @param key   the key to cache
      * @param value the value to cache
      *
-     * @return the cache map for fluent coding
+     * @return atomically the previous value for the key or null if the value is not present.
      */
-    CompletableFuture<V> putIfAbsentAtomically(K key, CompletableFuture<V> value);
+    @Nullable CompletableFuture<V> putIfAbsentAtomically(K key, CompletableFuture<V> value);
 
     /**
      * Deletes the entry with the specified key from the cache map, if it exists.
@@ -114,7 +127,7 @@ public interface CacheMap<K, V> {
      * and intended for testing and debugging.
      * If a cache doesn't support it, it can throw an Exception.
      *
-     * @return
+     * @return the size of the cache
      */
     int size();
 }
