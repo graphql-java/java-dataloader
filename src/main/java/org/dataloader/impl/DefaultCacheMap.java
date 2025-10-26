@@ -20,9 +20,8 @@ import org.dataloader.CacheMap;
 import org.dataloader.annotations.Internal;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Default implementation of {@link CacheMap} that is based on a regular {@link java.util.HashMap}.
@@ -35,13 +34,13 @@ import java.util.concurrent.CompletableFuture;
 @Internal
 public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
 
-    private final Map<K, CompletableFuture<V>> cache;
+    private final ConcurrentHashMap<K, CompletableFuture<V>> cache;
 
     /**
      * Default constructor
      */
     public DefaultCacheMap() {
-        cache = new HashMap<>();
+        cache = new ConcurrentHashMap<>();
     }
 
     /**
@@ -73,9 +72,8 @@ public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
      * {@inheritDoc}
      */
     @Override
-    public CacheMap<K, V> set(K key, CompletableFuture<V> value) {
-        cache.put(key, value);
-        return this;
+    public CompletableFuture<V> putIfAbsentAtomically(K key, CompletableFuture<V> value) {
+        return cache.putIfAbsent(key, value);
     }
 
     /**
@@ -94,5 +92,10 @@ public class DefaultCacheMap<K, V> implements CacheMap<K, V> {
     public CacheMap<K, V> clear() {
         cache.clear();
         return this;
+    }
+
+    @Override
+    public int size() {
+        return cache.size();
     }
 }

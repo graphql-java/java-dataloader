@@ -1,6 +1,7 @@
+import net.ltgt.gradle.errorprone.CheckSeverity
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
-import net.ltgt.gradle.errorprone.CheckSeverity
+
 import java.text.SimpleDateFormat
 
 plugins {
@@ -15,6 +16,7 @@ plugins {
     id 'com.github.ben-manes.versions' version '0.53.0'
     id "me.champeau.jmh" version "0.7.3"
     id "net.ltgt.errorprone" version '4.3.0'
+    id "io.github.reyerizo.gradle.jcstress" version "0.8.15"
 
     // Kotlin just for tests - not production code
     id 'org.jetbrains.kotlin.jvm' version '2.2.20'
@@ -229,7 +231,8 @@ nexusPublishing {
             // https://central.sonatype.org/publish/publish-portal-ossrh-staging-api/#configuration
             nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
             // GraphQL Java does not publish snapshots, but adding this URL for completeness
-            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))        }
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+        }
     }
 }
 
@@ -257,4 +260,8 @@ tasks.named("dependencyUpdates").configure {
     rejectVersionIf {
         isNonStable(it.candidate.version)
     }
+}
+
+jcstress {
+//    verbose = true
 }

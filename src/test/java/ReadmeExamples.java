@@ -265,7 +265,7 @@ public class ReadmeExamples {
         }
 
         @Override
-        public CacheMap set(Object key, CompletableFuture value) {
+        public CompletableFuture<Object> putIfAbsentAtomically(Object key, CompletableFuture value) {
             return null;
         }
 
@@ -277,6 +277,11 @@ public class ReadmeExamples {
         @Override
         public CacheMap clear() {
             return null;
+        }
+
+        @Override
+        public int size() {
+            return 0;
         }
     }
 

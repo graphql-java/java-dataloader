@@ -61,6 +61,7 @@ import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.dataloader.DataLoaderOptions.newDefaultOptions;
 import static org.dataloader.DataLoaderOptions.newOptions;
 import static org.dataloader.fixtures.TestKit.areAllDone;
+import static org.dataloader.fixtures.TestKit.asSet;
 import static org.dataloader.fixtures.TestKit.listFrom;
 import static org.dataloader.impl.CompletableFutureKit.cause;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -70,6 +71,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -980,7 +982,7 @@ public class DataLoaderTest {
         assertThat(future2b.get(), equalTo("b"));
         assertThat(loadCalls, equalTo(asList(asList("a", "b"),
                 singletonList("c"), singletonList("b"))));
-        assertArrayEquals(customMap.stash.keySet().toArray(), asList("a", "c", "b").toArray());
+        assertEquals(customMap.stash.keySet(), asSet("a", "c", "b"));
 
         // Supports clear all
 
