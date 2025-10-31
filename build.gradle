@@ -19,7 +19,7 @@ plugins {
     id "io.github.reyerizo.gradle.jcstress" version "0.8.15"
 
     // Kotlin just for tests - not production code
-    id 'org.jetbrains.kotlin.jvm' version '2.2.20'
+    id 'org.jetbrains.kotlin.jvm' version '2.2.21'
 }
 
 java {
