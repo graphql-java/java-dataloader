@@ -14,6 +14,7 @@ import static org.hamcrest.Matchers.equalTo;
 /**
  * Tests for cacheMap functionality..
  */
+@SuppressWarnings("NullableProblems")
 public class DataLoaderCacheMapTest {
 
     private <T> BatchLoader<T, T> keysAsValues() {
@@ -24,12 +25,33 @@ public class DataLoaderCacheMapTest {
     public void should_provide_all_futures_from_cache() {
         DataLoader<Integer, Integer> dataLoader = newDataLoader(keysAsValues());
 
-        dataLoader.load(1);
-        dataLoader.load(2);
-        dataLoader.load(1);
+        CompletableFuture<Integer> cf1 = dataLoader.load(1);
+        CompletableFuture<Integer> cf2 = dataLoader.load(2);
+        CompletableFuture<Integer> cf3 = dataLoader.load(3);
 
-        Collection<CompletableFuture<Integer>> futures = dataLoader.getCacheMap().getAll();
-        assertThat(futures.size(), equalTo(2));
+        CacheMap<Object, Integer> cacheMap = dataLoader.getCacheMap();
+        Collection<CompletableFuture<Integer>> futures = cacheMap.getAll();
+        assertThat(futures.size(), equalTo(3));
+
+
+        assertThat(cacheMap.get(1), equalTo(cf1));
+        assertThat(cacheMap.get(2), equalTo(cf2));
+        assertThat(cacheMap.get(3), equalTo(cf3));
+        assertThat(cacheMap.containsKey(1), equalTo(true));
+        assertThat(cacheMap.containsKey(2), equalTo(true));
+        assertThat(cacheMap.containsKey(3), equalTo(true));
+        assertThat(cacheMap.containsKey(4), equalTo(false));
+
+        cacheMap.delete(1);
+        assertThat(cacheMap.containsKey(1), equalTo(false));
+        assertThat(cacheMap.containsKey(2), equalTo(true));
+
+        cacheMap.clear();
+        assertThat(cacheMap.containsKey(1), equalTo(false));
+        assertThat(cacheMap.containsKey(2), equalTo(false));
+        assertThat(cacheMap.containsKey(3), equalTo(false));
+        assertThat(cacheMap.containsKey(4), equalTo(false));
+
     }
 
     @Test
