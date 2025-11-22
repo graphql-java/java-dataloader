@@ -1,6 +1,7 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
+import org.dataloader.errors.StrictModeRegistryException;
 import org.dataloader.impl.Assertions;
 import org.dataloader.instrumentation.ChainedDataLoaderInstrumentation;
 import org.dataloader.instrumentation.DataLoaderInstrumentation;
@@ -20,6 +21,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
+import static java.lang.String.format;
 import static org.dataloader.impl.Assertions.assertState;
 
 /**
@@ -43,21 +45,28 @@ import static org.dataloader.impl.Assertions.assertState;
 @PublicApi
 @NullMarked
 public class DataLoaderRegistry {
+
     protected final Map<String, DataLoader<?, ?>> dataLoaders;
     protected final @Nullable DataLoaderInstrumentation instrumentation;
+    protected final boolean strictMode;
 
 
     public DataLoaderRegistry() {
-        this(new ConcurrentHashMap<>(), null);
+        this(new ConcurrentHashMap<>(), null, false);
     }
 
     private DataLoaderRegistry(Builder builder) {
-        this(builder.dataLoaders, builder.instrumentation);
+        this(builder.dataLoaders, builder.instrumentation, builder.strictMode);
     }
 
-    protected DataLoaderRegistry(Map<String, DataLoader<?, ?>> dataLoaders, @Nullable DataLoaderInstrumentation instrumentation) {
+    protected DataLoaderRegistry(
+        Map<String, DataLoader<?, ?>> dataLoaders,
+        @Nullable DataLoaderInstrumentation instrumentation,
+        boolean strictMode
+    ) {
         this.dataLoaders = instrumentDLs(dataLoaders, instrumentation);
         this.instrumentation = instrumentation;
+        this.strictMode = strictMode;
     }
 
     private Map<String, DataLoader<?, ?>> instrumentDLs(Map<String, DataLoader<?, ?>> incomingDataLoaders, @Nullable DataLoaderInstrumentation registryInstrumentation) {
@@ -144,6 +153,9 @@ public class DataLoaderRegistry {
      */
     public DataLoaderRegistry register(DataLoader<?, ?> dataLoader) {
         String name = Assertions.nonNull(dataLoader.getName(), () -> "The DataLoader must have a non null name");
+        if (strictMode) {
+            assertKeyStrictly(name);
+        }
         dataLoaders.put(name, nameAndInstrumentDL(name, instrumentation, dataLoader));
         return this;
     }
@@ -160,6 +172,9 @@ public class DataLoaderRegistry {
      * @return this registry
      */
     public DataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader) {
+        if (strictMode) {
+            assertKeyStrictly(key);
+        }
         dataLoaders.put(key, nameAndInstrumentDL(key, instrumentation, dataLoader));
         return this;
     }
@@ -176,6 +191,9 @@ public class DataLoaderRegistry {
      * @return the data loader instance that was registered
      */
     public <K, V> DataLoader<K, V> registerAndGet(String key, DataLoader<?, ?> dataLoader) {
+        if (strictMode) {
+            assertKeyStrictly(key);
+        }
         dataLoaders.put(key, nameAndInstrumentDL(key, instrumentation, dataLoader));
         return Objects.requireNonNull(getDataLoader(key));
     }
@@ -214,7 +232,9 @@ public class DataLoaderRegistry {
      * @return a new combined registry
      */
     public DataLoaderRegistry combine(DataLoaderRegistry registry) {
-        DataLoaderRegistry combined = new DataLoaderRegistry();
+        DataLoaderRegistry combined = new Builder()
+            .strictMode(strictMode)
+            .build();
 
         this.dataLoaders.forEach(combined::register);
         registry.dataLoaders.forEach(combined::register);
@@ -312,6 +332,12 @@ public class DataLoaderRegistry {
         return stats;
     }
 
+    protected void assertKeyStrictly(String key) {
+        if (dataLoaders.containsKey(key)) {
+            throw new StrictModeRegistryException(format("The key %s already has a DataLoader defined", key));
+        }
+    }
+
     /**
      * @return A builder of {@link DataLoaderRegistry}s
      */
@@ -323,6 +349,19 @@ public class DataLoaderRegistry {
 
         private final Map<String, DataLoader<?, ?>> dataLoaders = new HashMap<>();
         private @Nullable DataLoaderInstrumentation instrumentation;
+        private boolean strictMode;
+
+        /**
+         * This puts the builder into strict mode, so if things get defined twice, for example, it
+         * will throw a {@link org.dataloader.errors.StrictModeRegistryException}.
+         *
+         * @param strictMode whether strict mode is enabled
+         * @return this builder
+         */
+        public Builder strictMode(boolean strictMode) {
+            this.strictMode = strictMode;
+            return this;
+        }
 
         /**
          * This will register a new dataloader
@@ -332,6 +371,9 @@ public class DataLoaderRegistry {
          * @return this builder for a fluent pattern
          */
         public Builder register(String key, DataLoader<?, ?> dataLoader) {
+            if (strictMode) {
+                assertKeyStrictly(key);
+            }
             dataLoaders.put(key, dataLoader);
             return this;
         }
@@ -344,6 +386,11 @@ public class DataLoaderRegistry {
          * @return this builder for a fluent pattern
          */
         public Builder registerAll(DataLoaderRegistry otherRegistry) {
+            if (strictMode) {
+                otherRegistry.dataLoaders.forEach((key, dataLoader) -> {
+                    assertKeyStrictly(key);
+                });
+            }
             dataLoaders.putAll(otherRegistry.dataLoaders);
             return this;
         }
@@ -351,6 +398,12 @@ public class DataLoaderRegistry {
         public Builder instrumentation(DataLoaderInstrumentation instrumentation) {
             this.instrumentation = instrumentation;
             return this;
+        }
+
+        private void assertKeyStrictly(String key) {
+            if (dataLoaders.containsKey(key)) {
+                throw new StrictModeRegistryException(format("The key %s already has a DataLoader defined", key));
+            }
         }
 
         /**
