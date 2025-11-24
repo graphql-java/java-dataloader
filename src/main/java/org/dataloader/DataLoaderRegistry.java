@@ -85,7 +85,10 @@ public class DataLoaderRegistry {
      * @param existingDL              the existing data loader
      * @return a new {@link DataLoader} or the same one if there is nothing to change
      */
-    private static DataLoader<?, ?> nameAndInstrumentDL(String key, @Nullable DataLoaderInstrumentation registryInstrumentation, DataLoader<?, ?> existingDL) {
+    private DataLoader<?, ?> nameAndInstrumentDL(String key, @Nullable DataLoaderInstrumentation registryInstrumentation, DataLoader<?, ?> existingDL) {
+        if (strictMode) {
+            assertKeyStrictly(key);
+        }
         existingDL = checkAndSetName(key, existingDL);
 
         if (registryInstrumentation == null) {
@@ -153,9 +156,6 @@ public class DataLoaderRegistry {
      */
     public DataLoaderRegistry register(DataLoader<?, ?> dataLoader) {
         String name = Assertions.nonNull(dataLoader.getName(), () -> "The DataLoader must have a non null name");
-        if (strictMode) {
-            assertKeyStrictly(name);
-        }
         dataLoaders.put(name, nameAndInstrumentDL(name, instrumentation, dataLoader));
         return this;
     }
@@ -172,9 +172,6 @@ public class DataLoaderRegistry {
      * @return this registry
      */
     public DataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader) {
-        if (strictMode) {
-            assertKeyStrictly(key);
-        }
         dataLoaders.put(key, nameAndInstrumentDL(key, instrumentation, dataLoader));
         return this;
     }
@@ -191,9 +188,6 @@ public class DataLoaderRegistry {
      * @return the data loader instance that was registered
      */
     public <K, V> DataLoader<K, V> registerAndGet(String key, DataLoader<?, ?> dataLoader) {
-        if (strictMode) {
-            assertKeyStrictly(key);
-        }
         dataLoaders.put(key, nameAndInstrumentDL(key, instrumentation, dataLoader));
         return Objects.requireNonNull(getDataLoader(key));
     }
