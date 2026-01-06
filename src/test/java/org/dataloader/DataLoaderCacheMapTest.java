@@ -65,7 +65,8 @@ public class DataLoaderCacheMapTest {
         Collection<CompletableFuture<Integer>> futures = dataLoader.getCacheMap().getAll();
 
         List<CompletableFuture<Integer>> futuresList = new ArrayList<>(futures);
-        assertThat(futuresList.get(0).getNumberOfDependents(), equalTo(4)); // instrumentation is depending on the CF completing
-        assertThat(futuresList.get(1).getNumberOfDependents(), equalTo(2));
+        // instrumentation is depending on the CF completing + dispatch strategy
+        assertThat(futuresList.get(0).getNumberOfDependents(), equalTo(6));
+        assertThat(futuresList.get(1).getNumberOfDependents(), equalTo(3));
     }
 }
