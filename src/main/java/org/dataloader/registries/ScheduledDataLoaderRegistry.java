@@ -2,6 +2,7 @@ package org.dataloader.registries;
 
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderRegistry;
+import org.dataloader.DispatchStrategy;
 import org.dataloader.annotations.ExperimentalApi;
 import org.dataloader.impl.Assertions;
 import org.dataloader.instrumentation.DataLoaderInstrumentation;
@@ -69,7 +70,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     private volatile boolean closed;
 
     private ScheduledDataLoaderRegistry(Builder builder) {
-        super(builder.dataLoaders, builder.instrumentation);
+        super(builder.dataLoaders, builder.instrumentation, DispatchStrategy.NO_OP);
         this.scheduledExecutorService = Assertions.nonNull(builder.scheduledExecutorService);
         this.defaultExecutorUsed = builder.defaultExecutorUsed;
         this.schedule = builder.schedule;

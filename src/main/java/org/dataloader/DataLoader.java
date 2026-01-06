@@ -229,9 +229,7 @@ public class DataLoader<K, V extends @Nullable Object> {
      * @return the future of the value
      */
     public CompletableFuture<V> load(@NonNull K key, @Nullable Object keyContext) {
-        CompletableFuture<V> result = loadImpl(key, keyContext);
-        options.getDispatchStrategy().loadCalled(this);
-        return result;
+        return loadImpl(key, keyContext);
     }
 
     private CompletableFuture<V> loadImpl(@NonNull K key, @Nullable Object keyContext) {
@@ -283,7 +281,6 @@ public class DataLoader<K, V extends @Nullable Object> {
             }
             collect.add(loadImpl(key, keyContext));
         }
-        options.getDispatchStrategy().loadCalled(this);
         return CompletableFutureKit.allOf(collect);
     }
 
@@ -311,7 +308,6 @@ public class DataLoader<K, V extends @Nullable Object> {
             Object keyContext = entry.getValue();
             collect.put(key, loadImpl(key, keyContext));
         }
-        options.getDispatchStrategy().loadCalled(this);
         return CompletableFutureKit.allOf(collect);
     }
 

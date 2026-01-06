@@ -158,7 +158,9 @@ class DataLoaderHelper<K, V> {
                     // We already have a promise for this key, no need to check value cache or queue up load
                     stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key, loadContext));
                     ctx.onDispatched();
+                    loaderOptions.getDispatchStrategy().loadCalled();
                     cachedFuture.whenComplete(ctx::onCompleted);
+                    cachedFuture.whenComplete((result, error) -> loaderOptions.getDispatchStrategy().loadCompleted());
                     return cachedFuture;
                 }
             } catch (Exception ignored) {
@@ -173,7 +175,9 @@ class DataLoaderHelper<K, V> {
                     // another thread was faster and created a matching CF ... hence this is really a cachehit and we are done
                     stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key, loadContext));
                     ctx.onDispatched();
+                    loaderOptions.getDispatchStrategy().loadCalled();
                     cachedFuture.whenComplete(ctx::onCompleted);
+                    cachedFuture.whenComplete((result, error) -> loaderOptions.getDispatchStrategy().loadCompleted());
                     return cachedFuture;
                 }
             }
@@ -190,14 +194,18 @@ class DataLoaderHelper<K, V> {
                     // meaning this is a cache hit and we are done
                     stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key, loadContext));
                     ctx.onDispatched();
+                    loaderOptions.getDispatchStrategy().loadCalled();
                     cachedFuture.whenComplete(ctx::onCompleted);
+                    cachedFuture.whenComplete((result, error) -> loaderOptions.getDispatchStrategy().loadCompleted());
                     return cachedFuture;
                 }
             }
         }
 
         ctx.onDispatched();
+        loaderOptions.getDispatchStrategy().loadCalled();
         loadCallFuture.whenComplete(ctx::onCompleted);
+        loadCallFuture.whenComplete((result, error) -> loaderOptions.getDispatchStrategy().loadCompleted());
         return loadCallFuture;
     }
 

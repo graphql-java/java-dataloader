@@ -3,6 +3,8 @@ package org.dataloader;
 import org.dataloader.annotations.PublicApi;
 import org.jspecify.annotations.NullMarked;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 @NullMarked
 @PublicApi
 public interface DispatchStrategy {
@@ -10,7 +12,15 @@ public interface DispatchStrategy {
     DispatchStrategy NO_OP = new DispatchStrategy() {
     };
 
-    default void loadCalled(DataLoader<?, ?> dataLoader) {
+    default void onRegistryCreation(DataLoaderRegistry registry) {
+
+    }
+
+    default void loadCalled() {
+
+    }
+
+    default void loadCompleted() {
 
     }
 }

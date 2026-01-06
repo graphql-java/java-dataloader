@@ -58,14 +58,15 @@ public class DataLoaderRegistry {
     }
 
     protected DataLoaderRegistry(Map<String, DataLoader<?, ?>> dataLoaders, @Nullable DataLoaderInstrumentation instrumentation, DispatchStrategy dispatchStrategy) {
-        this.dataLoaders = instrumentDLs(dataLoaders, instrumentation);
+        this.dataLoaders = instrumentDLs(dataLoaders, instrumentation, dispatchStrategy);
         this.instrumentation = instrumentation;
         this.dispatchStrategy = dispatchStrategy;
+        dispatchStrategy.onRegistryCreation(this);
     }
 
-    private Map<String, DataLoader<?, ?>> instrumentDLs(Map<String, DataLoader<?, ?>> incomingDataLoaders, @Nullable DataLoaderInstrumentation registryInstrumentation) {
+    private Map<String, DataLoader<?, ?>> instrumentDLs(Map<String, DataLoader<?, ?>> incomingDataLoaders, @Nullable DataLoaderInstrumentation registryInstrumentation, DispatchStrategy dispatchStrategy) {
         Map<String, DataLoader<?, ?>> dataLoaders = new ConcurrentHashMap<>(incomingDataLoaders);
-        if (registryInstrumentation != null) {
+        if (registryInstrumentation != null || dispatchStrategy != DispatchStrategy.NO_OP) {
             dataLoaders.replaceAll((k, existingDL) -> nameAndInstrumentDL(k, registryInstrumentation, existingDL, dispatchStrategy));
         }
         return dataLoaders;
@@ -83,7 +84,7 @@ public class DataLoaderRegistry {
     private static DataLoader<?, ?> nameAndInstrumentDL(String key, @Nullable DataLoaderInstrumentation registryInstrumentation, DataLoader<?, ?> existingDL, DispatchStrategy dispatchStrategy) {
         existingDL = checkAndSetName(key, existingDL);
 
-        if (registryInstrumentation == null) {
+        if (registryInstrumentation == null && dispatchStrategy == DispatchStrategy.NO_OP) {
             return existingDL;
         }
         DataLoaderOptions options = existingDL.getOptions();
@@ -120,12 +121,17 @@ public class DataLoaderRegistry {
         return dataLoader;
     }
 
-    private static DataLoader<?, ?> mkInstrumentedDataLoader(DataLoader<?, ?> existingDL, DataLoaderOptions options, DataLoaderInstrumentation newInstrumentation, DispatchStrategy dispatchStrategy) {
+    private static DataLoader<?, ?> mkInstrumentedDataLoader(DataLoader<?, ?> existingDL, DataLoaderOptions options, @Nullable DataLoaderInstrumentation newInstrumentation, DispatchStrategy dispatchStrategy) {
         return existingDL.transform(builder -> builder.options(setInInstrumentation(options, newInstrumentation, dispatchStrategy)));
     }
 
-    private static DataLoaderOptions setInInstrumentation(DataLoaderOptions options, DataLoaderInstrumentation newInstrumentation, DispatchStrategy dispatchStrategy) {
-        return options.transform(optionsBuilder -> optionsBuilder.setInstrumentation(newInstrumentation).setDispatchStrategy(dispatchStrategy));
+    private static DataLoaderOptions setInInstrumentation(DataLoaderOptions options, @Nullable DataLoaderInstrumentation newInstrumentation, DispatchStrategy dispatchStrategy) {
+        return options.transform(optionsBuilder -> {
+            optionsBuilder.setDispatchStrategy(dispatchStrategy);
+            if (newInstrumentation != null) {
+                optionsBuilder.setInstrumentation(newInstrumentation);
+            }
+        });
     }
 
     /**
