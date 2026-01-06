@@ -11,20 +11,20 @@ plugins {
     id 'maven-publish'
     id 'signing'
     id 'groovy'
-    id 'biz.aQute.bnd.builder' version '6.2.0'
+    id 'biz.aQute.bnd.builder' version '7.1.0'
     id 'io.github.gradle-nexus.publish-plugin' version '2.0.0'
     id 'com.github.ben-manes.versions' version '0.53.0'
     id "me.champeau.jmh" version "0.7.3"
     id "net.ltgt.errorprone" version '4.3.0'
-    id "io.github.reyerizo.gradle.jcstress" version "0.8.15"
+    id "io.github.reyerizo.gradle.jcstress" version "0.9.0"
 
     // Kotlin just for tests - not production code
-    id 'org.jetbrains.kotlin.jvm' version '2.2.20'
+    id 'org.jetbrains.kotlin.jvm' version '2.2.21'
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -81,13 +81,15 @@ repositories {
 
 jar {
     manifest {
-        attributes('Automatic-Module-Name': 'org.dataloader',
-                '-exportcontents': 'org.dataloader.*',
-                '-removeheaders': 'Private-Package')
+        attributes('Automatic-Module-Name': 'org.dataloader')
     }
-    bnd('''
+    bundle {
+        bnd('''
+-exportcontents: org.dataloader.*
+-removeheaders: Private-Package
 Import-Package: org.jspecify.annotations;resolution:=optional,*
 ''')
+    }
 }
 
 dependencies {
@@ -99,7 +101,7 @@ dependencies {
     jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
 
     errorprone 'com.uber.nullaway:nullaway:0.12.10'
-    errorprone 'com.google.errorprone:error_prone_core:2.42.0'
+    errorprone 'com.google.errorprone:error_prone_core:2.43.0'
 
     // just tests
     testImplementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
@@ -141,10 +143,7 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
     from javadoc.destinationDir
 }
 
-artifacts {
-    archives sourcesJar
-    archives javadocJar
-}
+
 
 testing {
     suites {
@@ -177,9 +176,9 @@ publishing {
     publications {
         graphqlJava(MavenPublication) {
             from components.java
-            groupId 'com.graphql-java'
-            artifactId 'java-dataloader'
-            version project.version
+            groupId = 'com.graphql-java'
+            artifactId = 'java-dataloader'
+            version = project.version
 
             artifact sourcesJar
             artifact javadocJar
@@ -237,7 +236,7 @@ nexusPublishing {
 }
 
 signing {
-    required { !project.hasProperty('publishToMavenLocal') }
+    required = { !project.hasProperty('publishToMavenLocal') }
     def signingKey = System.env.MAVEN_CENTRAL_PGP_KEY
     useInMemoryPgpKeys(signingKey, "")
     sign publishing.publications
