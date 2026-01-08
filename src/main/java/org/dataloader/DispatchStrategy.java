@@ -3,7 +3,6 @@ package org.dataloader;
 import org.dataloader.annotations.PublicApi;
 import org.jspecify.annotations.NullMarked;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * An interface to implement to allow for custom dispatch strategies when executing {@link DataLoader}s
