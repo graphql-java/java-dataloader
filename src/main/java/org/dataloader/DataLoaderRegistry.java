@@ -368,11 +368,25 @@ public class DataLoaderRegistry {
             return this;
         }
 
+        /**
+         * The {@link DataLoaderInstrumentation} to use for this registry
+         *
+         * @param instrumentation instrumentation to use
+         *
+         * @return the builder for a fluent pattern
+         */
         public Builder instrumentation(DataLoaderInstrumentation instrumentation) {
             this.instrumentation = instrumentation;
             return this;
         }
 
+        /**
+         * The {@link DispatchStrategy} to use for this registry
+         *
+         * @param dispatchStrategy strategy to use
+         *
+         * @return this builder for a fluent pattern
+         */
         public Builder dispatchStrategy(DispatchStrategy dispatchStrategy) {
             this.dispatchStrategy = dispatchStrategy;
             return this;
