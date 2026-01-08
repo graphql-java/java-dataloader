@@ -2,6 +2,7 @@ package org.dataloader.strategy;
 
 import org.dataloader.DataLoaderRegistry;
 import org.dataloader.DispatchStrategy;
+import org.dataloader.annotations.VisibleForTesting;
 import org.dataloader.impl.Assertions;
 import org.jspecify.annotations.Nullable;
 
@@ -19,6 +20,9 @@ public class BreadthFirstChainedDispatchStrategy implements DispatchStrategy {
     private final AtomicInteger pendingLoadCount = new AtomicInteger(0);
     private final AtomicInteger totalWorkCount = new AtomicInteger(0);
     private final Object dispatchLock = new Object();
+
+    // only used for tests
+    private Runnable onIteration;
 
     private final Duration fallbackTimeout;
     @Nullable private ScheduledFuture<?> fallbackDispatchFuture = null;
@@ -62,6 +66,8 @@ public class BreadthFirstChainedDispatchStrategy implements DispatchStrategy {
             }
 
             while (pendingLoadCount.get() > 0) {
+                onIteration.run();
+
                 int workBefore = totalWorkCount.get();
 
                 dispatchCallback.run();
@@ -109,6 +115,11 @@ public class BreadthFirstChainedDispatchStrategy implements DispatchStrategy {
         if (fallbackDispatchFuture != null) {
             fallbackDispatchFuture.cancel(false);
         }
+    }
+
+    @VisibleForTesting
+    void onIteration(Runnable onIteration) {
+        this.onIteration = onIteration;
     }
 
     public static class Builder {
