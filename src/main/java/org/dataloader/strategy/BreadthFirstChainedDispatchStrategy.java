@@ -120,6 +120,12 @@ public class BreadthFirstChainedDispatchStrategy implements DispatchStrategy {
         }
 
         public Builder setFallbackTimeout(Duration fallbackTimeout) {
+            if (fallbackTimeout == null) {
+                throw new IllegalArgumentException("fallbackTimeout must not be null");
+            }
+            if (fallbackTimeout.isZero() || fallbackTimeout.isNegative()) {
+                throw new IllegalArgumentException("fallbackTimeout must be a positive duration");
+            }
             this.fallbackTimeout = Assertions.nonNull(fallbackTimeout);
             return this;
         }
