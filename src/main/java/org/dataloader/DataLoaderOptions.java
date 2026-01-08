@@ -451,6 +451,13 @@ public class DataLoaderOptions {
             return this;
         }
 
+        /**
+         * Sets in a new {@link DispatchStrategy}
+         *
+         * @param dispatchStrategy the new {@link DispatchStrategy}
+         *
+         * @return the builder for fluent coding
+         */
         public Builder setDispatchStrategy(DispatchStrategy dispatchStrategy) {
             this.dispatchStrategy = dispatchStrategy;
             return this;
