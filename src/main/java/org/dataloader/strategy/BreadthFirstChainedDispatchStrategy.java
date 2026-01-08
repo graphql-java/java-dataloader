@@ -2,6 +2,7 @@ package org.dataloader.strategy;
 
 import org.dataloader.DataLoaderRegistry;
 import org.dataloader.DispatchStrategy;
+import org.dataloader.impl.Assertions;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
@@ -115,11 +116,11 @@ public class BreadthFirstChainedDispatchStrategy implements DispatchStrategy {
         private final ScheduledExecutorService scheduledExecutorService;
 
         public Builder(ScheduledExecutorService scheduledExecutorService) {
-            this.scheduledExecutorService = scheduledExecutorService;
+            this.scheduledExecutorService = Assertions.nonNull(scheduledExecutorService);
         }
 
         public Builder setFallbackTimeout(Duration fallbackTimeout) {
-            this.fallbackTimeout = fallbackTimeout;
+            this.fallbackTimeout = Assertions.nonNull(fallbackTimeout);
             return this;
         }
 

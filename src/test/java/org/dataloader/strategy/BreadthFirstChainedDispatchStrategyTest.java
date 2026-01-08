@@ -31,7 +31,7 @@ public class BreadthFirstChainedDispatchStrategyTest {
 
     @AfterEach
     public void cleanUp() {
-        this.scheduledExecutorService.shutdown();
+        this.scheduledExecutorService.shutdownNow();
     }
 
     @Test
