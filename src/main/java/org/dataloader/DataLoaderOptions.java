@@ -261,6 +261,9 @@ public class DataLoaderOptions {
         return instrumentation;
     }
 
+    /**
+     * @return the {@link DispatchStrategy} to use for dispatching batch loads
+     */
     public DispatchStrategy getDispatchStrategy() {
         return dispatchStrategy;
     }
