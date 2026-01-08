@@ -144,7 +144,8 @@ public class DataLoaderOptions {
                Objects.equals(statisticsCollector, that.statisticsCollector) &&
                Objects.equals(environmentProvider, that.environmentProvider) &&
                Objects.equals(valueCacheOptions, that.valueCacheOptions) &&
-               Objects.equals(batchLoaderScheduler, that.batchLoaderScheduler);
+               Objects.equals(batchLoaderScheduler, that.batchLoaderScheduler) &&
+               Objects.equals(dispatchStrategy, that.dispatchStrategy);
     }
 
 
