@@ -12,13 +12,12 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-public class BreadthFirstChainedDispatchStrategyStressTest {
+public class GreedyLevelByLevelChainedDispatchStrategyStressTest {
 
     private int iterationCount;
     private List<List<String>> dispatchOrder;
@@ -62,12 +61,12 @@ public class BreadthFirstChainedDispatchStrategyStressTest {
         gCompleted = new CountDownLatch(1);
         iCompleted = new CountDownLatch(1);
         iterationCount = 1;
-        BreadthFirstChainedDispatchStrategy breadthFirstChainedDispatchStrategy =
-                new BreadthFirstChainedDispatchStrategy.Builder(Executors.newSingleThreadScheduledExecutor())
+        GreedyLevelByLevelChainedDispatchStrategy greedyLevelByLevelChainedDispatchStrategy =
+                new GreedyLevelByLevelChainedDispatchStrategy.Builder(Executors.newSingleThreadScheduledExecutor())
                         .setFallbackTimeout(Duration.ofMillis(300)).build();
-        breadthFirstChainedDispatchStrategy.onIteration(() -> iterationCount += 1);
+        greedyLevelByLevelChainedDispatchStrategy.onIteration(() -> iterationCount += 1);
         registry = DataLoaderRegistry.newRegistry()
-                .dispatchStrategy(breadthFirstChainedDispatchStrategy)
+                .dispatchStrategy(greedyLevelByLevelChainedDispatchStrategy)
                 .build();
 
 

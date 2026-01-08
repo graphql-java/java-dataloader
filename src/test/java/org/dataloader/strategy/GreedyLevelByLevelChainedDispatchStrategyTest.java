@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-public class BreadthFirstChainedDispatchStrategyTest {
+public class GreedyLevelByLevelChainedDispatchStrategyTest {
 
     private ScheduledExecutorService scheduledExecutorService;
 
@@ -38,7 +38,7 @@ public class BreadthFirstChainedDispatchStrategyTest {
     void singleDepthLoadSucceeds() throws Exception {
         DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
                 .register(SimpleLoader.class.getSimpleName(), DataLoaderFactory.newDataLoader(new SimpleLoader()))
-                .dispatchStrategy(new BreadthFirstChainedDispatchStrategy.Builder(scheduledExecutorService).build())
+                .dispatchStrategy(new GreedyLevelByLevelChainedDispatchStrategy.Builder(scheduledExecutorService).build())
                 .build();
         DataLoader<Integer, Integer> loader = registry.getDataLoader(SimpleLoader.class.getSimpleName());
         CompletableFuture<Integer> result = loader.load(1);
@@ -50,7 +50,7 @@ public class BreadthFirstChainedDispatchStrategyTest {
     void singleDepthLoadSucceedsMultipleTimes() throws Exception {
         DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
                 .register(SimpleLoader.class.getSimpleName(), DataLoaderFactory.newDataLoader(new SimpleLoader()))
-                .dispatchStrategy(new BreadthFirstChainedDispatchStrategy.Builder(scheduledExecutorService).build())
+                .dispatchStrategy(new GreedyLevelByLevelChainedDispatchStrategy.Builder(scheduledExecutorService).build())
                 .build();
         DataLoader<Integer, Integer> loader = registry.getDataLoader(SimpleLoader.class.getSimpleName());
         CompletableFuture<Integer> result = loader.load(1);
@@ -66,7 +66,7 @@ public class BreadthFirstChainedDispatchStrategyTest {
     @Test
     void chainedLoaderSucceeds() throws Exception {
         DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
-                .dispatchStrategy(new BreadthFirstChainedDispatchStrategy.Builder(scheduledExecutorService).build())
+                .dispatchStrategy(new GreedyLevelByLevelChainedDispatchStrategy.Builder(scheduledExecutorService).build())
                 .build();
         registry.register(SimpleLoader.class.getSimpleName(), DataLoaderFactory.newDataLoader(new SimpleLoader()));
         registry.register(ChainedLoader.class.getSimpleName(), DataLoaderFactory.newDataLoader(new ChainedLoader(registry)));
@@ -80,7 +80,7 @@ public class BreadthFirstChainedDispatchStrategyTest {
     void chainedAsyncLoaderSucceeds() {
         CountDownLatch latch = new CountDownLatch(1);
         DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
-                .dispatchStrategy(new BreadthFirstChainedDispatchStrategy.Builder(scheduledExecutorService).build())
+                .dispatchStrategy(new GreedyLevelByLevelChainedDispatchStrategy.Builder(scheduledExecutorService).build())
                 .build();
         registry.register(SimpleLoader.class.getSimpleName(), DataLoaderFactory.newDataLoader(new SimpleLoader()));
         registry.register(ChainedAsyncLoader.class.getSimpleName(), DataLoaderFactory.newDataLoader(new ChainedAsyncLoader(registry, latch)));
@@ -100,7 +100,7 @@ public class BreadthFirstChainedDispatchStrategyTest {
     @Test
     void dispatchGoesByLevel() throws Exception {
         DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
-                .dispatchStrategy(new BreadthFirstChainedDispatchStrategy.Builder(scheduledExecutorService).build())
+                .dispatchStrategy(new GreedyLevelByLevelChainedDispatchStrategy.Builder(scheduledExecutorService).build())
                 .build();
         List<List<Integer>> leafLevelSeenKeys = new ArrayList<>();
         BatchLoader<Integer, Integer> leaf = keys -> {

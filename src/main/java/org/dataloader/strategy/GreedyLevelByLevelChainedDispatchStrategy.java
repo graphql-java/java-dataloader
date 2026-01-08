@@ -12,7 +12,20 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class BreadthFirstChainedDispatchStrategy implements DispatchStrategy {
+/**
+ * A {@link DispatchStrategy} which balances batching and performance by dispatching level by level with minimal waiting.
+ * <p>
+ * We use a fallback {@link ScheduledExecutorService} to handle when work is stuck due to async calls in the chain for
+ * chained dataloaders. This minimizes the amount of threads spawned to only be used when there is no known work to be
+ * done and the chain is not finished.
+ * <p>
+ * Due to the concept of 'known' work we greedily walk the chain instead of waiting for async calls to finish before
+ * kicking off the next level.
+ * <p>
+ * In practice this will greedily fill up DataLoader keys while walking the chain to provide a nice balance of
+ * batching/dedupe/caching while not needing to worry about manually dispatching the tree.
+ */
+public class GreedyLevelByLevelChainedDispatchStrategy implements DispatchStrategy {
 
     private static final Duration DEFAULT_FALLBACK_TIMEOUT = Duration.ofMillis(30);
 
@@ -29,7 +42,7 @@ public class BreadthFirstChainedDispatchStrategy implements DispatchStrategy {
 
     @Nullable private Runnable dispatchCallback;
 
-    private BreadthFirstChainedDispatchStrategy(Builder builder) {
+    private GreedyLevelByLevelChainedDispatchStrategy(Builder builder) {
         this.scheduledExecutorService = builder.scheduledExecutorService;
         this.fallbackTimeout = builder.fallbackTimeout;
     }
@@ -141,8 +154,8 @@ public class BreadthFirstChainedDispatchStrategy implements DispatchStrategy {
             return this;
         }
 
-        public BreadthFirstChainedDispatchStrategy build() {
-            return new BreadthFirstChainedDispatchStrategy(this);
+        public GreedyLevelByLevelChainedDispatchStrategy build() {
+            return new GreedyLevelByLevelChainedDispatchStrategy(this);
         }
 
     }
