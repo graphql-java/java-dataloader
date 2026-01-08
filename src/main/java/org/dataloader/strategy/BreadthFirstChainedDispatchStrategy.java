@@ -39,8 +39,8 @@ public class BreadthFirstChainedDispatchStrategy implements DispatchStrategy {
     public void loadCalled() {
         // initial load called
         pendingLoadCount.incrementAndGet();
-        totalWorkCount.incrementAndGet();
-        if (totalWorkCount.get() == 1) {
+        int previousTotal = totalWorkCount.getAndIncrement();
+        if (previousTotal == 0) {
             triggerDeterministicDispatch();
         }
     }
