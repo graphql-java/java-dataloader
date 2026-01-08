@@ -3,8 +3,6 @@ package org.dataloader;
 import org.dataloader.annotations.PublicApi;
 import org.jspecify.annotations.NullMarked;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 @NullMarked
 @PublicApi
 public interface DispatchStrategy {
