@@ -339,7 +339,7 @@ public class DataLoaderRegistry {
     public static class Builder {
 
         private final Map<String, DataLoader<?, ?>> dataLoaders = new HashMap<>();
-        public DispatchStrategy dispatchStrategy = DispatchStrategy.NO_OP;
+        private DispatchStrategy dispatchStrategy = DispatchStrategy.NO_OP;
         private @Nullable DataLoaderInstrumentation instrumentation;
 
         /**
