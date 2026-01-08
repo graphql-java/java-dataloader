@@ -103,7 +103,7 @@ public class BreadthFirstChainedDispatchStrategy implements DispatchStrategy {
                 );
     }
 
-    private void resetState() {
+    private synchronized void resetState() {
         pendingLoadCount.set(0);
         totalWorkCount.set(0);
         if (fallbackDispatchFuture != null) {
