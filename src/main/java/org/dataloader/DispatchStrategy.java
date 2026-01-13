@@ -2,6 +2,9 @@ package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
+
+import java.util.concurrent.CompletableFuture;
 
 
 /**
@@ -28,14 +31,14 @@ public interface DispatchStrategy {
     /**
      * Called when a {@link DataLoader#load(Object)} is called on a dataloader
      */
-    default void loadCalled() {
+    default void loadCalled(DataLoader<?, ?> dataLoader, Object key, @Nullable Object loadContext, CompletableFuture<?> result) {
 
     }
 
     /**
      * Called when a {@link DataLoader#load(Object)} is executed and completed on a dataloader
      */
-    default void loadCompleted() {
+    default void loadCompleted(DataLoader<?, ?> dataLoader, @Nullable Object result, @Nullable Throwable error) {
 
     }
 }

@@ -1,12 +1,15 @@
 package org.dataloader.strategy;
 
+import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderRegistry;
 import org.dataloader.DispatchStrategy;
 import org.dataloader.annotations.VisibleForTesting;
 import org.dataloader.impl.Assertions;
+import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * In practice this will greedily fill up DataLoader keys while walking the chain to provide a nice balance of
  * batching/dedupe/caching while not needing to worry about manually dispatching the tree.
  */
+@NullMarked
 public class GreedyLevelByLevelChainedDispatchStrategy implements DispatchStrategy {
 
     private static final Duration DEFAULT_FALLBACK_TIMEOUT = Duration.ofMillis(30);
@@ -35,7 +39,9 @@ public class GreedyLevelByLevelChainedDispatchStrategy implements DispatchStrate
     private final Object dispatchLock = new Object();
 
     // only used for tests
-    private Runnable onIteration;
+    Runnable onIteration = () -> {
+
+    };
 
     private final Duration fallbackTimeout;
     @Nullable private ScheduledFuture<?> fallbackDispatchFuture = null;
@@ -53,7 +59,7 @@ public class GreedyLevelByLevelChainedDispatchStrategy implements DispatchStrate
     }
 
     @Override
-    public void loadCalled() {
+    public void loadCalled(DataLoader<?, ?> dataLoader, Object key, @Nullable Object loaderContext, CompletableFuture<?> result) {
         // initial load called
         pendingLoadCount.incrementAndGet();
         int previousTotal = totalWorkCount.getAndIncrement();
@@ -63,7 +69,7 @@ public class GreedyLevelByLevelChainedDispatchStrategy implements DispatchStrate
     }
 
     @Override
-    public void loadCompleted() {
+    public void loadCompleted(DataLoader<?, ?> dataLoader, @Nullable Object result, @Nullable Throwable error) {
         pendingLoadCount.decrementAndGet();
     }
 
