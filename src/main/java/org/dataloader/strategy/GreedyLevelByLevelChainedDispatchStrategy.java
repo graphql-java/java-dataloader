@@ -3,6 +3,7 @@ package org.dataloader.strategy;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderRegistry;
 import org.dataloader.DispatchStrategy;
+import org.dataloader.annotations.PublicApi;
 import org.dataloader.annotations.VisibleForTesting;
 import org.dataloader.impl.Assertions;
 import org.jspecify.annotations.NullMarked;
@@ -28,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * In practice this will greedily fill up DataLoader keys while walking the chain to provide a nice balance of
  * batching/dedupe/caching while not needing to worry about manually dispatching the tree.
  */
+@PublicApi
 @NullMarked
 public class GreedyLevelByLevelChainedDispatchStrategy implements DispatchStrategy {
 
