@@ -189,8 +189,11 @@ class DataLoaderHelper<K, V> {
 
         ctx.onDispatched();
         loaderOptions.getDispatchStrategy().loadCalled(dataLoader, key, loadContext, loadCallFuture);
-        loadCallFuture = loadCallFuture.whenComplete((result, error) -> loaderOptions.getDispatchStrategy().loadCompleted(dataLoader, result, error));
-        loadCallFuture.whenComplete(ctx::onCompleted);
+        loadCallFuture = loadCallFuture.whenComplete((result, error) -> {
+                    loaderOptions.getDispatchStrategy().loadCompleted(dataLoader, result, error);
+                    ctx.onCompleted(result, error);
+                }
+        );
         return loadCallFuture;
     }
 
@@ -198,8 +201,10 @@ class DataLoaderHelper<K, V> {
         stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key, loadContext));
         ctx.onDispatched();
         loaderOptions.getDispatchStrategy().loadCalled(dataLoader, key, loadContext, cachedFuture);
-        cachedFuture = cachedFuture.whenComplete((result, error) -> loaderOptions.getDispatchStrategy().loadCompleted(dataLoader, result, error));
-        cachedFuture.whenComplete(ctx::onCompleted);
+        cachedFuture = cachedFuture.whenComplete((result, error) -> {
+            loaderOptions.getDispatchStrategy().loadCompleted(dataLoader, result, error);
+            ctx.onCompleted(result, error);
+        });
         return cachedFuture;
     }
 

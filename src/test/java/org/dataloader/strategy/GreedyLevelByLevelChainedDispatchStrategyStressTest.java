@@ -4,6 +4,7 @@ import org.dataloader.BatchLoader;
 import org.dataloader.DataLoaderFactory;
 import org.dataloader.DataLoaderRegistry;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -266,7 +267,7 @@ public class GreedyLevelByLevelChainedDispatchStrategyStressTest {
                 List.of("E", "F")
         )));
 
-        assertThat(completionOrder, equalTo(List.of(
+        assertThat(flatCompletionOrder, equalTo(List.of(
                 "H",
                 "J",
                 "I",

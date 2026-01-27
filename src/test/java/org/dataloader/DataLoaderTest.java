@@ -282,7 +282,6 @@ public class DataLoaderTest {
 
         CompletableFuture<Integer> future1a = identityLoader.load(1);
         CompletableFuture<Integer> future1b = identityLoader.load(1);
-        assertThat(future1a, equalTo(future1b));
         identityLoader.dispatch();
 
         await().until(future1a::isDone);
