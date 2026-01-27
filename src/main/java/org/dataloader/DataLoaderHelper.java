@@ -190,10 +190,9 @@ class DataLoaderHelper<K, V> {
         ctx.onDispatched();
         loaderOptions.getDispatchStrategy().loadCalled(dataLoader, key, loadContext, loadCallFuture);
         loadCallFuture = loadCallFuture.whenComplete((result, error) -> {
-                    loaderOptions.getDispatchStrategy().loadCompleted(dataLoader, result, error);
-                    ctx.onCompleted(result, error);
-                }
-        );
+            loaderOptions.getDispatchStrategy().loadCompleted(dataLoader, result, error);
+            ctx.onCompleted(result, error);
+        });
         return loadCallFuture;
     }
 
