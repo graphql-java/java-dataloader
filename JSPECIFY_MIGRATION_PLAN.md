@@ -240,14 +240,46 @@ When annotating the API, consider:
 
 ## Estimated Effort
 
-- **Phase 1-2** (Core + Impl): ~8 files, 2-3 hours
-- **Phase 3** (Stats): ~11 files, 1-2 hours
-- **Phase 4-5** (Instrumentation + Scheduler): ~6 files, 1-2 hours
-- **Phase 6-7** (Registries + Reactive): ~5 files, 1 hour
-- **Phase 8** (Annotations): ~6 files, 30 minutes
-- **Final verification and testing**: 1-2 hours
+### Per-Phase Breakdown
 
-**Total estimated effort**: 6-10 hours
+| Phase | Files | Time Estimate | Justification |
+|-------|-------|---------------|---------------|
+| **Phase 1-2** (Core + Impl) | 8 files | 2-3 hours | `Try.java` and `DataLoaderOptions.java` require careful analysis of nullable generics and multiple nullable fields. Implementation classes need review of internal null handling. |
+| **Phase 3** (Stats) | 11 files | 1-2 hours | Mostly straightforward classes with few nullable members. Context classes are simple records. |
+| **Phase 4-5** (Instrumentation + Scheduler) | 6 files | 1-2 hours | Methods explicitly return nullable `DataLoaderInstrumentationContext`. Requires attention to null callback patterns. |
+| **Phase 6-7** (Registries + Reactive) | 5 files | 1 hour | `DispatchPredicate` is simple. Reactive subscribers follow established patterns. |
+| **Phase 8** (Annotations) | 6 files | 30 minutes | Annotation definitions rarely need null annotations; quick review only. |
+| **Final verification** | N/A | 1-2 hours | Full build, test suite, and enable `AnnotatedPackages` option. |
+
+### Time Estimate Rationale
+
+Each file requires the following activities:
+
+1. **Analysis** (~5-10 min/file): Review all fields, parameters, return types, and generic bounds
+2. **Annotation** (~5-10 min/file): Add `@NullMarked` and `@Nullable` annotations  
+3. **Compilation check** (~2-5 min/file): Run `./gradlew compileJava` and fix NullAway errors
+4. **Iteration** (variable): Complex classes may need multiple rounds of fixes
+
+**Complexity factors that increase time:**
+- Generic types with nullable bounds (e.g., `Try<V>`, `DataLoader<K, V>`)
+- Classes with many optional/nullable fields (e.g., `DataLoaderOptions`)
+- Interfaces that return nullable values (e.g., `DataLoaderInstrumentation`)
+- Chained builders or fluent APIs
+
+**Factors that decrease time:**
+- Simple data classes with all non-null fields
+- Annotation definitions (usually no changes needed)
+- Classes that already follow non-null patterns
+
+### Total Estimated Effort
+
+| Scenario | Hours | Conditions |
+|----------|-------|------------|
+| **Optimistic** | 6 hours | Experienced with JSpecify, no unexpected issues |
+| **Expected** | 8 hours | Normal pace, some debugging of NullAway errors |
+| **Pessimistic** | 10 hours | Complex edge cases, API design decisions needed |
+
+**Recommendation**: Plan for 8 hours, which allows for one full working day or 2-3 focused sessions.
 
 ## References
 
