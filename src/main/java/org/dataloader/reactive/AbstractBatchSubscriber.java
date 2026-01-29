@@ -69,7 +69,7 @@ abstract class AbstractBatchSubscriber<K, V, T> implements Subscriber<T> {
     }
 
     @Override
-    @SuppressWarnings("NullAway") // NullAway doesn't correctly infer List<@Nullable Object> in generic constructor
+    @SuppressWarnings("NullAway") // NullAway has issues with generic type inference for List<@Nullable Object>
     public void onError(Throwable throwable) {
         assertState(!onCompleteCalled, () -> "onComplete has already been called; onError may not be invoked.");
         onErrorCalled = true;

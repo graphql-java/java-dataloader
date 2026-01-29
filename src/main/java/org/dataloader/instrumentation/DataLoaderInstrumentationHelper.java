@@ -58,6 +58,7 @@ public class DataLoaderInstrumentationHelper {
      * @param <U>       the generic type
      * @return an instrumentation context
      */
+    @SuppressWarnings("NullAway") // NullAway has issues with generic type inference for BiConsumer with nullable type arguments
     public static <U> DataLoaderInstrumentationContext<U> whenCompleted(BiConsumer<@Nullable U, @Nullable Throwable> codeToRun) {
         return new SimpleDataLoaderInstrumentationContext<>(null, codeToRun);
     }

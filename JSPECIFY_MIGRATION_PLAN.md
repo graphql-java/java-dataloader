@@ -46,86 +46,89 @@ The following files already have `@NullMarked` annotations:
 
 ## Files Requiring Annotations
 
+> **✅ COMPLETED**: All phases have been implemented. See status below.
+
 ### Phase 1: Core Package (`org.dataloader`) - High Priority
 
 | File | Status | Notes |
 |------|--------|-------|
-| `Try.java` | ❌ Needs annotation | Generic type `V` may be nullable; internal throwable field is nullable |
-| `DataLoaderOptions.java` | ❌ Needs annotation | Many nullable fields (cacheKeyFunction, cacheMap, valueCache, batchLoaderScheduler) |
+| `Try.java` | ✅ Done | Added `@NullMarked`, marked throwable field as nullable, used `nonNull()` assertions |
+| `DataLoaderOptions.java` | ✅ Done | Added `@NullMarked`, marked nullable fields and builder setters |
+| `BatchLoaderContextProvider.java` | ✅ Done | Marked `getContext()` return as `@Nullable` |
 
 ### Phase 2: Implementation Package (`org.dataloader.impl`)
 
 | File | Status | Notes |
 |------|--------|-------|
-| `Assertions.java` | ❌ Needs annotation | `nonNull()` method accepts nullable input, returns non-null |
-| `CompletableFutureKit.java` | ❌ Needs annotation | Review for nullable handling |
-| `PromisedValues.java` | ❌ Needs annotation | Interface with nullable considerations |
-| `PromisedValuesImpl.java` | ❌ Needs annotation | Implementation class |
-| `NoOpValueCache.java` | ❌ Needs annotation | Implements `ValueCache` |
-| `DataLoaderAssertionException.java` | ❌ Needs annotation | Exception class |
+| `Assertions.java` | ✅ Done | Added `@NullMarked`, marked `nonNull()` input parameter as nullable |
+| `CompletableFutureKit.java` | ✅ Done | Added `@NullMarked`, marked `cause()` return as nullable |
+| `PromisedValues.java` | ✅ Done | Added `@NullMarked`, marked nullable returns (`cause()`, `get()`) |
+| `PromisedValuesImpl.java` | ✅ Done | Added `@NullMarked`, marked nullable returns |
+| `NoOpValueCache.java` | ✅ Done | Added `@NullMarked`, added nullable type bound `V extends @Nullable Object` |
+| `DataLoaderAssertionException.java` | ✅ Done | Added `@NullMarked` |
 
 ### Phase 3: Statistics Package (`org.dataloader.stats`)
 
 | File | Status | Notes |
 |------|--------|-------|
-| `Statistics.java` | ❌ Needs annotation | Simple data class, likely all non-null |
-| `StatisticsCollector.java` | ❌ Needs annotation | Interface |
-| `SimpleStatisticsCollector.java` | ❌ Needs annotation | Implements `StatisticsCollector` |
-| `ThreadLocalStatisticsCollector.java` | ❌ Needs annotation | Implements `StatisticsCollector` |
-| `NoOpStatisticsCollector.java` | ❌ Needs annotation | Implements `StatisticsCollector` |
-| `DelegatingStatisticsCollector.java` | ❌ Needs annotation | Implements `StatisticsCollector` |
+| `Statistics.java` | ✅ Done | Added `@NullMarked` |
+| `StatisticsCollector.java` | ✅ Done | Added `@NullMarked`, marked context parameters as nullable |
+| `SimpleStatisticsCollector.java` | ✅ Done | Added `@NullMarked` |
+| `ThreadLocalStatisticsCollector.java` | ✅ Done | Added `@NullMarked` |
+| `NoOpStatisticsCollector.java` | ✅ Done | Added `@NullMarked` |
+| `DelegatingStatisticsCollector.java` | ✅ Done | Added `@NullMarked` |
 
 #### Statistics Context Subpackage (`org.dataloader.stats.context`)
 
 | File | Status | Notes |
 |------|--------|-------|
-| `IncrementBatchLoadCountByStatisticsContext.java` | ❌ Needs annotation | Context class |
-| `IncrementBatchLoadExceptionCountStatisticsContext.java` | ❌ Needs annotation | Context class |
-| `IncrementCacheHitCountStatisticsContext.java` | ❌ Needs annotation | Context class |
-| `IncrementLoadCountStatisticsContext.java` | ❌ Needs annotation | Context class |
-| `IncrementLoadErrorCountStatisticsContext.java` | ❌ Needs annotation | Context class |
+| `IncrementBatchLoadCountByStatisticsContext.java` | ✅ Done | Added `@NullMarked`, nullable callContext |
+| `IncrementBatchLoadExceptionCountStatisticsContext.java` | ✅ Done | Added `@NullMarked`, nullable callContexts |
+| `IncrementCacheHitCountStatisticsContext.java` | ✅ Done | Added `@NullMarked`, nullable callContext |
+| `IncrementLoadCountStatisticsContext.java` | ✅ Done | Added `@NullMarked`, nullable callContext |
+| `IncrementLoadErrorCountStatisticsContext.java` | ✅ Done | Added `@NullMarked`, nullable callContext |
 
 ### Phase 4: Instrumentation Package (`org.dataloader.instrumentation`)
 
 | File | Status | Notes |
 |------|--------|-------|
-| `DataLoaderInstrumentation.java` | ❌ Needs annotation | Methods return `@Nullable DataLoaderInstrumentationContext` |
-| `DataLoaderInstrumentationContext.java` | ❌ Needs annotation | Interface with nullable generics |
-| `DataLoaderInstrumentationHelper.java` | ❌ Needs annotation | Helper with NOOP implementations |
-| `SimpleDataLoaderInstrumentationContext.java` | ❌ Needs annotation | Simple implementation |
-| `ChainedDataLoaderInstrumentation.java` | ❌ Needs annotation | Chains multiple instrumentations |
+| `DataLoaderInstrumentation.java` | ✅ Done | Added `@NullMarked`, nullable returns and loadContext param |
+| `DataLoaderInstrumentationContext.java` | ✅ Done | Added `@NullMarked`, nullable `onCompleted` parameters |
+| `DataLoaderInstrumentationHelper.java` | ✅ Done | Added `@NullMarked`, nullable parameters |
+| `SimpleDataLoaderInstrumentationContext.java` | ✅ Done | Added `@NullMarked`, nullable fields and callbacks |
+| `ChainedDataLoaderInstrumentation.java` | ✅ Done | Added `@NullMarked`, handle nullable contexts |
 
 ### Phase 5: Scheduler Package (`org.dataloader.scheduler`)
 
 | File | Status | Notes |
 |------|--------|-------|
-| `BatchLoaderScheduler.java` | ❌ Needs annotation | Interface; `environment` parameter documented as possibly null |
+| `BatchLoaderScheduler.java` | ✅ Done | Added `@NullMarked` |
 
 ### Phase 6: Registries Package (`org.dataloader.registries`)
 
 | File | Status | Notes |
 |------|--------|-------|
-| `DispatchPredicate.java` | ❌ Needs annotation | Functional interface |
+| `DispatchPredicate.java` | ✅ Done | Added `@NullMarked` |
 
 ### Phase 7: Reactive Package (`org.dataloader.reactive`)
 
 | File | Status | Notes |
 |------|--------|-------|
-| `ReactiveSupport.java` | ❌ Needs annotation | Factory methods for subscribers |
-| `AbstractBatchSubscriber.java` | ❌ Needs annotation | Base subscriber implementation |
-| `BatchSubscriberImpl.java` | ❌ Needs annotation | Subscriber implementation |
-| `MappedBatchSubscriberImpl.java` | ❌ Needs annotation | Subscriber implementation |
+| `ReactiveSupport.java` | ✅ Done | Added `@NullMarked`, nullable callContexts |
+| `AbstractBatchSubscriber.java` | ✅ Done | Added `@NullMarked`, nullable callContexts |
+| `BatchSubscriberImpl.java` | ✅ Done | Added `@NullMarked` |
+| `MappedBatchSubscriberImpl.java` | ✅ Done | Added `@NullMarked`, handle nullable futures |
 
 ### Phase 8: Annotations Package (`org.dataloader.annotations`)
 
 | File | Status | Notes |
 |------|--------|-------|
-| `ExperimentalApi.java` | ❌ Consider | Annotation definition |
-| `GuardedBy.java` | ❌ Consider | Annotation definition |
-| `Internal.java` | ❌ Consider | Annotation definition |
-| `PublicApi.java` | ❌ Consider | Annotation definition |
-| `PublicSpi.java` | ❌ Consider | Annotation definition |
-| `VisibleForTesting.java` | ❌ Consider | Annotation definition |
+| `ExperimentalApi.java` | ⏭️ Skipped | Annotation definition doesn't need null annotations |
+| `GuardedBy.java` | ⏭️ Skipped | Annotation definition doesn't need null annotations |
+| `Internal.java` | ⏭️ Skipped | Annotation definition doesn't need null annotations |
+| `PublicApi.java` | ⏭️ Skipped | Annotation definition doesn't need null annotations |
+| `PublicSpi.java` | ⏭️ Skipped | Annotation definition doesn't need null annotations |
+| `VisibleForTesting.java` | ⏭️ Skipped | Annotation definition doesn't need null annotations |
 
 > **Note**: Annotation definitions typically don't need `@NullMarked` unless they have methods that return potentially null values.
 
