@@ -1,6 +1,8 @@
 package org.dataloader.impl;
 
 import org.dataloader.annotations.Internal;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +18,7 @@ import static org.dataloader.impl.Assertions.assertState;
 import static org.dataloader.impl.Assertions.nonNull;
 
 @Internal
+@NullMarked
 public class PromisedValuesImpl<T> implements PromisedValues<T> {
 
     private final List<? extends CompletionStage<T>> futures;
@@ -88,7 +91,7 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
     }
 
     @Override
-    public Throwable cause() {
+    public @Nullable Throwable cause() {
         return cause.get();
     }
 
@@ -98,12 +101,12 @@ public class PromisedValuesImpl<T> implements PromisedValues<T> {
     }
 
     @Override
-    public Throwable cause(int index) {
+    public @Nullable Throwable cause(int index) {
         return CompletableFutureKit.cause(futures.get(index).toCompletableFuture());
     }
 
     @Override
-    public T get(int index) {
+    public @Nullable T get(int index) {
         assertState(isDone(), () -> "The PromisedValues MUST be complete before calling the get() method");
         try {
             CompletionStage<T> future = futures.get(index);

@@ -1,19 +1,3 @@
-/*
- * Copyright (c) 2016 The original author or authors
- *
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * and Apache License v2.0 which accompanies this distribution.
- *
- *      The Eclipse Public License is available at
- *      http://www.eclipse.org/legal/epl-v10.html
- *
- *      The Apache License v2.0 is available at
- *      http://www.opensource.org/licenses/apache2.0.php
- *
- * You may elect to redistribute this code under either of these licenses.
- */
-
 package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
@@ -22,6 +6,8 @@ import org.dataloader.instrumentation.DataLoaderInstrumentationHelper;
 import org.dataloader.scheduler.BatchLoaderScheduler;
 import org.dataloader.stats.NoOpStatisticsCollector;
 import org.dataloader.stats.StatisticsCollector;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -37,6 +23,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  * @author <a href="https://github.com/aschrijver/">Arnold Schrijver</a>
  */
 @PublicApi
+@NullMarked
 public class DataLoaderOptions {
 
     private static final BatchLoaderContextProvider NULL_PROVIDER = () -> null;
@@ -46,14 +33,14 @@ public class DataLoaderOptions {
     private final boolean batchingEnabled;
     private final boolean cachingEnabled;
     private final boolean cachingExceptionsEnabled;
-    private final CacheKey<?> cacheKeyFunction;
-    private final CacheMap<?, ?> cacheMap;
-    private final ValueCache<?, ?> valueCache;
+    private final @Nullable CacheKey<?> cacheKeyFunction;
+    private final @Nullable CacheMap<?, ?> cacheMap;
+    private final @Nullable ValueCache<?, ?> valueCache;
     private final int maxBatchSize;
     private final Supplier<StatisticsCollector> statisticsCollector;
     private final BatchLoaderContextProvider environmentProvider;
     private final ValueCacheOptions valueCacheOptions;
-    private final BatchLoaderScheduler batchLoaderScheduler;
+    private final @Nullable BatchLoaderScheduler batchLoaderScheduler;
     private final DataLoaderInstrumentation instrumentation;
 
     /**
@@ -243,7 +230,7 @@ public class DataLoaderOptions {
     /**
      * @return the {@link BatchLoaderScheduler} to use, which can be null
      */
-    public BatchLoaderScheduler getBatchLoaderScheduler() {
+    public @Nullable BatchLoaderScheduler getBatchLoaderScheduler() {
         return batchLoaderScheduler;
     }
 
@@ -258,14 +245,14 @@ public class DataLoaderOptions {
         private boolean batchingEnabled;
         private boolean cachingEnabled;
         private boolean cachingExceptionsEnabled;
-        private CacheKey<?> cacheKeyFunction;
-        private CacheMap<?, ?> cacheMap;
-        private ValueCache<?, ?> valueCache;
+        private @Nullable CacheKey<?> cacheKeyFunction;
+        private @Nullable CacheMap<?, ?> cacheMap;
+        private @Nullable ValueCache<?, ?> valueCache;
         private int maxBatchSize;
         private Supplier<StatisticsCollector> statisticsCollector;
         private BatchLoaderContextProvider environmentProvider;
         private ValueCacheOptions valueCacheOptions;
-        private BatchLoaderScheduler batchLoaderScheduler;
+        private @Nullable BatchLoaderScheduler batchLoaderScheduler;
         private DataLoaderInstrumentation instrumentation;
 
         public Builder() {
@@ -326,7 +313,7 @@ public class DataLoaderOptions {
          * @param cacheKeyFunction the cache key function to use
          * @return this builder for fluent coding
          */
-        public Builder setCacheKeyFunction(CacheKey<?> cacheKeyFunction) {
+        public Builder setCacheKeyFunction(@Nullable CacheKey<?> cacheKeyFunction) {
             this.cacheKeyFunction = cacheKeyFunction;
             return this;
         }
@@ -337,7 +324,7 @@ public class DataLoaderOptions {
          * @param cacheMap the cache map instance
          * @return this builder for fluent coding
          */
-        public Builder setCacheMap(CacheMap<?, ?> cacheMap) {
+        public Builder setCacheMap(@Nullable CacheMap<?, ?> cacheMap) {
             this.cacheMap = cacheMap;
             return this;
         }
@@ -348,7 +335,7 @@ public class DataLoaderOptions {
          * @param valueCache the value cache instance
          * @return this builder for fluent coding
          */
-        public Builder setValueCache(ValueCache<?, ?> valueCache) {
+        public Builder setValueCache(@Nullable ValueCache<?, ?> valueCache) {
             this.valueCache = valueCache;
             return this;
         }
@@ -407,7 +394,7 @@ public class DataLoaderOptions {
          * @param batchLoaderScheduler the scheduler
          * @return this builder for fluent coding
          */
-        public Builder setBatchLoaderScheduler(BatchLoaderScheduler batchLoaderScheduler) {
+        public Builder setBatchLoaderScheduler(@Nullable BatchLoaderScheduler batchLoaderScheduler) {
             this.batchLoaderScheduler = batchLoaderScheduler;
             return this;
         }

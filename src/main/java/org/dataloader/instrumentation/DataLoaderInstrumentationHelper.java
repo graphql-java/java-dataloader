@@ -1,10 +1,13 @@
 package org.dataloader.instrumentation;
 
 import org.dataloader.annotations.PublicApi;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.function.BiConsumer;
 
 @PublicApi
+@NullMarked
 public class DataLoaderInstrumentationHelper {
 
     @SuppressWarnings("RedundantMethodOverride")
@@ -14,7 +17,7 @@ public class DataLoaderInstrumentationHelper {
         }
 
         @Override
-        public void onCompleted(Object result, Throwable t) {
+        public void onCompleted(@Nullable Object result, @Nullable Throwable t) {
         }
     };
 
@@ -55,7 +58,7 @@ public class DataLoaderInstrumentationHelper {
      * @param <U>       the generic type
      * @return an instrumentation context
      */
-    public static <U> DataLoaderInstrumentationContext<U> whenCompleted(BiConsumer<U, Throwable> codeToRun) {
+    public static <U> DataLoaderInstrumentationContext<U> whenCompleted(BiConsumer<@Nullable U, @Nullable Throwable> codeToRun) {
         return new SimpleDataLoaderInstrumentationContext<>(null, codeToRun);
     }
 
@@ -68,7 +71,7 @@ public class DataLoaderInstrumentationHelper {
      * @param <T> for two
      * @return a non null context
      */
-    public static <T> DataLoaderInstrumentationContext<T> ctxOrNoopCtx(DataLoaderInstrumentationContext<T> ic) {
+    public static <T> DataLoaderInstrumentationContext<T> ctxOrNoopCtx(@Nullable DataLoaderInstrumentationContext<T> ic) {
         return ic == null ? noOpCtx() : ic;
     }
 }

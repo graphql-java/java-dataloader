@@ -1,6 +1,7 @@
 package org.dataloader.registries;
 
 import org.dataloader.DataLoader;
+import org.jspecify.annotations.NullMarked;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -9,6 +10,7 @@ import java.util.Objects;
  * A predicate class used by {@link ScheduledDataLoaderRegistry} to decide whether to dispatch or not
  */
 @FunctionalInterface
+@NullMarked
 public interface DispatchPredicate {
 
     /**

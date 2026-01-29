@@ -1,6 +1,7 @@
 package org.dataloader.stats;
 
 import org.dataloader.annotations.PublicApi;
+import org.jspecify.annotations.NullMarked;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -9,6 +10,7 @@ import java.util.Map;
  * This holds statistics on how a {@link org.dataloader.DataLoader} has performed
  */
 @PublicApi
+@NullMarked
 public class Statistics {
 
     private final long loadCount;

@@ -1,5 +1,8 @@
 package org.dataloader.reactive;
 
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,9 +18,10 @@ import java.util.concurrent.CompletableFuture;
  * @param <K> the type of keys
  * @param <V> the type of values
  */
+@NullMarked
 class MappedBatchSubscriberImpl<K, V> extends AbstractBatchSubscriber<K, V, Map.Entry<K, V>> {
 
-    private final Map<K, Object> callContextByKey;
+    private final Map<K, @Nullable Object> callContextByKey;
     private final Map<K, List<CompletableFuture<V>>> queuedFuturesByKey;
     private final Map<K, V> completedValuesByKey = new HashMap<>();
 
@@ -25,7 +29,7 @@ class MappedBatchSubscriberImpl<K, V> extends AbstractBatchSubscriber<K, V, Map.
     MappedBatchSubscriberImpl(
             CompletableFuture<List<V>> valuesFuture,
             List<K> keys,
-            List<Object> callContexts,
+            List<@Nullable Object> callContexts,
             List<CompletableFuture<V>> queuedFutures,
             ReactiveSupport.HelperIntegration<K> helperIntegration
     ) {
@@ -98,20 +102,21 @@ class MappedBatchSubscriberImpl<K, V> extends AbstractBatchSubscriber<K, V, Map.
         try {
             lock.lock();
             super.onError(ex);
-            ex = unwrapThrowable(ex);
+            Throwable unwrapped = unwrapThrowable(ex);
+            Throwable finalEx = unwrapped != null ? unwrapped : ex;
             // Complete the futures for the remaining keys with the exception.
             for (int idx = 0; idx < queuedFutures.size(); idx++) {
                 K key = keys.get(idx);
                 List<CompletableFuture<V>> futures = queuedFuturesByKey.get(key);
-                if (!completedValuesByKey.containsKey(key)) {
+                if (!completedValuesByKey.containsKey(key) && futures != null) {
                     for (CompletableFuture<V> future : futures) {
-                        future.completeExceptionally(ex);
+                        future.completeExceptionally(finalEx);
                     }
                     // clear any cached view of this key because they all failed
                     helperIntegration.clearCacheView(key);
                 }
             }
-            valuesFuture.completeExceptionally(ex);
+            valuesFuture.completeExceptionally(finalEx);
         } finally {
             lock.unlock();
         }

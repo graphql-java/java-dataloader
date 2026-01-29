@@ -3,6 +3,8 @@ package org.dataloader.reactive;
 import org.dataloader.Try;
 import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -20,11 +22,12 @@ import static org.dataloader.impl.Assertions.assertState;
  *
  * @param <T> for two
  */
+@NullMarked
 abstract class AbstractBatchSubscriber<K, V, T> implements Subscriber<T> {
 
     final CompletableFuture<List<V>> valuesFuture;
     final List<K> keys;
-    final List<Object> callContexts;
+    final List<@Nullable Object> callContexts;
     final List<CompletableFuture<V>> queuedFutures;
     final ReactiveSupport.HelperIntegration<K> helperIntegration;
     final Lock lock = new ReentrantLock();
@@ -37,7 +40,7 @@ abstract class AbstractBatchSubscriber<K, V, T> implements Subscriber<T> {
     AbstractBatchSubscriber(
             CompletableFuture<List<V>> valuesFuture,
             List<K> keys,
-            List<Object> callContexts,
+            List<@Nullable Object> callContexts,
             List<CompletableFuture<V>> queuedFutures,
             ReactiveSupport.HelperIntegration<K> helperIntegration
     ) {
@@ -66,17 +69,19 @@ abstract class AbstractBatchSubscriber<K, V, T> implements Subscriber<T> {
     }
 
     @Override
+    @SuppressWarnings("NullAway") // NullAway doesn't correctly infer List<@Nullable Object> in generic constructor
     public void onError(Throwable throwable) {
         assertState(!onCompleteCalled, () -> "onComplete has already been called; onError may not be invoked.");
         onErrorCalled = true;
 
-        helperIntegration.getStats().incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(keys, callContexts));
+        helperIntegration.getStats().incrementBatchLoadExceptionCount(
+                new IncrementBatchLoadExceptionCountStatisticsContext<>(keys, callContexts));
     }
 
     /*
      * A value has arrived - how do we complete the future that's associated with it in a common way
      */
-    void onNextValue(K key, V value, Object callContext, List<CompletableFuture<V>> futures) {
+    void onNextValue(K key, V value, @Nullable Object callContext, List<CompletableFuture<V>> futures) {
         if (value instanceof Try) {
             // we allow the batch loader to return a Try so we can better represent a computation
             // that might have worked or not.
@@ -94,7 +99,7 @@ abstract class AbstractBatchSubscriber<K, V, T> implements Subscriber<T> {
         }
     }
 
-    Throwable unwrapThrowable(Throwable ex) {
+    @Nullable Throwable unwrapThrowable(Throwable ex) {
         if (ex instanceof CompletionException) {
             ex = ex.getCause();
         }

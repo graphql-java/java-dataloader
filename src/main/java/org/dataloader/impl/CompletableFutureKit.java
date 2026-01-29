@@ -1,6 +1,8 @@
 package org.dataloader.impl;
 
 import org.dataloader.annotations.Internal;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -14,6 +16,7 @@ import static java.util.stream.Collectors.toList;
  * Some really basic helpers when working with CompletableFutures
  */
 @Internal
+@NullMarked
 public class CompletableFutureKit {
 
     public static <V> CompletableFuture<V> failedFuture(Exception e) {
@@ -22,7 +25,7 @@ public class CompletableFutureKit {
         return future;
     }
 
-    public static <V> Throwable cause(CompletableFuture<V> completableFuture) {
+    public static <V> @Nullable Throwable cause(CompletableFuture<V> completableFuture) {
         if (!completableFuture.isCompletedExceptionally()) {
             return null;
         }

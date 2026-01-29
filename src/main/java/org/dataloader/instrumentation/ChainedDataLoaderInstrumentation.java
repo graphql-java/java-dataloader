@@ -4,6 +4,8 @@ import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.DataLoader;
 import org.dataloader.DispatchResult;
 import org.dataloader.annotations.PublicApi;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,6 +19,7 @@ import java.util.stream.Collectors;
  * the order of the provided list.
  */
 @PublicApi
+@NullMarked
 public class ChainedDataLoaderInstrumentation implements DataLoaderInstrumentation {
     private final List<DataLoaderInstrumentation> instrumentations;
 
@@ -71,7 +74,7 @@ public class ChainedDataLoaderInstrumentation implements DataLoaderInstrumentati
 
 
     @Override
-    public DataLoaderInstrumentationContext<Object> beginLoad(DataLoader<?, ?> dataLoader, Object key, Object loadContext) {
+    public DataLoaderInstrumentationContext<Object> beginLoad(DataLoader<?, ?> dataLoader, Object key, @Nullable Object loadContext) {
         return chainedCtx(it -> it.beginLoad(dataLoader, key, loadContext));
     }
 
@@ -85,19 +88,19 @@ public class ChainedDataLoaderInstrumentation implements DataLoaderInstrumentati
         return chainedCtx(it -> it.beginBatchLoader(dataLoader, keys, environment));
     }
 
-    private <T> DataLoaderInstrumentationContext<T> chainedCtx(Function<DataLoaderInstrumentation, DataLoaderInstrumentationContext<T>> mapper) {
+    private <T> DataLoaderInstrumentationContext<T> chainedCtx(Function<DataLoaderInstrumentation, @Nullable DataLoaderInstrumentationContext<T>> mapper) {
         // if we have zero or 1 instrumentations (and 1 is the most common), then we can avoid an object allocation
         // of the ChainedInstrumentationContext since it won't be needed
         if (instrumentations.isEmpty()) {
             return DataLoaderInstrumentationHelper.noOpCtx();
         }
         if (instrumentations.size() == 1) {
-            return mapper.apply(instrumentations.get(0));
+            return DataLoaderInstrumentationHelper.ctxOrNoopCtx(mapper.apply(instrumentations.get(0)));
         }
         return new ChainedInstrumentationContext<>(dropNullContexts(mapper));
     }
 
-    private <T> List<DataLoaderInstrumentationContext<T>> dropNullContexts(Function<DataLoaderInstrumentation, DataLoaderInstrumentationContext<T>> mapper) {
+    private <T> List<DataLoaderInstrumentationContext<T>> dropNullContexts(Function<DataLoaderInstrumentation, @Nullable DataLoaderInstrumentationContext<T>> mapper) {
         return instrumentations.stream()
                 .map(mapper)
                 .filter(Objects::nonNull)
@@ -117,7 +120,7 @@ public class ChainedDataLoaderInstrumentation implements DataLoaderInstrumentati
         }
 
         @Override
-        public void onCompleted(T result, Throwable t) {
+        public void onCompleted(@Nullable T result, @Nullable Throwable t) {
             contexts.forEach(it -> it.onCompleted(result, t));
         }
     }

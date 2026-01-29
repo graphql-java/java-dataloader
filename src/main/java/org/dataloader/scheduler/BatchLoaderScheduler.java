@@ -7,6 +7,7 @@ import org.dataloader.DataLoaderOptions;
 import org.dataloader.MappedBatchLoader;
 import org.dataloader.MappedBatchPublisher;
 import org.dataloader.BatchPublisher;
+import org.jspecify.annotations.NullMarked;
 
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,7 @@ import java.util.concurrent.CompletionStage;
  * call.  The total set of keys will be sliced into batches themselves and then the {@link BatchLoaderScheduler} will be called for
  * each batch of keys.  Do not assume that a single call to {@link DataLoader#dispatch()} results in a single call to {@link BatchLoaderScheduler}.
  */
+@NullMarked
 public interface BatchLoaderScheduler {
 
 
@@ -57,8 +59,7 @@ public interface BatchLoaderScheduler {
      * @param scheduledCall the callback that needs to be invoked to allow the {@link BatchLoader} to proceed.
      * @param keys          this is the list of keys that will be passed to the {@link BatchLoader}.
      *                      This is provided only for informative reasons, and you can't change the keys that are used
-     * @param environment   this is the {@link BatchLoaderEnvironment} in place,
-     *                      which can be null if it's a simple {@link BatchLoader} call
+     * @param environment   this is the {@link BatchLoaderEnvironment} in place
      * @param <K>           the key type
      * @param <V>           the value type
      *
@@ -72,8 +73,7 @@ public interface BatchLoaderScheduler {
      * @param scheduledCall the callback that needs to be invoked to allow the {@link MappedBatchLoader} to proceed.
      * @param keys          this is the list of keys that will be passed to the {@link MappedBatchLoader}.
      *                      This is provided only for informative reasons and, you can't change the keys that are used
-     * @param environment   this is the {@link BatchLoaderEnvironment} in place,
-     *                      which can be null if it's a simple {@link MappedBatchLoader} call
+     * @param environment   this is the {@link BatchLoaderEnvironment} in place
      * @param <K>           the key type
      * @param <V>           the value type
      *
@@ -87,8 +87,7 @@ public interface BatchLoaderScheduler {
      * @param scheduledCall the callback that needs to be invoked to allow the {@link BatchPublisher} to proceed.
      * @param keys          this is the list of keys that will be passed to the {@link BatchPublisher}.
      *                      This is provided only for informative reasons and, you can't change the keys that are used
-     * @param environment   this is the {@link BatchLoaderEnvironment} in place,
-     *                      which can be null if it's a simple {@link BatchPublisher} call
+     * @param environment   this is the {@link BatchLoaderEnvironment} in place
      * @param <K>           the key type
      */
     <K> void scheduleBatchPublisher(ScheduledBatchPublisherCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment);

@@ -1,6 +1,8 @@
 package org.dataloader.reactive;
 
 import org.dataloader.impl.DataLoaderAssertionException;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -15,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
  * @param <K> the type of keys
  * @param <V> the type of values
  */
+@NullMarked
 class BatchSubscriberImpl<K, V> extends AbstractBatchSubscriber<K, V, V> {
 
     private int idx = 0;
@@ -22,7 +25,7 @@ class BatchSubscriberImpl<K, V> extends AbstractBatchSubscriber<K, V, V> {
     BatchSubscriberImpl(
             CompletableFuture<List<V>> valuesFuture,
             List<K> keys,
-            List<Object> callContexts,
+            List<@Nullable Object> callContexts,
             List<CompletableFuture<V>> queuedFutures,
             ReactiveSupport.HelperIntegration<K> helperIntegration
     ) {
@@ -83,18 +86,19 @@ class BatchSubscriberImpl<K, V> extends AbstractBatchSubscriber<K, V, V> {
         try {
             lock.lock();
             super.onError(ex);
-            ex = unwrapThrowable(ex);
+            Throwable unwrapped = unwrapThrowable(ex);
+            Throwable finalEx = unwrapped != null ? unwrapped : ex;
             // Set the remaining keys to the exception.
             for (int i = idx; i < queuedFutures.size(); i++) {
                 K key = keys.get(i);
                 CompletableFuture<V> future = queuedFutures.get(i);
                 if (!future.isDone()) {
-                    future.completeExceptionally(ex);
+                    future.completeExceptionally(finalEx);
                     // clear any cached view of this key because it failed
                     helperIntegration.clearCacheView(key);
                 }
             }
-            valuesFuture.completeExceptionally(ex);
+            valuesFuture.completeExceptionally(finalEx);
         } finally {
             lock.unlock();
         }

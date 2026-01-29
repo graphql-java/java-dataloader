@@ -4,6 +4,8 @@ import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.DataLoader;
 import org.dataloader.DispatchResult;
 import org.dataloader.annotations.PublicSpi;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
@@ -11,6 +13,7 @@ import java.util.List;
  * This interface is called when certain actions happen inside a data loader
  */
 @PublicSpi
+@NullMarked
 public interface DataLoaderInstrumentation {
     /**
      * This call back is done just before the {@link DataLoader#load(Object)} methods are invoked,
@@ -23,7 +26,7 @@ public interface DataLoaderInstrumentation {
      * @param loadContext the load context used during the {@link DataLoader#load(Object, Object)} call
      * @return a DataLoaderInstrumentationContext or null to be more performant
      */
-    default DataLoaderInstrumentationContext<Object> beginLoad(DataLoader<?, ?> dataLoader, Object key, Object loadContext) {
+    default @Nullable DataLoaderInstrumentationContext<Object> beginLoad(DataLoader<?, ?> dataLoader, Object key, @Nullable Object loadContext) {
         return null;
     }
 
@@ -34,7 +37,7 @@ public interface DataLoaderInstrumentation {
      * @param dataLoader the {@link DataLoader} in question
      * @return a DataLoaderInstrumentationContext or null to be more performant
      */
-    default DataLoaderInstrumentationContext<DispatchResult<?>> beginDispatch(DataLoader<?, ?> dataLoader) {
+    default @Nullable DataLoaderInstrumentationContext<DispatchResult<?>> beginDispatch(DataLoader<?, ?> dataLoader) {
         return null;
     }
 
@@ -47,7 +50,7 @@ public interface DataLoaderInstrumentation {
      * @param environment the {@link BatchLoaderEnvironment}
      * @return a DataLoaderInstrumentationContext or null to be more performant
      */
-    default DataLoaderInstrumentationContext<List<?>> beginBatchLoader(DataLoader<?, ?> dataLoader, List<?> keys, BatchLoaderEnvironment environment) {
+    default @Nullable DataLoaderInstrumentationContext<List<?>> beginBatchLoader(DataLoader<?, ?> dataLoader, List<?> keys, BatchLoaderEnvironment environment) {
         return null;
     }
 }

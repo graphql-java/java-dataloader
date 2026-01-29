@@ -5,16 +5,19 @@ import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsCo
 import org.dataloader.stats.context.IncrementCacheHitCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A statistics collector that does nothing
  */
+@NullMarked
 public class NoOpStatisticsCollector implements StatisticsCollector {
 
     private static final Statistics ZERO_STATS = new Statistics();
 
     @Override
-    public <K> void incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
+    public <K> void incrementLoadCount(@Nullable IncrementLoadCountStatisticsContext<K> context) {
     }
 
     @Deprecated
@@ -24,7 +27,7 @@ public class NoOpStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> void incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
+    public <K> void incrementLoadErrorCount(@Nullable IncrementLoadErrorCountStatisticsContext<K> context) {
     }
 
     @Deprecated
@@ -34,7 +37,7 @@ public class NoOpStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> void incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
+    public <K> void incrementBatchLoadCountBy(long delta, @Nullable IncrementBatchLoadCountByStatisticsContext<K> context) {
     }
 
     @Deprecated
@@ -44,7 +47,7 @@ public class NoOpStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> void incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
+    public <K> void incrementBatchLoadExceptionCount(@Nullable IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
 
     }
 
@@ -55,7 +58,7 @@ public class NoOpStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> void incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
+    public <K> void incrementCacheHitCount(@Nullable IncrementCacheHitCountStatisticsContext<K> context) {
     }
 
     @Deprecated
