@@ -2,11 +2,12 @@ package org.dataloader.scheduler;
 
 import org.dataloader.BatchLoader;
 import org.dataloader.BatchLoaderEnvironment;
+import org.dataloader.BatchPublisher;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.MappedBatchLoader;
 import org.dataloader.MappedBatchPublisher;
-import org.dataloader.BatchPublisher;
+import org.dataloader.impl.CompletableFutureKit;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ public interface BatchLoaderScheduler {
      * @param <V> the value type
      */
     interface ScheduledBatchLoaderCall<V> {
+
         CompletionStage<List<V>> invoke();
     }
 
@@ -41,6 +43,7 @@ public interface BatchLoaderScheduler {
      * @param <V> the value type
      */
     interface ScheduledMappedBatchLoaderCall<K, V> {
+
         CompletionStage<Map<K, V>> invoke();
     }
 
@@ -48,6 +51,7 @@ public interface BatchLoaderScheduler {
      * This represents a callback that will invoke a {@link BatchPublisher} or {@link MappedBatchPublisher} function under the covers
      */
     interface ScheduledBatchPublisherCall {
+
         void invoke();
     }
 
@@ -92,4 +96,40 @@ public interface BatchLoaderScheduler {
      * @param <K>           the key type
      */
     <K> void scheduleBatchPublisher(ScheduledBatchPublisherCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment);
+
+    /**
+     * This is called to schedule the "completion" of the {@link java.util.concurrent.CompletableFuture}s in the {@link org.dataloader.DataLoader} that map
+     * to values that have come back from the batch loader call.
+     * <p>
+     * You might want to schedule the completion of values on another thread if there following chained work such as :
+     * <pre>
+     * {@code
+     *   var cfStage1 = dataLoader.load(key);
+     *   var cfStage2 = cfStage1.thenApply(v -> doSomethingSlow(v));
+     *   //...
+     *   var dispatchCF = dataLoader.dispatch();
+     * }
+     * </pre>
+     * <p>
+     * In the above example the `.doSomethingSlow(v)` call will happen inside the completion
+     * of the dataloader code path when it tries to complete `cfStage1` since {@link java.util.concurrent.CompletableFuture}
+     * by design runs chained dependent methods eagerly.
+     * <p>
+     * Perhaps you want this tp happen more asynchronously so that the `.dispatch()` returns more
+     * quickly and is not bound to the `.doSomethingSlow(v)` call.
+     * <p>
+     * By default, the dispatch completion is done on the current thread in a synchronous manner, which will include
+     * any extra {@link java.util.concurrent.CompletableFuture} dependent chained methods.
+     *
+     * @param completeValuesRunnable this is the runnable that the {@link DataLoader} engine code needs to be run
+     * @param keys          this is the list of keys that will be passed to the {@link BatchPublisher}.
+     *                      This is provided only for informative reasons and, you can't change the keys that are used
+     * @param environment   this is the {@link BatchLoaderEnvironment} in place,
+     *
+     * @return a {@link CompletionStage} representing this work is being scheduled
+     */
+    default <K>  CompletionStage<?> scheduleCompletion(Runnable completeValuesRunnable, List<K> keys, BatchLoaderEnvironment environment) {
+        return CompletableFutureKit.run(completeValuesRunnable);
+    }
+
 }
