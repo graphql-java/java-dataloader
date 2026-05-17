@@ -242,7 +242,7 @@ class DataLoaderHelper<K, V> {
         int queueSize = loaderQueueEntryHead.queueSize;
         // we copy the pre-loaded set of futures ready for dispatch
         Object[] keysArray = new Object[queueSize];
-        CompletableFuture[] queuedFuturesArray = new CompletableFuture[queueSize];
+        CompletableFuture<V>[] queuedFuturesArray = new CompletableFuture[queueSize];
         Object[] callContextsArray = new Object[queueSize];
         int index = queueSize - 1;
         while (loaderQueueEntryHead != null) {

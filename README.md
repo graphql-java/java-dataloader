@@ -662,7 +662,7 @@ This is an example of running the completion step in an asynchronous manner :
 ```java
 
 @Override
-public <K> CompletionStage<?> scheduleCompletion(Runnable completeValuesRunnable, List<K> keys, BatchLoaderEnvironment environment) {
+public <K> CompletionStage<Void> scheduleCompletion(Runnable completeValuesRunnable, List<K> keys, BatchLoaderEnvironment environment) {
     return CompletableFuture.runAsync(completeValuesRunnable);
 }
 ```

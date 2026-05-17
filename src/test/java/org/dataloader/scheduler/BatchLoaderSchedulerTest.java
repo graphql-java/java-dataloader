@@ -205,7 +205,7 @@ public class BatchLoaderSchedulerTest {
             }
 
             @Override
-            public <K> CompletionStage<?> scheduleCompletion(Runnable completeValuesRunnable, List<K> keys, BatchLoaderEnvironment environment) {
+            public <K> CompletionStage<Void> scheduleCompletion(Runnable completeValuesRunnable, List<K> keys, BatchLoaderEnvironment environment) {
                 if (useThreading.get()) {
                     snooze(500);
                     return CompletableFuture.runAsync(completeValuesRunnable);

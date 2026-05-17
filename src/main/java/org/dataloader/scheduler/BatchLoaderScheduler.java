@@ -128,7 +128,7 @@ public interface BatchLoaderScheduler {
      *
      * @return a {@link CompletionStage} representing this work is being scheduled
      */
-    default <K>  CompletionStage<?> scheduleCompletion(Runnable completeValuesRunnable, List<K> keys, BatchLoaderEnvironment environment) {
+    default <K>  CompletionStage<Void> scheduleCompletion(Runnable completeValuesRunnable, List<K> keys, BatchLoaderEnvironment environment) {
         return CompletableFutureKit.run(completeValuesRunnable);
     }
 

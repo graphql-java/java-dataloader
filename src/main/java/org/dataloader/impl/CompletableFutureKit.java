@@ -84,7 +84,7 @@ public class CompletableFutureKit {
                         .collect(toList()));
     }
 
-    public static CompletableFuture<?> run(Runnable runnable) {
+    public static CompletableFuture<Void> run(Runnable runnable) {
         try {
             runnable.run();
             return CompletableFutureKit.success(null);
