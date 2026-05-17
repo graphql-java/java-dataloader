@@ -18,6 +18,7 @@ package org.dataloader;
 
 import org.awaitility.Duration;
 import org.dataloader.fixtures.CustomCacheMap;
+import org.dataloader.fixtures.CustomValueCache;
 import org.dataloader.fixtures.JsonObject;
 import org.dataloader.fixtures.User;
 import org.dataloader.fixtures.UserManager;
@@ -70,6 +71,8 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -1009,15 +1012,26 @@ public class DataLoaderTest {
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void batching_disabled_should_dispatch_immediately(TestDataLoaderFactory factory) {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().setBatchingEnabled(false).build();
+
+        CacheMap<String, String> cacheMap = CacheMap.simpleMap();
+        CustomValueCache valueCache = new CustomValueCache();
+
+        DataLoaderOptions options = newOptions().setBatchingEnabled(false)
+                .setCacheMap(cacheMap).setValueCache(valueCache).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fa = identityLoader.load("A");
         CompletableFuture<String> fb = identityLoader.load("B");
 
+        assertThat(cacheMap.size(), equalTo(2));
+        assertThat(valueCache.asMap().size(), equalTo(2));
+
         // caching is on still
         CompletableFuture<String> fa1 = identityLoader.load("A");
         CompletableFuture<String> fb1 = identityLoader.load("B");
+
+        assertThat(fa, sameInstance(fa1));
+        assertThat(fb, sameInstance(fb1));
 
         List<String> values = CompletableFutureKit.allOf(asList(fa, fb, fa1, fb1)).join();
 
@@ -1038,15 +1052,26 @@ public class DataLoaderTest {
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void batching_disabled_and_caching_disabled_should_dispatch_immediately_and_forget(TestDataLoaderFactory factory) {
         List<Collection<String>> loadCalls = new ArrayList<>();
-        DataLoaderOptions options = newOptions().setBatchingEnabled(false).setCachingEnabled(false).build();
+
+        CacheMap<String, String> cacheMap = CacheMap.simpleMap();
+        CustomValueCache valueCache = new CustomValueCache();
+
+        DataLoaderOptions options = newOptions().setBatchingEnabled(false).setCachingEnabled(false)
+                .setCacheMap(cacheMap).setValueCache(valueCache).build();
         DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
 
         CompletableFuture<String> fa = identityLoader.load("A");
         CompletableFuture<String> fb = identityLoader.load("B");
 
-        // caching is off
+        // caching is off - it should not go to the Value cache nor the future cache
+        assertThat(cacheMap.size(), equalTo(0));
+        assertThat(valueCache.asMap().size(), equalTo(0));
+
         CompletableFuture<String> fa1 = identityLoader.load("A");
         CompletableFuture<String> fb1 = identityLoader.load("B");
+
+        assertThat(fa, not(sameInstance(fa1)));
+        assertThat(fb, not(sameInstance(fb1)));
 
         List<String> values = CompletableFutureKit.allOf(asList(fa, fb, fa1, fb1)).join();
 

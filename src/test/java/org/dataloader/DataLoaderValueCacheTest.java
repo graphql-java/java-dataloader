@@ -381,6 +381,40 @@ public class DataLoaderValueCacheTest {
 
     @ParameterizedTest
     @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
+    public void if_caching_is_off_and_batching_is_off_its_never_hit(TestDataLoaderFactory factory) {
+        AtomicInteger getCalls = new AtomicInteger();
+        CustomValueCache customValueCache = new CustomValueCache() {
+
+            @Override
+            public CompletableFuture<Object> get(String key) {
+                getCalls.incrementAndGet();
+                return super.get(key);
+            }
+        };
+
+        List<Collection<String>> loadCalls = new ArrayList<>();
+        DataLoaderOptions options = newOptions().setValueCache(customValueCache).setCachingEnabled(false).setBatchingEnabled(false).build();
+        DataLoader<String, String> identityLoader = factory.idLoader(options, loadCalls);
+
+        CompletableFuture<String> fA = identityLoader.load("a");
+        CompletableFuture<String> fB = identityLoader.load("b");
+        CompletableFuture<String> fC = identityLoader.load("missC");
+        CompletableFuture<String> fD = identityLoader.load("missD");
+
+        await().until(identityLoader.dispatch()::isDone);
+
+        assertThat(fA.join(), equalTo("a"));
+        assertThat(fB.join(), equalTo("b"));
+        assertThat(fC.join(), equalTo("missC"));
+        assertThat(fD.join(), equalTo("missD"));
+
+        assertThat(loadCalls, equalTo(asList(singletonList("a"), singletonList("b"), singletonList("missC"), singletonList("missD"))));
+        assertThat(getCalls.get(), equalTo(0));
+        assertTrue(customValueCache.asMap().isEmpty());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.dataloader.fixtures.parameterized.TestDataLoaderFactories#get")
     public void if_everything_is_cached_no_batching_happens(TestDataLoaderFactory factory) {
         AtomicInteger getCalls = new AtomicInteger();
         AtomicInteger setCalls = new AtomicInteger();
