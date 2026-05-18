@@ -655,15 +655,17 @@ Perhaps you want this completion to happen more asynchronously so that the `.dis
 quickly and is not bound to the `.doSomethingSlow(v)` call.
 
 By default, the dispatch completion is done on the current thread in a synchronous manner, which will include
-any extra `CompletableFuture` chained methods.
+any extra `CompletableFuture` chained methods. If multiple keys were loaded, the dispatch completion is done
+sequentially.
 
 This is an example of running the completion step in an asynchronous manner :
 
 ```java
 
 @Override
-public <K> CompletionStage<Void> scheduleCompletion(Runnable completeValuesRunnable, List<K> keys, BatchLoaderEnvironment environment) {
-    return CompletableFuture.runAsync(completeValuesRunnable);
+public <K> CompletionStage<Void> scheduleCompletion(List<Runnable> completeValueRunnables, List<K> keys, BatchLoaderEnvironment environment) {
+    return CompletableFuture.allOf(completeValueRunnables.stream()
+            .map(CompletableFuture::runAsync).toArray(CompletableFuture[]::new));
 }
 ```
 

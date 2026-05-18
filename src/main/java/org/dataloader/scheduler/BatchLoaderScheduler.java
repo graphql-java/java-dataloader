@@ -121,15 +121,15 @@ public interface BatchLoaderScheduler {
      * By default, the dispatch completion is done on the current thread in a synchronous manner, which will include
      * any extra {@link java.util.concurrent.CompletableFuture} dependent chained methods.
      *
-     * @param completeValuesRunnable this is the runnable that the {@link DataLoader} engine code needs to be run
+     * @param completeValueRunnables these are the runnable tasks that the {@link DataLoader} engine code needs to be run
      * @param keys          this is the list of keys that will be passed to the {@link BatchPublisher}.
      *                      This is provided only for informative reasons and, you can't change the keys that are used
      * @param environment   this is the {@link BatchLoaderEnvironment} in place,
      *
      * @return a {@link CompletionStage} representing this work is being scheduled
      */
-    default <K>  CompletionStage<Void> scheduleCompletion(Runnable completeValuesRunnable, List<K> keys, BatchLoaderEnvironment environment) {
-        return CompletableFutureKit.run(completeValuesRunnable);
+    default <K> CompletionStage<Void> scheduleCompletion(List<Runnable> completeValueRunnables, List<K> keys, BatchLoaderEnvironment environment) {
+        return CompletableFutureKit.runAll(completeValueRunnables);
     }
 
 }

@@ -19,6 +19,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Collections.emptyList;
@@ -329,17 +331,18 @@ class DataLoaderHelper<K, V> {
                         return CompletableFutureKit.success(values);
                     }
 
-                    Runnable completeValuesRunnable = () -> {
-                        List<K> clearCacheKeys = new ArrayList<>();
-                        for (int idx = 0; idx < queuedFutures.size(); idx++) {
-                            K key = keys.get(idx);
-                            V value = values.get(idx);
-                            Object callContext = keyContexts.get(idx);
-                            CompletableFuture<V> future = queuedFutures.get(idx);
+                    Collection<K> clearCacheKeys = new ConcurrentLinkedQueue<>();
+                    List<Runnable> completeValueRunnables = new ArrayList<>();
+                    for (int idx = 0; idx < queuedFutures.size(); idx++) {
+                        K key = keys.get(idx);
+                        V value = values.get(idx);
+                        Object callContext = keyContexts.get(idx);
+                        CompletableFuture<V> future = queuedFutures.get(idx);
+                        Runnable completeValueRunnable = () -> {
                             if (value instanceof Throwable) {
                                 stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
                                 future.completeExceptionally((Throwable) value);
-                                clearCacheKeys.add(keys.get(idx));
+                                clearCacheKeys.add(key);
                             } else if (value instanceof Try) {
                                 // we allow the batch loader to return a Try so we can better represent a computation
                                 // that might have worked or not.
@@ -349,16 +352,18 @@ class DataLoaderHelper<K, V> {
                                 } else {
                                     stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
                                     future.completeExceptionally(tryValue.getThrowable());
-                                    clearCacheKeys.add(keys.get(idx));
+                                    clearCacheKeys.add(key);
                                 }
                             } else {
                                 future.complete(value);
                             }
-                        }
+                        };
+                        completeValueRunnables.add(completeValueRunnable);
+                    }
+                    return scheduleCompletion(environment, keys, values, completeValueRunnables).thenApply(ignored -> {
                         possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
-                    };
-
-                    return scheduleCompletion(environment, keys, values, completeValuesRunnable);
+                        return values;
+                    });
                 }).exceptionally(ex -> {
                     stats.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(keys, keyContexts));
                     if (ex instanceof CompletionException) {
@@ -375,14 +380,14 @@ class DataLoaderHelper<K, V> {
                 });
     }
 
-    private CompletableFuture<List<V>> scheduleCompletion(BatchLoaderEnvironment environment, List<K> keys, List<V> values, Runnable completeValuesRunnable) {
+    private CompletableFuture<List<V>> scheduleCompletion(BatchLoaderEnvironment environment, List<K> keys, List<V> values, List<Runnable> completeValueRunnables) {
         BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
         CompletionStage<?> scheduledCompletion;
         if (batchLoaderScheduler != null) {
             scheduledCompletion = batchLoaderScheduler
-                    .scheduleCompletion(completeValuesRunnable, keys, environment);
+                    .scheduleCompletion(completeValueRunnables, keys, environment);
         } else {
-            scheduledCompletion = CompletableFutureKit.run(completeValuesRunnable);
+            scheduledCompletion = CompletableFutureKit.runAll(completeValueRunnables);
         }
         return scheduledCompletion
                 .thenApply(ignored -> values)
@@ -400,7 +405,7 @@ class DataLoaderHelper<K, V> {
         assertState(keys.size() == values.size(), () -> "The size of the promised values MUST be the same size as the key list");
     }
 
-    private void possiblyClearCacheEntriesOnExceptions(List<K> keys) {
+    private void possiblyClearCacheEntriesOnExceptions(Collection<K> keys) {
         if (keys.isEmpty()) {
             return;
         }

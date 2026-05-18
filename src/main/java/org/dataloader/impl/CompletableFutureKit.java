@@ -84,6 +84,13 @@ public class CompletableFutureKit {
                         .collect(toList()));
     }
 
+    /**
+     * Runs the given {@link Runnable} synchronously on the current thread, returning a
+     * {@link CompletableFuture} that is completed normally or exceptionally based on the outcome.
+     *
+     * @param runnable the task to execute
+     * @return a completed future, or a failed future if the runnable throws
+     */
     public static CompletableFuture<Void> run(Runnable runnable) {
         try {
             runnable.run();
@@ -92,4 +99,16 @@ public class CompletableFutureKit {
             return CompletableFutureKit.failedFuture(e);
         }
     }
+
+    /**
+     * Runs all the {@link Runnable} from the list synchronously on the current thread, returning a
+     * {@link CompletableFuture} that is completed normally or exceptionally based on the outcome.
+     *
+     * @param runnables the list of tasks to execute
+     * @return a completed future, or a failed future if any of the tasks throws
+     */
+    public static CompletableFuture<Void> runAll(List<Runnable> runnables) {
+        return CompletableFuture.allOf(runnables.stream().map(CompletableFutureKit::run).toArray(CompletableFuture[]::new));
+    }
+
 }

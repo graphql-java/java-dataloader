@@ -99,4 +99,31 @@ class CompletableFutureKitTest {
 
 
     }
+
+    @Test
+    void runAll() {
+        AtomicBoolean ran1 = new AtomicBoolean(false);
+        AtomicBoolean ran2 = new AtomicBoolean(false);
+        Runnable runnable1 = () -> ran1.set(true);
+        Runnable runnable2 = () -> ran2.set(true);
+
+        CompletableFuture<?> runCF = CompletableFutureKit.runAll(List.of(runnable1, runnable2));
+        runCF.join();
+        assertThat(ran1.get(), equalTo(true));
+        assertThat(ran2.get(), equalTo(true));
+
+        ran1.set(false);
+        ran2.set(false);
+        Runnable runnable3 = () -> {
+            throw new RuntimeException("BANG");
+        };
+
+        runCF = CompletableFutureKit.runAll(List.of(runnable1, runnable2, runnable3));
+
+        CompletionException completionException = assertThrows(CompletionException.class, runCF::join);
+        assertThat(ran1.get(), equalTo(true));
+        assertThat(ran2.get(), equalTo(true));
+        assertThat(completionException.getCause().getMessage(), equalTo("BANG"));
+    }
+
 }
