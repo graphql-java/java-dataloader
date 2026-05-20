@@ -480,7 +480,8 @@ class DataLoaderHelper<K, V> {
                 // we missed some keys from cache, so send them to the batch loader
                 // and then fill in their values
                 //
-                CompletableFuture<List<V>> batchLoad = invokeLoader(environment, missedKeys, missedKeyContexts, missedQueuedFutures);
+                BatchLoaderEnvironment missedEnvironment = mkBatchLoaderEnv(missedKeys, missedKeyContexts);
+                CompletableFuture<List<V>> batchLoad = invokeLoader(missedEnvironment, missedKeys, missedKeyContexts, missedQueuedFutures);
                 return batchLoad.thenCompose(missedValues -> {
                     assertResultSize(missedKeys, missedValues);
 
