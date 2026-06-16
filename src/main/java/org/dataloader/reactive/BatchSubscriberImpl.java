@@ -50,9 +50,17 @@ class BatchSubscriberImpl<K, V> extends AbstractBatchSubscriber<K, V, V> {
 
             completedValues.add(value);
             idx++;
+
+            requestMoreIfNeeded();
         } finally {
             lock.unlock();
         }
+    }
+
+    @Override
+    boolean allResultsReceived() {
+        // the values come back in key index order so once we have as many as keys we have them all
+        return completedValues.size() >= keys.size();
     }
 
 
