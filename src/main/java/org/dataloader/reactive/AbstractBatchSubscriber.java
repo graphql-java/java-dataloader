@@ -34,6 +34,11 @@ abstract class AbstractBatchSubscriber<K, V, T> implements Subscriber<T> {
     boolean onErrorCalled = false;
     boolean onCompleteCalled = false;
 
+    // the upstream subscription and how much demand we currently have outstanding with it.
+    // guarded by lock (see requestMore / requestMoreIfNeeded).
+    Subscription subscription;
+    long pendingDemand = 0;
+
     AbstractBatchSubscriber(
             CompletableFuture<List<V>> valuesFuture,
             List<K> keys,
@@ -50,7 +55,13 @@ abstract class AbstractBatchSubscriber<K, V, T> implements Subscriber<T> {
 
     @Override
     public void onSubscribe(Subscription subscription) {
-        subscription.request(keys.size());
+        lock.lock();
+        try {
+            this.subscription = subscription;
+            requestMore();
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
@@ -58,6 +69,57 @@ abstract class AbstractBatchSubscriber<K, V, T> implements Subscriber<T> {
         assertState(!onErrorCalled, () -> "onError has already been called; onNext may not be invoked.");
         assertState(!onCompleteCalled, () -> "onComplete has already been called; onNext may not be invoked.");
     }
+
+    /**
+     * Requests the next window of demand (sized to the key count) from the upstream subscription.
+     * <p>
+     * Must be called while holding {@link #lock}.
+     */
+    private void requestMore() {
+        long n = keys.size();
+        if (n <= 0) {
+            return;
+        }
+        pendingDemand += n;
+        subscription.request(n);
+    }
+
+    /**
+     * Called by the concrete subscribers once they have processed a value in {@code onNext}.
+     * <p>
+     * A reactive publisher only emits while it has outstanding demand. We originally only ever
+     * requested {@code keys.size()} once, so a publisher that emitted values not matching our keys
+     * (or simply emitted them lazily as more demand arrived) could leave us blocked forever waiting
+     * for a value that needed another request to be delivered. So we:
+     * <ol>
+     *     <li>re-request another window whenever the outstanding demand drains to zero, until the
+     *     publisher completes or errors, and</li>
+     *     <li>once every key has a result there is nothing left to wait for, so we cancel the upstream
+     *     subscription and complete ourselves rather than blocking on a publisher that may never call
+     *     {@code onComplete}.</li>
+     * </ol>
+     * <p>
+     * Must be called while holding {@link #lock}.
+     */
+    void requestMoreIfNeeded() {
+        if (onCompleteCalled || onErrorCalled) {
+            return;
+        }
+        if (allResultsReceived()) {
+            subscription.cancel();
+            onComplete();
+            return;
+        }
+        if (--pendingDemand <= 0) {
+            requestMore();
+        }
+    }
+
+    /**
+     * @return true once a result has been received for every key, so that we can complete early
+     * without waiting for the upstream publisher to finish
+     */
+    abstract boolean allResultsReceived();
 
     @Override
     public void onComplete() {

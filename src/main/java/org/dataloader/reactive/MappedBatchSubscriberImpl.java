@@ -59,10 +59,18 @@ class MappedBatchSubscriberImpl<K, V> extends AbstractBatchSubscriber<K, V, Map.
             if (!futures.isEmpty()) {
                 completedValuesByKey.put(key, value);
             }
+
+            requestMoreIfNeeded();
         } finally {
             lock.unlock();
         }
 
+    }
+
+    @Override
+    boolean allResultsReceived() {
+        // once every distinct requested key has a value we have everything we asked for
+        return completedValuesByKey.size() >= queuedFuturesByKey.size();
     }
 
     @Override
