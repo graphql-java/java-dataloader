@@ -175,7 +175,7 @@ class DataLoaderHelper<K, V> {
         } else {
             stats.incrementBatchLoadCountBy(1, new IncrementBatchLoadCountByStatisticsContext<>(key, loadContext));
             // immediate execution of batch function
-            loadCallFuture = invokeLoaderImmediately(key, loadContext, true);
+            loadCallFuture = invokeLoaderImmediately(key, loadContext, loaderOptions.cachingEnabled());
             if (futureCachingEnabled) {
                 CompletableFuture<V> cachedFuture = futureCache.putIfAbsentAtomically(cacheKey, loadCallFuture);
                 if (cachedFuture != null) {
@@ -228,6 +228,7 @@ class DataLoaderHelper<K, V> {
         boolean batchingEnabled = loaderOptions.batchingEnabled();
 
         LoaderQueueEntry<K, V> loaderQueueEntryHead;
+        //noinspection ConditionalBreakInInfiniteLoop
         while (true) {
             loaderQueueEntryHead = loaderQueue.get();
             if (loaderQueue.compareAndSet(loaderQueueEntryHead, null)) {
@@ -244,7 +245,7 @@ class DataLoaderHelper<K, V> {
         int queueSize = loaderQueueEntryHead.queueSize;
         // we copy the pre-loaded set of futures ready for dispatch
         Object[] keysArray = new Object[queueSize];
-        CompletableFuture[] queuedFuturesArray = new CompletableFuture[queueSize];
+        CompletableFuture<V>[] queuedFuturesArray = new CompletableFuture[queueSize];
         Object[] callContextsArray = new Object[queueSize];
         int index = queueSize - 1;
         while (loaderQueueEntryHead != null) {
