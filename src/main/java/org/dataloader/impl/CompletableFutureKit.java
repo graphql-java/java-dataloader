@@ -2,6 +2,7 @@ package org.dataloader.impl;
 
 import org.dataloader.annotations.Internal;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -19,6 +20,12 @@ public class CompletableFutureKit {
     public static <V> CompletableFuture<V> failedFuture(Exception e) {
         CompletableFuture<V> future = new CompletableFuture<>();
         future.completeExceptionally(e);
+        return future;
+    }
+
+    public static <V> CompletableFuture<V> success(V v) {
+        CompletableFuture<V> future = new CompletableFuture<>();
+        future.complete(v);
         return future;
     }
 
@@ -66,5 +73,23 @@ public class CompletableFutureKit {
                                         task -> task.getValue().join())
                         )
                 );
+    }
+
+    public static <T> CompletableFuture<List<T>> allOfFlatMap(List<CompletableFuture<List<T>>> cfs) {
+
+        return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0]))
+                .thenApply(v -> cfs.stream()
+                        .map(CompletableFuture::join)
+                        .flatMap(Collection::stream)
+                        .collect(toList()));
+    }
+
+    public static CompletableFuture<Void> run(Runnable runnable) {
+        try {
+            runnable.run();
+            return CompletableFutureKit.success(null);
+        } catch (Exception e) {
+            return CompletableFutureKit.failedFuture(e);
+        }
     }
 }
