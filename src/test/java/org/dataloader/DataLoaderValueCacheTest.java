@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -340,8 +342,15 @@ public class DataLoaderValueCacheTest {
     }
 
     private boolean isAssertionException(CompletableFuture<String> fA) {
-        Throwable throwable = Try.tryFuture(fA).join().getThrowable();
+        Throwable throwable = maybeUnwrapCompletionException(Try.tryFuture(fA).join().getThrowable());
         return throwable instanceof DataLoaderAssertionException;
+    }
+
+    private Throwable maybeUnwrapCompletionException(Throwable throwable) {
+        if (throwable instanceof CompletionException) {
+            return maybeUnwrapCompletionException(throwable.getCause());
+        }
+        return throwable;
     }
 
 
