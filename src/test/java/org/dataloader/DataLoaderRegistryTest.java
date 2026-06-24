@@ -1,5 +1,6 @@
 package org.dataloader;
 
+import org.dataloader.errors.StrictModeRegistryException;
 import org.dataloader.stats.SimpleStatisticsCollector;
 import org.dataloader.stats.Statistics;
 import org.junit.jupiter.api.Assertions;
@@ -14,6 +15,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.sameInstance;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DataLoaderRegistryTest {
     final BatchLoader<Object, Object> identityBatchLoader = CompletableFuture::completedFuture;
@@ -218,5 +220,49 @@ public class DataLoaderRegistryTest {
         assertThat(registry.getDataLoader("a"), equalTo(dlA));
         assertThat(registry.getDataLoader("c"), equalTo(dlC));
 
+    }
+
+    @Test
+    public void strictMode_works() {
+
+        DataLoader<Object, Object> dlA = newDataLoader(identityBatchLoader);
+        DataLoader<Object, Object> dlB = newDataLoader(identityBatchLoader);
+
+        assertThrows(StrictModeRegistryException.class, () -> {
+            DataLoaderRegistry.newRegistry()
+                .strictMode(true)
+                .register("a", dlA)
+                .register("a", dlB)
+                .build();
+        });
+        assertThrows(StrictModeRegistryException.class, () -> {
+            DataLoaderRegistry.newRegistry()
+                .strictMode(true)
+                .register("a", dlA)
+                .registerAll(DataLoaderRegistry.newRegistry()
+                    .register("a", dlB)
+                    .build())
+                .build();
+        });
+
+        DataLoaderRegistry registry = DataLoaderRegistry.newRegistry()
+            .strictMode(true)
+            .build();
+        registry.register("a", dlA);
+
+        assertThrows(StrictModeRegistryException.class, () -> {
+            registry.register("a", dlB);
+        });
+        assertThrows(StrictModeRegistryException.class, () -> {
+            registry.register(newDataLoader("a", identityBatchLoader));
+        });
+        assertThrows(StrictModeRegistryException.class, () -> {
+            registry.registerAndGet("a", dlB);
+        });
+        assertThrows(StrictModeRegistryException.class, () -> {
+            registry.combine(DataLoaderRegistry.newRegistry()
+                .register("a", dlB)
+                .build());
+        });
     }
 }

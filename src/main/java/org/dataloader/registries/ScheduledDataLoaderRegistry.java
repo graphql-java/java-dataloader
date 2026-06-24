@@ -3,6 +3,7 @@ package org.dataloader.registries;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderRegistry;
 import org.dataloader.annotations.ExperimentalApi;
+import org.dataloader.errors.StrictModeRegistryException;
 import org.dataloader.impl.Assertions;
 import org.dataloader.instrumentation.DataLoaderInstrumentation;
 import org.jspecify.annotations.NullMarked;
@@ -16,6 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static java.lang.String.format;
 import static org.dataloader.impl.Assertions.nonNull;
 
 /**
@@ -69,7 +71,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     private volatile boolean closed;
 
     private ScheduledDataLoaderRegistry(Builder builder) {
-        super(builder.dataLoaders, builder.instrumentation);
+        super(builder.dataLoaders, builder.instrumentation, builder.strictMode);
         this.scheduledExecutorService = Assertions.nonNull(builder.scheduledExecutorService);
         this.defaultExecutorUsed = builder.defaultExecutorUsed;
         this.schedule = builder.schedule;
@@ -120,7 +122,8 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
      */
     public ScheduledDataLoaderRegistry combine(DataLoaderRegistry registry) {
         Builder combinedBuilder = ScheduledDataLoaderRegistry.newScheduledRegistry()
-                .dispatchPredicate(this.dispatchPredicate);
+                .dispatchPredicate(this.dispatchPredicate)
+                .strictMode(this.strictMode);
         combinedBuilder.registerAll(this);
         combinedBuilder.registerAll(registry);
         return combinedBuilder.build();
@@ -166,6 +169,9 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
      * @return this registry
      */
     public ScheduledDataLoaderRegistry register(String key, DataLoader<?, ?> dataLoader, DispatchPredicate dispatchPredicate) {
+        if (strictMode) {
+            assertKeyStrictly(key);
+        }
         dataLoaders.put(key, dataLoader);
         dataLoaderPredicates.put(dataLoader, dispatchPredicate);
         return this;
@@ -272,6 +278,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         private Duration schedule = Duration.ofMillis(10);
         private boolean tickerMode = false;
         private @Nullable DataLoaderInstrumentation instrumentation;
+        private boolean strictMode;
 
 
         /**
@@ -292,6 +299,18 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         }
 
         /**
+         * This puts the builder into strict mode, so if things get defined twice, for example, it
+         * will throw a {@link org.dataloader.errors.StrictModeRegistryException}.
+         *
+         * @param strictMode whether strict mode is enabled
+         * @return this builder
+         */
+        public Builder strictMode(boolean strictMode) {
+            this.strictMode = strictMode;
+            return this;
+        }
+
+        /**
          * This will register a new dataloader
          *
          * @param key        the key to put the data loader under
@@ -299,6 +318,9 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
          * @return this builder for a fluent pattern
          */
         public Builder register(String key, DataLoader<?, ?> dataLoader) {
+            if (strictMode) {
+                assertKeyStrictly(key);
+            }
             dataLoaders.put(key, dataLoader);
             return this;
         }
@@ -326,7 +348,13 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
          * @return this builder for a fluent pattern
          */
         public Builder registerAll(DataLoaderRegistry otherRegistry) {
-            dataLoaders.putAll(otherRegistry.getDataLoadersMap());
+            Map<String, DataLoader<?, ?>> otherDataLoaders = otherRegistry.getDataLoadersMap();
+            if (strictMode) {
+                otherDataLoaders.forEach((key, dataLoader) -> {
+                    assertKeyStrictly(key);
+                });
+            }
+            dataLoaders.putAll(otherDataLoaders);
             if (otherRegistry instanceof ScheduledDataLoaderRegistry) {
                 ScheduledDataLoaderRegistry other = (ScheduledDataLoaderRegistry) otherRegistry;
                 dataLoaderPredicates.putAll(other.dataLoaderPredicates);
@@ -362,6 +390,12 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         public Builder instrumentation(DataLoaderInstrumentation instrumentation) {
             this.instrumentation = instrumentation;
             return this;
+        }
+
+        private void assertKeyStrictly(String key) {
+            if (dataLoaders.containsKey(key)) {
+                throw new StrictModeRegistryException(format("The key %s already has a DataLoader defined", key));
+            }
         }
 
         /**

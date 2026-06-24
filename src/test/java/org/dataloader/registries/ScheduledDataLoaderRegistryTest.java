@@ -3,6 +3,7 @@ package org.dataloader.registries;
 import org.awaitility.core.ConditionTimeoutException;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderRegistry;
+import org.dataloader.errors.StrictModeRegistryException;
 import org.dataloader.fixtures.parameterized.TestDataLoaderFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,12 +23,14 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
 import static org.awaitility.Duration.TWO_SECONDS;
+import static org.dataloader.DataLoaderFactory.newDataLoader;
 import static org.dataloader.fixtures.TestKit.snooze;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -370,5 +373,49 @@ public class ScheduledDataLoaderRegistryTest {
         assertThat(executorService.isShutdown(), equalTo(false));
 
 
+    }
+
+    @Test
+    public void strictMode_works() {
+
+        DataLoader<Object, Object> dlA = newDataLoader(CompletableFuture::completedFuture);
+        DataLoader<Object, Object> dlB = newDataLoader(CompletableFuture::completedFuture);
+
+        assertThrows(StrictModeRegistryException.class, () -> {
+            ScheduledDataLoaderRegistry.newRegistry()
+                .strictMode(true)
+                .register("a", dlA)
+                .register("a", dlB)
+                .build();
+        });
+        assertThrows(StrictModeRegistryException.class, () -> {
+            ScheduledDataLoaderRegistry.newRegistry()
+                .strictMode(true)
+                .register("a", dlA)
+                .registerAll(ScheduledDataLoaderRegistry.newRegistry()
+                    .register("a", dlB)
+                    .build())
+                .build();
+        });
+
+        DataLoaderRegistry registry = ScheduledDataLoaderRegistry.newRegistry()
+            .strictMode(true)
+            .build();
+        registry.register("a", dlA);
+
+        assertThrows(StrictModeRegistryException.class, () -> {
+            registry.register("a", dlB);
+        });
+        assertThrows(StrictModeRegistryException.class, () -> {
+            registry.register(newDataLoader("a", CompletableFuture::completedFuture));
+        });
+        assertThrows(StrictModeRegistryException.class, () -> {
+            registry.registerAndGet("a", dlB);
+        });
+        assertThrows(StrictModeRegistryException.class, () -> {
+            registry.combine(ScheduledDataLoaderRegistry.newRegistry()
+                .register("a", dlB)
+                .build());
+        });
     }
 }
