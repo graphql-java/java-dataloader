@@ -1,6 +1,8 @@
 package org.dataloader;
 
 import org.dataloader.annotations.PublicApi;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -26,6 +28,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  * the value promise with that exception value.
  */
 @PublicApi
+@NullMarked
 public class Try<V> {
     private final static Object NIL = new Object() {
     };
@@ -43,7 +46,7 @@ public class Try<V> {
     };
 
 
-    private final Throwable throwable;
+    private final @Nullable Throwable throwable;
     private final V value;
 
 
@@ -169,7 +172,7 @@ public class Try<V> {
         if (isSuccess()) {
             throw new UnsupportedOperationException("You have called Try.getThrowable() with a successful Try");
         }
-        return throwable;
+        return nonNull(throwable);
     }
 
     /**
@@ -199,7 +202,7 @@ public class Try<V> {
         if (isSuccess()) {
             return succeeded(mapper.apply(value));
         }
-        return failed(this.throwable);
+        return failed(nonNull(this.throwable));
     }
 
     /**
@@ -214,7 +217,7 @@ public class Try<V> {
         if (isSuccess()) {
             return mapper.apply(value);
         }
-        return failed(this.throwable);
+        return failed(nonNull(this.throwable));
     }
 
     /**
@@ -258,7 +261,7 @@ public class Try<V> {
         if (isSuccess()) {
             throw new UnsupportedOperationException("You have called Try.reThrow() with a successful Try.  There is nothing to rethrow");
         }
-        throw throwable;
+        throw nonNull(throwable);
     }
 
     /**
@@ -281,7 +284,7 @@ public class Try<V> {
      */
     public Try<V> recover(Function<Throwable, V> recoverFunction) {
         if (isFailure()) {
-            return succeeded(recoverFunction.apply(throwable));
+            return succeeded(recoverFunction.apply(nonNull(throwable)));
         }
         return this;
     }

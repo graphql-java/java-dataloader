@@ -7,6 +7,8 @@ import org.dataloader.DataLoaderOptions;
 import org.dataloader.MappedBatchLoader;
 import org.dataloader.MappedBatchPublisher;
 import org.dataloader.BatchPublisher;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,7 @@ import java.util.concurrent.CompletionStage;
  * call.  The total set of keys will be sliced into batches themselves and then the {@link BatchLoaderScheduler} will be called for
  * each batch of keys.  Do not assume that a single call to {@link DataLoader#dispatch()} results in a single call to {@link BatchLoaderScheduler}.
  */
+@NullMarked
 public interface BatchLoaderScheduler {
 
 
@@ -64,7 +67,7 @@ public interface BatchLoaderScheduler {
      *
      * @return a promise to the values that come from the {@link BatchLoader}
      */
-    <K, V> CompletionStage<List<V>> scheduleBatchLoader(ScheduledBatchLoaderCall<V> scheduledCall, List<K> keys, BatchLoaderEnvironment environment);
+    <K, V> CompletionStage<List<V>> scheduleBatchLoader(ScheduledBatchLoaderCall<V> scheduledCall, List<K> keys, @Nullable BatchLoaderEnvironment environment);
 
     /**
      * This is called to schedule a {@link MappedBatchLoader} call.
@@ -79,7 +82,7 @@ public interface BatchLoaderScheduler {
      *
      * @return a promise to the values that come from the {@link BatchLoader}
      */
-    <K, V> CompletionStage<Map<K, V>> scheduleMappedBatchLoader(ScheduledMappedBatchLoaderCall<K, V> scheduledCall, List<K> keys, BatchLoaderEnvironment environment);
+    <K, V> CompletionStage<Map<K, V>> scheduleMappedBatchLoader(ScheduledMappedBatchLoaderCall<K, V> scheduledCall, List<K> keys, @Nullable BatchLoaderEnvironment environment);
 
     /**
      * This is called to schedule a {@link BatchPublisher} call.
@@ -91,5 +94,5 @@ public interface BatchLoaderScheduler {
      *                      which can be null if it's a simple {@link BatchPublisher} call
      * @param <K>           the key type
      */
-    <K> void scheduleBatchPublisher(ScheduledBatchPublisherCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment);
+    <K> void scheduleBatchPublisher(ScheduledBatchPublisherCall scheduledCall, List<K> keys, @Nullable BatchLoaderEnvironment environment);
 }

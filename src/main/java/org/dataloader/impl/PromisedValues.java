@@ -1,6 +1,8 @@
 package org.dataloader.impl;
 
 import org.dataloader.annotations.Internal;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.concurrent.CancellationException;
@@ -25,6 +27,7 @@ import static java.util.Arrays.asList;
  * @author <a href="https://github.com/bbakerman/">Brad Baker</a>
  */
 @Internal
+@NullMarked
 public interface PromisedValues<T> {
 
     /**
@@ -193,7 +196,7 @@ public interface PromisedValues<T> {
      *
      * @return an exception or null if the future did not fail
      */
-    Throwable cause();
+    @Nullable Throwable cause();
 
     /**
      * The true if the {@link CompletionStage} at the specified index succeeded
@@ -211,7 +214,7 @@ public interface PromisedValues<T> {
      *
      * @return an exception or null if the future did not fail
      */
-    Throwable cause(int index);
+    @Nullable Throwable cause(int index);
 
     /**
      * The value at index or null if it failed
@@ -220,7 +223,7 @@ public interface PromisedValues<T> {
      *
      * @return the value of the future
      */
-    T get(int index);
+    @Nullable T get(int index);
 
     /**
      * Returns the underlying values as a list

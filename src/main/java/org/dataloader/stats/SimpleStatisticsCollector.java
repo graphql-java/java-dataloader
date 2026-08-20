@@ -5,6 +5,8 @@ import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsCo
 import org.dataloader.stats.context.IncrementCacheHitCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.concurrent.atomic.LongAdder;
 
@@ -14,6 +16,7 @@ import java.util.concurrent.atomic.LongAdder;
  *
  * @see org.dataloader.stats.StatisticsCollector
  */
+@NullMarked
 public class SimpleStatisticsCollector implements StatisticsCollector {
 
     private final LongAdder loadCount = new LongAdder();
@@ -24,7 +27,7 @@ public class SimpleStatisticsCollector implements StatisticsCollector {
     private final LongAdder loadErrorCount = new LongAdder();
 
     @Override
-    public <K> void incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
+    public <K> void incrementLoadCount(@Nullable IncrementLoadCountStatisticsContext<K> context) {
         loadCount.increment();
     }
 
@@ -35,7 +38,7 @@ public class SimpleStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> void incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
+    public <K> void incrementLoadErrorCount(@Nullable IncrementLoadErrorCountStatisticsContext<K> context) {
         loadErrorCount.increment();
     }
 
@@ -46,7 +49,7 @@ public class SimpleStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> void incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
+    public <K> void incrementBatchLoadCountBy(long delta, @Nullable IncrementBatchLoadCountByStatisticsContext<K> context) {
         batchInvokeCount.increment();
         batchLoadCount.add(delta);
     }
@@ -58,7 +61,7 @@ public class SimpleStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> void incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
+    public <K> void incrementBatchLoadExceptionCount(@Nullable IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
         batchLoadExceptionCount.increment();
     }
 
@@ -69,7 +72,7 @@ public class SimpleStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> void incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
+    public <K> void incrementCacheHitCount(@Nullable IncrementCacheHitCountStatisticsContext<K> context) {
         cacheHitCount.increment();
     }
 
