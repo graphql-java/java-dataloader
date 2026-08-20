@@ -1,10 +1,12 @@
 package org.dataloader;
 
+import org.dataloader.fixtures.CustomValueCache;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
@@ -214,6 +216,37 @@ public class DataLoaderBatchLoaderEnvironmentTest {
         List<String> results = loader.dispatchAndJoin();
 
         assertThat(results, equalTo(asList("A-ctx-m:overridesCtx-l:aCtx", "B-ctx-m:bCtx-l:bCtx", "A-ctx-m:overridesCtx-l:overridesCtx")));
+    }
+
+    @Test
+    public void value_cache_misses_are_passed_matching_key_contexts_to_batch_loader_function() {
+        CustomValueCache valueCache = new CustomValueCache();
+        valueCache.asMap().put("A", "cachedA");
+
+        AtomicReference<List<String>> batchKeysRef = new AtomicReference<>();
+        BatchLoaderWithContext<String, String> batchLoader = (keys, environment) -> {
+            batchKeysRef.set(new ArrayList<>(keys));
+            AtomicInteger index = new AtomicInteger(0);
+            List<String> list = keys.stream().map(k -> {
+                int i = index.getAndIncrement();
+                Object keyContextM = environment.getKeyContexts().get(k);
+                Object keyContextL = environment.getKeyContextsList().get(i);
+                return k + "-m:" + keyContextM + "-l:" + keyContextL;
+            }).collect(Collectors.toList());
+            return CompletableFuture.completedFuture(list);
+        };
+        DataLoaderOptions options = DataLoaderOptions.newOptions()
+                .setValueCache(valueCache)
+                .build();
+        DataLoader<String, String> loader = newDataLoader(batchLoader, options);
+
+        loader.load("A", "aCtx");
+        loader.load("B", "bCtx");
+
+        List<String> results = loader.dispatchAndJoin();
+
+        assertThat(batchKeysRef.get(), equalTo(singletonList("B")));
+        assertThat(results, equalTo(asList("cachedA", "B-m:bCtx-l:bCtx")));
     }
 
 }
