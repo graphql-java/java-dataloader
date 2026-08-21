@@ -633,6 +633,40 @@ Do not assume that a single call to `dispatch()` results in a single call to `Ba
 
 This code is inspired from the scheduling code in the [reference JS implementation](https://github.com/graphql/dataloader#batch-scheduling)
 
+### Scheduling DataLoader promise completion
+
+Another step in the batch loading process is the completion of the futures that have been promised earlier via
+`Dataloader.load()`. This can also be scheduled on another thread if need be, allowing the dispatch call 
+to return quicker.
+
+You might want to schedule the completion of values on another thread if there is following work t do such as :
+
+```java
+var cfStage1 = dataLoader.load(key);
+var cfStage2 = cfStage1.thenApply(v -> doSomethingSlow(v));
+//...
+var dispatchCF = dataLoader.dispatch();
+```     
+
+In the above example the `.doSomethingSlow(v)` call will happen inside the completion
+of the `cfStage1` code path since `CompletableFuture` by design eagerly runs dependent chained methods.
+
+Perhaps you want this completion to happen more asynchronously so that the `.dispatch()` returns more
+quickly and is not bound to the `.doSomethingSlow(v)` call.
+
+By default, the dispatch completion is done on the current thread in a synchronous manner, which will include
+any extra `CompletableFuture` chained methods.
+
+This is an example of running the completion step in an asynchronous manner :
+
+```java
+
+@Override
+public <K> CompletionStage<Void> scheduleCompletion(Runnable completeValuesRunnable, List<K> keys, BatchLoaderEnvironment environment) {
+    return CompletableFuture.runAsync(completeValuesRunnable);
+}
+```
+
 ## Scheduled Registry Dispatching
 
 `ScheduledDataLoaderRegistry` is a registry that allows for dispatching to be done on a schedule. It contains a
