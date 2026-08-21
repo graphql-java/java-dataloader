@@ -188,14 +188,22 @@ class DataLoaderHelper<K, V> {
         }
 
         ctx.onDispatched();
-        loadCallFuture.whenComplete(ctx::onCompleted);
+        loaderOptions.getDispatchStrategy().loadCalled(dataLoader, key, loadContext, loadCallFuture);
+        loadCallFuture = loadCallFuture.whenComplete((result, error) -> {
+            loaderOptions.getDispatchStrategy().loadCompleted(dataLoader, result, error);
+            ctx.onCompleted(result, error);
+        });
         return loadCallFuture;
     }
 
     private CompletableFuture<V> incrementCacheHitAndReturnCF(DataLoaderInstrumentationContext<Object> ctx, K key, Object loadContext, CompletableFuture<V> cachedFuture) {
         stats.incrementCacheHitCount(new IncrementCacheHitCountStatisticsContext<>(key, loadContext));
         ctx.onDispatched();
-        cachedFuture.whenComplete(ctx::onCompleted);
+        loaderOptions.getDispatchStrategy().loadCalled(dataLoader, key, loadContext, cachedFuture);
+        cachedFuture = cachedFuture.whenComplete((result, error) -> {
+            loaderOptions.getDispatchStrategy().loadCompleted(dataLoader, result, error);
+            ctx.onCompleted(result, error);
+        });
         return cachedFuture;
     }
 
