@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.dataloader.impl.Assertions.nonNull;
 
@@ -33,6 +34,8 @@ import static org.dataloader.impl.Assertions.nonNull;
  * no rescheduling will occur, and you will need to call dispatch again to restart the process.
  * <p>
  * However, when {@link #tickerMode} is true, the registry will always reschedule continuously after the first ever call to {@link #dispatchAll()}.
+ * A single task per registry re-runs the dispatch of all data loaders every {@link #getScheduleDuration()}, however
+ * often {@link #dispatchAll()} or {@link #rescheduleNow()} is called.
  * <p>
  * This will allow you to chain together {@link DataLoader} load calls like this :
  * <pre>{@code
@@ -67,6 +70,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
     private final Duration schedule;
     private final boolean tickerMode;
     private volatile boolean closed;
+    private final AtomicBoolean tickScheduled = new AtomicBoolean();
 
     private ScheduledDataLoaderRegistry(Builder builder) {
         super(builder.dataLoaders, builder.instrumentation);
@@ -214,7 +218,11 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
      * a pre-check of the predicate like {@link #dispatchAll()} would
      */
     public void rescheduleNow() {
-        dataLoaders.forEach(this::reschedule);
+        if (tickerMode) {
+            scheduleTick();
+        } else {
+            dataLoaders.forEach(this::reschedule);
+        }
     }
 
     /**
@@ -246,10 +254,30 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         if (shouldDispatch) {
             sum = dataLoader.dispatchWithCounts().getKeysCount();
         }
-        if (tickerMode || !shouldDispatch) {
+        if (tickerMode) {
+            scheduleTick();
+        } else if (!shouldDispatch) {
             reschedule(key, dataLoader);
         }
         return sum;
+    }
+
+    /**
+     * In ticker mode a single task per registry re-runs {@link #dispatchAllWithCount()} every {@link #schedule},
+     * however often {@link #dispatchAll()} is called. Scheduling a task per data loader on every
+     * {@link #dispatchAll()} call would grow the executor queue by the number of registered data loaders on each call.
+     */
+    private void scheduleTick() {
+        if (!closed && tickScheduled.compareAndSet(false, true)) {
+            scheduledExecutorService.schedule(this::tick, schedule.toMillis(), TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private void tick() {
+        tickScheduled.set(false);
+        // re-arm before dispatching so that a data loader throwing on dispatch cannot stop the ticker
+        scheduleTick();
+        dispatchAllWithCount();
     }
 
     /**
@@ -349,7 +377,7 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
         /**
          * This sets ticker mode on the registry.  When ticker mode is true the registry will
          * continuously reschedule the data loaders for possible dispatching after the first call
-         * to dispatchAll.
+         * to dispatchAll, using a single scheduled task per registry.
          *
          * @param tickerMode true or false
          * @return this builder for a fluent pattern
