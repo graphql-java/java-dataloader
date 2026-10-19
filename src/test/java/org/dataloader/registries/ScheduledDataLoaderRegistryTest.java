@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -22,6 +24,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
 import static org.awaitility.Duration.TWO_SECONDS;
+import static org.dataloader.fixtures.TestKit.idLoader;
 import static org.dataloader.fixtures.TestKit.snooze;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -348,6 +351,87 @@ public class ScheduledDataLoaderRegistryTest {
         } catch (ConditionTimeoutException expected) {
         }
         registry.close();
+    }
+
+    @Test
+    public void ticker_mode_keeps_one_pending_task_however_often_dispatch_all_is_called() {
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
+        // a tick that never fires during the test, so the queue is only inspected between ticks
+        ScheduledDataLoaderRegistry registry = tickerRegistry(executor, Duration.ofHours(1), 20, alwaysDispatch);
+
+        for (int i = 0; i < 50; i++) {
+            registry.dispatchAll();
+        }
+
+        assertThat(executor.getQueue().size(), equalTo(1));
+        registry.close();
+        executor.shutdownNow();
+    }
+
+    @Test
+    public void ticker_mode_reschedule_now_keeps_one_pending_task() {
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
+        ScheduledDataLoaderRegistry registry = tickerRegistry(executor, Duration.ofHours(1), 20, alwaysDispatch);
+        registry.dispatchAll();
+
+        for (int i = 0; i < 50; i++) {
+            registry.rescheduleNow();
+        }
+
+        assertThat(executor.getQueue().size(), equalTo(1));
+        registry.close();
+        executor.shutdownNow();
+    }
+
+    @Test
+    public void ticker_mode_keeps_ticking_after_a_dispatch_predicate_throws() throws Exception {
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
+        AtomicBoolean throwOnNextCheck = new AtomicBoolean();
+        DispatchPredicate throwingOnce = (key, dl) -> {
+            if (throwOnNextCheck.getAndSet(false)) {
+                throw new IllegalStateException("predicate failure");
+            }
+            return true;
+        };
+        ScheduledDataLoaderRegistry registry = tickerRegistry(executor, Duration.ofMillis(10), 1, throwingOnce);
+        registry.dispatchAll();
+        throwOnNextCheck.set(true);
+
+        DataLoader<String, String> loader = registry.getDataLoader("loader-0");
+        CompletableFuture<String> late = loader.load("late");
+
+        assertThat(late.get(2, TimeUnit.SECONDS), equalTo("late"));
+        registry.close();
+        executor.shutdownNow();
+    }
+
+    @Test
+    public void close_stops_the_ticker_but_dispatch_all_still_dispatches() throws Exception {
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
+        ScheduledDataLoaderRegistry registry = tickerRegistry(executor, Duration.ofMillis(10), 1, alwaysDispatch);
+        registry.dispatchAll();
+        registry.close();
+        await().atMost(TWO_SECONDS).until(() -> executor.getQueue().isEmpty());
+
+        DataLoader<String, String> loader = registry.getDataLoader("loader-0");
+        CompletableFuture<String> afterClose = loader.load("after-close");
+        registry.dispatchAll();
+
+        assertThat(afterClose.getNow(null), equalTo("after-close"));
+        assertThat(executor.getQueue().size(), equalTo(0));
+        executor.shutdownNow();
+    }
+
+    private ScheduledDataLoaderRegistry tickerRegistry(ScheduledExecutorService executor, Duration schedule, int loaderCount, DispatchPredicate loaderPredicate) {
+        ScheduledDataLoaderRegistry.Builder builder = ScheduledDataLoaderRegistry.newScheduledRegistry()
+                .scheduledExecutorService(executor)
+                .tickerMode(true)
+                .schedule(schedule)
+                .dispatchPredicate(neverDispatch);
+        for (int i = 0; i < loaderCount; i++) {
+            builder.register("loader-" + i, idLoader("loader-" + i), loaderPredicate);
+        }
+        return builder.build();
     }
 
     @Test
