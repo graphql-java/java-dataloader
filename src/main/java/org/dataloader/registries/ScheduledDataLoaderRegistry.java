@@ -182,11 +182,34 @@ public class ScheduledDataLoaderRegistry extends DataLoaderRegistry implements A
 
     @Override
     public int dispatchAllWithCount() {
+        if (tickerMode) {
+            return dispatchQueuedAndTick();
+        }
         int sum = 0;
         for (Map.Entry<String, DataLoader<?, ?>> entry : dataLoaders.entrySet()) {
             DataLoader<?, ?> dataLoader = entry.getValue();
             String key = entry.getKey();
             sum += dispatchOrReschedule(key, dataLoader);
+        }
+        return sum;
+    }
+
+    /**
+     * Ticker mode only dispatches the {@link DataLoader}s that have keys queued. Dispatching an empty
+     * {@link DataLoader} only refreshes its last dispatch time and calls the dispatch instrumentation, and a
+     * registry typically holds many more {@link DataLoader}s than a single dispatch has work for. A key queued
+     * after the {@link DataLoader#dispatchDepth()} check is dispatched by the next tick, as is a key queued just
+     * after a dispatch.
+     */
+    private int dispatchQueuedAndTick() {
+        // armed before dispatching so that a data loader or predicate throwing cannot stop the ticker
+        scheduleTick();
+        int sum = 0;
+        for (Map.Entry<String, DataLoader<?, ?>> entry : dataLoaders.entrySet()) {
+            DataLoader<?, ?> dataLoader = entry.getValue();
+            if (dataLoader.dispatchDepth() > 0 && shouldDispatch(entry.getKey(), dataLoader)) {
+                sum += dataLoader.dispatchWithCounts().getKeysCount();
+            }
         }
         return sum;
     }
