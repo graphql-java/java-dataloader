@@ -384,6 +384,28 @@ public class ScheduledDataLoaderRegistryTest {
     }
 
     @Test
+    public void ticker_mode_dispatch_all_only_visits_data_loaders_with_queued_keys() {
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
+        List<String> visited = new ArrayList<>();
+        DispatchPredicate recordingPredicate = (key, dl) -> {
+            visited.add(key);
+            return true;
+        };
+        ScheduledDataLoaderRegistry registry = tickerRegistry(executor, Duration.ofHours(1), 20, recordingPredicate);
+        DataLoader<String, String> loader = registry.getDataLoader("loader-7");
+        CompletableFuture<String> queued = loader.load("queued");
+
+        int dispatched = registry.dispatchAllWithCount();
+
+        assertThat(dispatched, equalTo(1));
+        assertThat(queued.getNow(null), equalTo("queued"));
+        assertThat(visited, equalTo(singletonList("loader-7")));
+        assertThat(executor.getQueue().size(), equalTo(1));
+        registry.close();
+        executor.shutdownNow();
+    }
+
+    @Test
     public void ticker_mode_keeps_ticking_after_a_dispatch_predicate_throws() throws Exception {
         ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
         AtomicBoolean throwOnNextCheck = new AtomicBoolean();
