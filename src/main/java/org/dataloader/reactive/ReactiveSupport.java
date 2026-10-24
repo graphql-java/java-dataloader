@@ -1,18 +1,21 @@
 package org.dataloader.reactive;
 
 import org.dataloader.stats.StatisticsCollector;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Subscriber;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+@NullMarked
 public class ReactiveSupport {
 
     public static <K, V> Subscriber<V> batchSubscriber(
             CompletableFuture<List<V>> valuesFuture,
             List<K> keys,
-            List<Object> callContexts,
+            List<@Nullable Object> callContexts,
             List<CompletableFuture<V>> queuedFutures,
             ReactiveSupport.HelperIntegration<K> helperIntegration
     ) {
@@ -22,7 +25,7 @@ public class ReactiveSupport {
     public static <K, V> Subscriber<Map.Entry<K, V>> mappedBatchSubscriber(
             CompletableFuture<List<V>> valuesFuture,
             List<K> keys,
-            List<Object> callContexts,
+            List<@Nullable Object> callContexts,
             List<CompletableFuture<V>> queuedFutures,
             ReactiveSupport.HelperIntegration<K> helperIntegration
     ) {

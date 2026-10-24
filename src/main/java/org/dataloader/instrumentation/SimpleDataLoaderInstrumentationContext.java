@@ -2,6 +2,8 @@ package org.dataloader.instrumentation;
 
 
 import org.dataloader.annotations.Internal;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.function.BiConsumer;
 
@@ -9,12 +11,13 @@ import java.util.function.BiConsumer;
  * A simple implementation of {@link DataLoaderInstrumentationContext}
  */
 @Internal
+@NullMarked
 class SimpleDataLoaderInstrumentationContext<T> implements DataLoaderInstrumentationContext<T> {
 
-    private final BiConsumer<T, Throwable> codeToRunOnComplete;
-    private final Runnable codeToRunOnDispatch;
+    private final @Nullable BiConsumer<@Nullable T, @Nullable Throwable> codeToRunOnComplete;
+    private final @Nullable Runnable codeToRunOnDispatch;
 
-    SimpleDataLoaderInstrumentationContext(Runnable codeToRunOnDispatch, BiConsumer<T, Throwable> codeToRunOnComplete) {
+    SimpleDataLoaderInstrumentationContext(@Nullable Runnable codeToRunOnDispatch, @Nullable BiConsumer<@Nullable T, @Nullable Throwable> codeToRunOnComplete) {
         this.codeToRunOnComplete = codeToRunOnComplete;
         this.codeToRunOnDispatch = codeToRunOnDispatch;
     }
@@ -27,7 +30,7 @@ class SimpleDataLoaderInstrumentationContext<T> implements DataLoaderInstrumenta
     }
 
     @Override
-    public void onCompleted(T result, Throwable t) {
+    public void onCompleted(@Nullable T result, @Nullable Throwable t) {
         if (codeToRunOnComplete != null) {
             codeToRunOnComplete.accept(result, t);
         }

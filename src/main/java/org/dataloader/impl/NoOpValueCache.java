@@ -4,6 +4,8 @@ package org.dataloader.impl;
 import org.dataloader.Try;
 import org.dataloader.ValueCache;
 import org.dataloader.annotations.Internal;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -20,7 +22,8 @@ import java.util.concurrent.CompletableFuture;
  * @author <a href="https://github.com/craig-day">Craig Day</a>
  */
 @Internal
-public class NoOpValueCache<K, V> implements ValueCache<K, V> {
+@NullMarked
+public class NoOpValueCache<K, V extends @Nullable Object> implements ValueCache<K, V> {
 
     /**
      * a no op value cache instance

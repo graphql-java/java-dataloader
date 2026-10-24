@@ -1,6 +1,8 @@
 package org.dataloader.instrumentation;
 
 import org.dataloader.annotations.PublicSpi;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -13,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
  * just happened or "loggers" to be called to record what has happened.
  */
 @PublicSpi
+@NullMarked
 public interface DataLoaderInstrumentationContext<T> {
     /**
      * This is invoked when the instrumentation step is initially dispatched.  Note this is NOT
@@ -28,6 +31,6 @@ public interface DataLoaderInstrumentationContext<T> {
      * @param result the result of the step (which may be null)
      * @param t      this exception will be non-null if an exception was thrown during the step
      */
-    default void onCompleted(T result, Throwable t) {
+    default void onCompleted(@Nullable T result, @Nullable Throwable t) {
     }
 }

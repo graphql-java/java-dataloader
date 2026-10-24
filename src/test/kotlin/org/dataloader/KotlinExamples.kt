@@ -85,7 +85,7 @@ class KotlinExamples {
 
     @Test
     fun `basic kotlin test of nullable value types in value cache`() {
-        val valueCache = object : ValueCache<String, String?> by NoOpValueCache() {
+        val valueCache = object : ValueCache<String, String?> by NoOpValueCache<String, String?>() {
             override fun get(key: String): CompletableFuture<String?> = if (key == "null")
                 completedFuture(null)
             else

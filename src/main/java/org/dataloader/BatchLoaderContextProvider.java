@@ -2,6 +2,7 @@ package org.dataloader;
 
 import org.dataloader.annotations.PublicSpi;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A BatchLoaderContextProvider is used by the {@link org.dataloader.DataLoader} code to
@@ -12,7 +13,7 @@ import org.jspecify.annotations.NullMarked;
 @NullMarked
 public interface BatchLoaderContextProvider {
     /**
-     * @return a context object that may be needed in batch load calls
+     * @return a context object that may be needed in batch load calls, can be null
      */
-    Object getContext();
+    @Nullable Object getContext();
 }

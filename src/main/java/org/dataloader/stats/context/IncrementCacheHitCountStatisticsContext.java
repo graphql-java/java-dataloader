@@ -1,11 +1,15 @@
 package org.dataloader.stats.context;
 
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
+
+@NullMarked
 public class IncrementCacheHitCountStatisticsContext<K> {
 
     private final K key;
-    private final Object callContext;
+    private final @Nullable Object callContext;
 
-    public IncrementCacheHitCountStatisticsContext(K key, Object callContext) {
+    public IncrementCacheHitCountStatisticsContext(K key, @Nullable Object callContext) {
         this.key = key;
         this.callContext = callContext;
     }
@@ -18,7 +22,7 @@ public class IncrementCacheHitCountStatisticsContext<K> {
         return key;
     }
 
-    public Object getCallContext() {
+    public @Nullable Object getCallContext() {
         return callContext;
     }
 }

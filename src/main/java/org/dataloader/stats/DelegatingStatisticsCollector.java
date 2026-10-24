@@ -5,6 +5,8 @@ import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsCo
 import org.dataloader.stats.context.IncrementCacheHitCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import static org.dataloader.impl.Assertions.nonNull;
 
@@ -13,6 +15,7 @@ import static org.dataloader.impl.Assertions.nonNull;
  * collector at the same time.  This allows you to keep a specific set of statistics
  * and also delegate the calls onto another collector.
  */
+@NullMarked
 public class DelegatingStatisticsCollector implements StatisticsCollector {
 
     private final StatisticsCollector collector = new SimpleStatisticsCollector();
@@ -26,7 +29,7 @@ public class DelegatingStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> void incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
+    public <K> void incrementLoadCount(@Nullable IncrementLoadCountStatisticsContext<K> context) {
         delegateCollector.incrementLoadCount(context);
         collector.incrementLoadCount(context);
     }
@@ -38,7 +41,7 @@ public class DelegatingStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> void incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
+    public <K> void incrementLoadErrorCount(@Nullable IncrementLoadErrorCountStatisticsContext<K> context) {
         delegateCollector.incrementLoadErrorCount(context);
         collector.incrementLoadErrorCount(context);
     }
@@ -50,7 +53,7 @@ public class DelegatingStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> void incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
+    public <K> void incrementBatchLoadCountBy(long delta, @Nullable IncrementBatchLoadCountByStatisticsContext<K> context) {
         delegateCollector.incrementBatchLoadCountBy(delta, context);
         collector.incrementBatchLoadCountBy(delta, context);
     }
@@ -62,7 +65,7 @@ public class DelegatingStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> void incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
+    public <K> void incrementBatchLoadExceptionCount(@Nullable IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
         delegateCollector.incrementBatchLoadExceptionCount(context);
         collector.incrementBatchLoadExceptionCount(context);
     }
@@ -74,7 +77,7 @@ public class DelegatingStatisticsCollector implements StatisticsCollector {
     }
 
     @Override
-    public <K> void incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
+    public <K> void incrementCacheHitCount(@Nullable IncrementCacheHitCountStatisticsContext<K> context) {
         delegateCollector.incrementCacheHitCount(context);
         collector.incrementCacheHitCount(context);
     }

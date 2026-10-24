@@ -6,11 +6,14 @@ import org.dataloader.stats.context.IncrementBatchLoadExceptionCountStatisticsCo
 import org.dataloader.stats.context.IncrementCacheHitCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadCountStatisticsContext;
 import org.dataloader.stats.context.IncrementLoadErrorCountStatisticsContext;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 /**
  * This allows statistics to be collected for {@link org.dataloader.DataLoader} operations
  */
 @PublicSpi
+@NullMarked
 public interface StatisticsCollector {
 
     /**
@@ -19,7 +22,7 @@ public interface StatisticsCollector {
      * @param <K> the class of the key in the data loader
      * @param context the context containing metadata of the data loader invocation
      */
-    default <K> void incrementLoadCount(IncrementLoadCountStatisticsContext<K> context) {
+    default <K> void incrementLoadCount(@Nullable IncrementLoadCountStatisticsContext<K> context) {
         incrementLoadCount();
     }
 
@@ -38,7 +41,7 @@ public interface StatisticsCollector {
      * @param context the context containing metadata of the data loader invocation
      *
      */
-    default <K> void incrementLoadErrorCount(IncrementLoadErrorCountStatisticsContext<K> context) {
+    default <K> void incrementLoadErrorCount(@Nullable IncrementLoadErrorCountStatisticsContext<K> context) {
         incrementLoadErrorCount();
     }
 
@@ -57,7 +60,7 @@ public interface StatisticsCollector {
      * @param delta how much to add to the count
      * @param context the context containing metadata of the data loader invocation
      */
-    default <K> void  incrementBatchLoadCountBy(long delta, IncrementBatchLoadCountByStatisticsContext<K> context) {
+    default <K> void  incrementBatchLoadCountBy(long delta, @Nullable IncrementBatchLoadCountByStatisticsContext<K> context) {
         incrementBatchLoadCountBy(delta);
     }
 
@@ -77,7 +80,7 @@ public interface StatisticsCollector {
      * @param <K> the class of the key in the data loader
      * @param context the context containing metadata of the data loader invocation
      */
-    default <K> void incrementBatchLoadExceptionCount(IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
+    default <K> void incrementBatchLoadExceptionCount(@Nullable IncrementBatchLoadExceptionCountStatisticsContext<K> context) {
         incrementBatchLoadExceptionCount();
     }
 
@@ -95,7 +98,7 @@ public interface StatisticsCollector {
      * @param <K> the class of the key in the data loader
      * @param context the context containing metadata of the data loader invocation
      */
-    default <K> void incrementCacheHitCount(IncrementCacheHitCountStatisticsContext<K> context) {
+    default <K> void incrementCacheHitCount(@Nullable IncrementCacheHitCountStatisticsContext<K> context) {
         incrementCacheHitCount();
     }
 
