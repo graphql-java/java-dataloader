@@ -3,6 +3,7 @@ package org.dataloader.scheduler;
 import org.dataloader.BatchLoaderEnvironment;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
+import org.dataloader.impl.CompletableFutureKit;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.awaitility.Awaitility.await;
 import static org.dataloader.DataLoaderFactory.newDataLoader;
@@ -184,4 +186,94 @@ public class BatchLoaderSchedulerTest {
     }
 
 
+    @Test
+    void can_schedule_cf_completion() {
+
+        AtomicBoolean useThreading = new AtomicBoolean(false);
+        AtomicBoolean parallelCompletion = new AtomicBoolean(false);
+        BatchLoaderScheduler scheduler = new BatchLoaderScheduler() {
+            @Override
+            public <K, V> CompletionStage<List<V>> scheduleBatchLoader(ScheduledBatchLoaderCall<V> scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+                return scheduledCall.invoke();
+            }
+
+            @Override
+            public <K, V> CompletionStage<Map<K, V>> scheduleMappedBatchLoader(ScheduledMappedBatchLoaderCall<K, V> scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+                return scheduledCall.invoke();
+            }
+
+            @Override
+            public <K> void scheduleBatchPublisher(ScheduledBatchPublisherCall scheduledCall, List<K> keys, BatchLoaderEnvironment environment) {
+                scheduledCall.invoke();
+            }
+
+            @Override
+            public <K> CompletionStage<Void> scheduleCompletion(List<Runnable> completeValueRunnables, List<K> keys, BatchLoaderEnvironment environment) {
+                if (useThreading.get()) {
+                    snooze(500);
+                    if (!parallelCompletion.get()) {
+                        return CompletableFutureKit.runAll(completeValueRunnables);
+                    } else {
+                        return CompletableFuture.allOf(completeValueRunnables.stream()
+                                .map(CompletableFuture::runAsync).toArray(CompletableFuture[]::new));
+                    }
+                } else {
+                    return BatchLoaderScheduler.super.scheduleCompletion(completeValueRunnables, keys, environment);
+                }
+            }
+        };
+
+        DataLoaderOptions options = DataLoaderOptions.newOptions().setBatchLoaderScheduler(scheduler).build();
+
+        DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValues(), options);
+
+        CompletableFuture<Integer> cf1 = identityLoader.load(1);
+        CompletableFuture<Integer> cf2 = identityLoader.load(2);
+        CompletableFuture<List<Integer>> dispatchCF = identityLoader.dispatch();
+
+        await().until(dispatchCF::isDone);
+        assertThat(cf1.join(), equalTo(1));
+        assertThat(cf2.join(), equalTo(2));
+
+        // switch mode to threading mode
+
+        useThreading.set(true);
+
+        cf1 = identityLoader.load(10);
+        cf2 = identityLoader.load(20);
+        dispatchCF = identityLoader.dispatch();
+
+
+        await().until(dispatchCF::isDone);
+        assertThat(cf1.join(), equalTo(10));
+        assertThat(cf2.join(), equalTo(20));
+
+        // switch mode to parallel execution
+
+        useThreading.set(true);
+
+        cf1 = identityLoader.load(10);
+        cf2 = identityLoader.load(20);
+        dispatchCF = identityLoader.dispatch();
+
+
+        await().until(dispatchCF::isDone);
+        assertThat(cf1.join(), equalTo(10));
+        assertThat(cf2.join(), equalTo(20));
+    }
+
+    @Test
+    void no_scheduler_present_will_works() {
+        DataLoaderOptions options = DataLoaderOptions.newOptions().build();
+
+        DataLoader<Integer, Integer> identityLoader = newDataLoader(keysAsValues(), options);
+
+        CompletableFuture<Integer> cf1 = identityLoader.load(1);
+        CompletableFuture<Integer> cf2 = identityLoader.load(2);
+        CompletableFuture<List<Integer>> dispatchCF = identityLoader.dispatch();
+
+        await().until(dispatchCF::isDone);
+        assertThat(cf1.join(), equalTo(1));
+        assertThat(cf2.join(), equalTo(2));
+    }
 }
