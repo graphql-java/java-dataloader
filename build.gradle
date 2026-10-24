@@ -32,7 +32,7 @@ kotlin {
     compilerOptions {
         apiVersion = KotlinVersion.KOTLIN_2_0
         languageVersion = KotlinVersion.KOTLIN_2_0
-        jvmTarget = JvmTarget.JVM_11
+        jvmTarget = JvmTarget.JVM_17
         javaParameters = true
         freeCompilerArgs = [
                 '-Xemit-jvm-type-annotations',
@@ -59,7 +59,7 @@ def getDevelopmentVersion() {
 def releaseVersion = System.env.RELEASE_VERSION
 version = releaseVersion ? releaseVersion : getDevelopmentVersion()
 group = 'com.graphql-java'
-description = 'A pure Java 11 port of Facebook Dataloader'
+description = 'A pure Java 17 port of Facebook Dataloader'
 
 gradle.buildFinished { buildResult ->
     println "*******************************"
@@ -108,7 +108,7 @@ dependencies {
 }
 
 tasks.withType(JavaCompile) {
-    options.release = 11
+    options.release = 17
     options.errorprone {
         disableAllChecks = true
         check("NullAway", CheckSeverity.ERROR)
