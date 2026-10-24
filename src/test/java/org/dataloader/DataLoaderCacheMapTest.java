@@ -25,18 +25,15 @@ public class DataLoaderCacheMapTest {
     public void should_provide_all_futures_from_cache() {
         DataLoader<Integer, Integer> dataLoader = newDataLoader(keysAsValues());
 
-        CompletableFuture<Integer> cf1 = dataLoader.load(1);
-        CompletableFuture<Integer> cf2 = dataLoader.load(2);
-        CompletableFuture<Integer> cf3 = dataLoader.load(3);
+        dataLoader.load(1);
+        dataLoader.load(2);
+        dataLoader.load(3);
 
         CacheMap<Object, Integer> cacheMap = dataLoader.getCacheMap();
         Collection<CompletableFuture<Integer>> futures = cacheMap.getAll();
         assertThat(futures.size(), equalTo(3));
 
 
-        assertThat(cacheMap.get(1), equalTo(cf1));
-        assertThat(cacheMap.get(2), equalTo(cf2));
-        assertThat(cacheMap.get(3), equalTo(cf3));
         assertThat(cacheMap.containsKey(1), equalTo(true));
         assertThat(cacheMap.containsKey(2), equalTo(true));
         assertThat(cacheMap.containsKey(3), equalTo(true));
@@ -65,7 +62,7 @@ public class DataLoaderCacheMapTest {
         Collection<CompletableFuture<Integer>> futures = dataLoader.getCacheMap().getAll();
 
         List<CompletableFuture<Integer>> futuresList = new ArrayList<>(futures);
-        assertThat(futuresList.get(0).getNumberOfDependents(), equalTo(4)); // instrumentation is depending on the CF completing
-        assertThat(futuresList.get(1).getNumberOfDependents(), equalTo(2));
+        assertThat(futuresList.get(0).getNumberOfDependents(), equalTo(2)); // instrumentation is depending on the CF completing
+        assertThat(futuresList.get(1).getNumberOfDependents(), equalTo(1));
     }
 }

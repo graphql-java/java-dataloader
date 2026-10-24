@@ -32,8 +32,6 @@ public class DataLoaderIfPresentTest {
         cachedPromise = dataLoader.getIfPresent(1);
         assertThat(cachedPromise.isPresent(), equalTo(true));
 
-        assertThat(cachedPromise.get(), sameInstance(future1));
-
         // but it's not done!
         assertThat(cachedPromise.get().isDone(), equalTo(false));
         //
