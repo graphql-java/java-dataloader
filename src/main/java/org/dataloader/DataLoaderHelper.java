@@ -19,7 +19,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +31,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 import static org.dataloader.impl.Assertions.assertState;
@@ -314,54 +312,56 @@ class DataLoaderHelper<K, V> {
         }
         //
         // now reassemble all the futures into one that is the complete set of results
-        return allOf(allBatches.toArray(new CompletableFuture[0]))
-                .thenApply(v -> allBatches.stream()
-                        .map(CompletableFuture::join)
-                        .flatMap(Collection::stream)
-                        .collect(toList()));
+        return CompletableFutureKit.allOfFlatMap(allBatches);
     }
 
     @SuppressWarnings("unchecked")
-    private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<Object> callContexts, List<CompletableFuture<V>> queuedFutures) {
-        stats.incrementBatchLoadCountBy(keys.size(), new IncrementBatchLoadCountByStatisticsContext<>(keys, callContexts));
-        CompletableFuture<List<V>> batchLoad = invokeLoader(keys, callContexts, queuedFutures, loaderOptions.cachingEnabled());
+    private CompletableFuture<List<V>> dispatchQueueBatch(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures) {
+        stats.incrementBatchLoadCountBy(keys.size(), new IncrementBatchLoadCountByStatisticsContext<>(keys, keyContexts));
+
+        BatchLoaderEnvironment environment = mkBatchLoaderEnv(keys, keyContexts);
+
+        CompletableFuture<List<V>> batchLoad = invokeLoader(environment, keys, keyContexts, queuedFutures, loaderOptions.cachingEnabled());
         return batchLoad
-                .thenApply(values -> {
+                .thenCompose(values -> {
                     assertResultSize(keys, values);
                     if (isPublisher() || isMappedPublisher()) {
                         // We have already completed the queued futures by the time the overall batchLoad future has completed.
-                        return values;
+                        return CompletableFutureKit.success(values);
                     }
 
-                    List<K> clearCacheKeys = new ArrayList<>();
-                    for (int idx = 0; idx < queuedFutures.size(); idx++) {
-                        K key = keys.get(idx);
-                        V value = values.get(idx);
-                        Object callContext = callContexts.get(idx);
-                        CompletableFuture<V> future = queuedFutures.get(idx);
-                        if (value instanceof Throwable) {
-                            stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
-                            future.completeExceptionally((Throwable) value);
-                            clearCacheKeys.add(keys.get(idx));
-                        } else if (value instanceof Try) {
-                            // we allow the batch loader to return a Try so we can better represent a computation
-                            // that might have worked or not.
-                            Try<V> tryValue = (Try<V>) value;
-                            if (tryValue.isSuccess()) {
-                                future.complete(tryValue.get());
-                            } else {
+                    Runnable completeValuesRunnable = () -> {
+                        List<K> clearCacheKeys = new ArrayList<>();
+                        for (int idx = 0; idx < queuedFutures.size(); idx++) {
+                            K key = keys.get(idx);
+                            V value = values.get(idx);
+                            Object callContext = keyContexts.get(idx);
+                            CompletableFuture<V> future = queuedFutures.get(idx);
+                            if (value instanceof Throwable) {
                                 stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
-                                future.completeExceptionally(tryValue.getThrowable());
+                                future.completeExceptionally((Throwable) value);
                                 clearCacheKeys.add(keys.get(idx));
+                            } else if (value instanceof Try) {
+                                // we allow the batch loader to return a Try so we can better represent a computation
+                                // that might have worked or not.
+                                Try<V> tryValue = (Try<V>) value;
+                                if (tryValue.isSuccess()) {
+                                    future.complete(tryValue.get());
+                                } else {
+                                    stats.incrementLoadErrorCount(new IncrementLoadErrorCountStatisticsContext<>(key, callContext));
+                                    future.completeExceptionally(tryValue.getThrowable());
+                                    clearCacheKeys.add(keys.get(idx));
+                                }
+                            } else {
+                                future.complete(value);
                             }
-                        } else {
-                            future.complete(value);
                         }
-                    }
-                    possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
-                    return values;
+                        possiblyClearCacheEntriesOnExceptions(clearCacheKeys);
+                    };
+
+                    return scheduleCompletion(environment, keys, values, completeValuesRunnable);
                 }).exceptionally(ex -> {
-                    stats.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(keys, callContexts));
+                    stats.incrementBatchLoadExceptionCount(new IncrementBatchLoadExceptionCountStatisticsContext<>(keys, keyContexts));
                     if (ex instanceof CompletionException) {
                         ex = ex.getCause();
                     }
@@ -374,6 +374,26 @@ class DataLoaderHelper<K, V> {
                     }
                     return emptyList();
                 });
+    }
+
+    private CompletableFuture<List<V>> scheduleCompletion(BatchLoaderEnvironment environment, List<K> keys, List<V> values, Runnable completeValuesRunnable) {
+        BatchLoaderScheduler batchLoaderScheduler = loaderOptions.getBatchLoaderScheduler();
+        CompletionStage<?> scheduledCompletion;
+        if (batchLoaderScheduler != null) {
+            scheduledCompletion = batchLoaderScheduler
+                    .scheduleCompletion(completeValuesRunnable, keys, environment);
+        } else {
+            scheduledCompletion = CompletableFutureKit.run(completeValuesRunnable);
+        }
+        return scheduledCompletion
+                .thenApply(ignored -> values)
+                .toCompletableFuture();
+    }
+
+    private BatchLoaderEnvironment mkBatchLoaderEnv(List<K> keys, List<Object> keyContexts) {
+        Object context = loaderOptions.getBatchLoaderContextProvider().getContext();
+        return BatchLoaderEnvironment.newBatchLoaderEnvironment()
+                .context(context).keyContexts(keys, keyContexts).build();
     }
 
 
@@ -397,15 +417,17 @@ class DataLoaderHelper<K, V> {
     CompletableFuture<V> invokeLoaderImmediately(K key, Object keyContext, boolean cachingEnabled) {
         List<K> keys = singletonList(key);
         List<Object> keyContexts = singletonList(keyContext);
+        BatchLoaderEnvironment environment = mkBatchLoaderEnv(keys, keyContexts);
+
         List<CompletableFuture<V>> queuedFutures = singletonList(new CompletableFuture<>());
-        return invokeLoader(keys, keyContexts, queuedFutures, cachingEnabled)
+        return invokeLoader(environment, keys, keyContexts, queuedFutures, cachingEnabled)
                 .thenApply(list -> list.get(0))
                 .toCompletableFuture();
     }
 
-    CompletableFuture<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, boolean cachingEnabled) {
+    CompletableFuture<List<V>> invokeLoader(BatchLoaderEnvironment environment, List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures, boolean cachingEnabled) {
         if (!cachingEnabled) {
-            return invokeLoader(keys, keyContexts, queuedFutures);
+            return invokeLoader(environment, keys, keyContexts, queuedFutures);
         }
         CompletableFuture<List<Try<V>>> cacheCallCF = getFromValueCache(keys);
         return cacheCallCF.thenCompose(cachedValues -> {
@@ -454,7 +476,7 @@ class DataLoaderHelper<K, V> {
                 // we missed some keys from cache, so send them to the batch loader
                 // and then fill in their values
                 //
-                CompletableFuture<List<V>> batchLoad = invokeLoader(missedKeys, missedKeyContexts, missedQueuedFutures);
+                CompletableFuture<List<V>> batchLoad = invokeLoader(environment, missedKeys, missedKeyContexts, missedQueuedFutures);
                 return batchLoad.thenCompose(missedValues -> {
                     assertResultSize(missedKeys, missedValues);
 
@@ -473,11 +495,7 @@ class DataLoaderHelper<K, V> {
         });
     }
 
-    CompletableFuture<List<V>> invokeLoader(List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures) {
-        Object context = loaderOptions.getBatchLoaderContextProvider().getContext();
-        BatchLoaderEnvironment environment = BatchLoaderEnvironment.newBatchLoaderEnvironment()
-                .context(context).keyContexts(keys, keyContexts).build();
-
+    CompletableFuture<List<V>> invokeLoader(BatchLoaderEnvironment environment, List<K> keys, List<Object> keyContexts, List<CompletableFuture<V>> queuedFutures) {
         DataLoaderInstrumentationContext<List<?>> instrCtx = ctxOrNoopCtx(instrumentation().beginBatchLoader(dataLoader, keys, environment));
 
         CompletableFuture<List<V>> batchLoad;
