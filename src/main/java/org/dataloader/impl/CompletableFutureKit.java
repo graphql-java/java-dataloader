@@ -2,6 +2,7 @@ package org.dataloader.impl;
 
 import org.dataloader.annotations.Internal;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -19,6 +20,12 @@ public class CompletableFutureKit {
     public static <V> CompletableFuture<V> failedFuture(Exception e) {
         CompletableFuture<V> future = new CompletableFuture<>();
         future.completeExceptionally(e);
+        return future;
+    }
+
+    public static <V> CompletableFuture<V> success(V v) {
+        CompletableFuture<V> future = new CompletableFuture<>();
+        future.complete(v);
         return future;
     }
 
@@ -67,4 +74,41 @@ public class CompletableFutureKit {
                         )
                 );
     }
+
+    public static <T> CompletableFuture<List<T>> allOfFlatMap(List<CompletableFuture<List<T>>> cfs) {
+
+        return CompletableFuture.allOf(cfs.toArray(new CompletableFuture[0]))
+                .thenApply(v -> cfs.stream()
+                        .map(CompletableFuture::join)
+                        .flatMap(Collection::stream)
+                        .collect(toList()));
+    }
+
+    /**
+     * Runs the given {@link Runnable} synchronously on the current thread, returning a
+     * {@link CompletableFuture} that is completed normally or exceptionally based on the outcome.
+     *
+     * @param runnable the task to execute
+     * @return a completed future, or a failed future if the runnable throws
+     */
+    public static CompletableFuture<Void> run(Runnable runnable) {
+        try {
+            runnable.run();
+            return CompletableFutureKit.success(null);
+        } catch (Exception e) {
+            return CompletableFutureKit.failedFuture(e);
+        }
+    }
+
+    /**
+     * Runs all the {@link Runnable} from the list synchronously on the current thread, returning a
+     * {@link CompletableFuture} that is completed normally or exceptionally based on the outcome.
+     *
+     * @param runnables the list of tasks to execute
+     * @return a completed future, or a failed future if any of the tasks throws
+     */
+    public static CompletableFuture<Void> runAll(List<Runnable> runnables) {
+        return CompletableFuture.allOf(runnables.stream().map(CompletableFutureKit::run).toArray(CompletableFuture[]::new));
+    }
+
 }
